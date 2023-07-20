@@ -74,7 +74,7 @@ endif
 ## (1) cn, cp, sn_D
 if 0
   ## load processed data (aligned, interpolated on common grid)
-  ldirs = glob ([pdir.processed measid "/" "*___" proc_type "/"]);
+  ldirs = glob ([pdir.processed measid "/" "*___" proc_type(3:end) "/"]);
   ldir = ldirs{end} # newest processing result
   [msh, c_dat, ~, h_g, ~, ~, ~, ~, pp] = load_uc (ldir, pdir.work);
   x = msh{1}(1,:);
@@ -373,7 +373,7 @@ if 1
   switch (pp.liquid.data)
     case {"WG141"}
       idx_ref = 2;
-      t_range_1 = 3:14;
+      t_range_1 = 3:16;
       t_range_2 = 40:160;
     case {"WP141"}
       idx_ref = 2;
@@ -428,10 +428,10 @@ if 1
   ## write data for tikz plots
   ##
   print (fh, "-djpeg", "-color", ["-r" num2str(1000)], [save_dir_p "diffusion-front"]);
-  plt_1_h = {mfilename, date; "t in s (offset with tnull)", "S^2 in m^2"};
-  plt_1_d = [tvec' sfsq'];
+  plt_1_h = {mfilename, date; "t in s (offset with tnull)", "S^2 in 1e-9 m^2"};
+  plt_1_d = [tvec' sfsq'*1e9];
   plt_2_h = {mfilename, date, "", "", "", ""; "Dfit1", "Dfit2", "sigma Dfit1", "sigma Dfit2", "sigma Dfit1 in %", "sigma Dfit2 in %"};
-  plt_2_d = [D_fit_1' D_fit_2' std_D1 std_D2 std_D1_rel std_D2_rel];
+  plt_2_d = [D_fit_1'*1e9 D_fit_2'*1e9 std_D1*1e9 std_D2*1e9 std_D1_rel std_D2_rel];
   plt_3_h = {mfilename, date; "extrapolated time of the start of the diffustion in s", ""};
   plt_3_d = [tnull];
   cd (save_dir_p)
@@ -487,10 +487,14 @@ if 1
   system ('rm out.gif')
   system ('ffmpeg -framerate 10 -pattern_type glob -i "./fig_*.jpg" out.gif');
 
+  ## 3 profiles
+  [~, i_print] =  min (abs (tvec' - [12,39,81]), [], 1);
   fh = figure ();
-  subplot (3, 1, 1)
-    i = 10
-    sph = surf (rgb2gray(imread([save_dir_p "tikz_" num2str(tn(i)) ".png"])))
+  k = 0;
+  for i = i_print
+    k++;
+    subplot (3, 1, k)
+    sph = surf (rgb2gray(imread([save_dir_p "tikz_" num2str(tn(i)) ".png"])));
     shading flat
     view ([0 0 1])
     axis image
@@ -499,41 +503,11 @@ if 1
     plot3 ([1 1] * (sn_D(i)*1e3)/2e-3, [0 0.2/2e-3], 2^16*[1 1], "r", "linewidth", 1.5)
     plot3 ([1 1] * (sn_D(2)*1e3)/2e-3, [0 0.2/2e-3], 2^16*[1 1], "m", "linewidth", 1.5)
     title (["t = " num2str(tn(i)) " s; sn_D = " num2str(sn_D(i)*1e3) " mm; sn_D ref = " num2str(sn_D(1)*1e3) "mm"])
-  subplot(3, 1, 2)
-    i = 37
-    sph = surf (rgb2gray(imread([save_dir_p "tikz_" num2str(tn(i)) ".png"])))
-    shading flat
-    view([0 0 1])
-    axis image
-    axis off
-    hold on
-    plot3 ([1 1] * (sn_D(i)*1e3)/2e-3, [0 0.2/2e-3], 2^16*[1 1], "r", "linewidth", 1.5)
-    plot3 ([1 1] * (sn_D(2)*1e3)/2e-3, [0 0.2/2e-3], 2^16*[1 1], "m", "linewidth", 1.5)
-    title (["t = " num2str(tn(i)) " s; sn_D = " num2str(sn_D(i)*1e3) " mm; sn_D ref = " num2str(sn_D(1)*1e3) "mm"])
-  subplot(3, 1, 3)
-    i = 80
-    sph = surf (rgb2gray(imread([save_dir_p "tikz_" num2str(tn(i)) ".png"])))
-    shading flat
-    view([0 0 1])
-    axis image
-    axis off
-    hold on
-    plot3 ([1 1] * (sn_D(i)*1e3)/2e-3, [0 0.2/2e-3], 2^16*[1 1], "r", "linewidth", 1.5)
-    plot3 ([1 1] * (sn_D(2)*1e3)/2e-3, [0 0.2/2e-3], 2^16*[1 1], "m", "linewidth", 1.5)
-    title (["t = " num2str(tn(i)) " s; sn_D = " num2str(sn_D(i)*1e3) " mm; sn_D ref = " num2str(sn_D(1)*1e3) "mm"])
+  endfor
   print (fh, "-djpeg", "-color", ["-r" num2str(500)], [save_dir_p "3diff_maps_2tikz"]);
-
-  ## 3 profiles
-  switch (pp.liquid.data)
-    case {"WG141"}
-      i_print = [10,37,79] - round(4.8)
-    case {"WP141"}
-      i_print = [10,37,79]
-  endswitch
   ##
   fh = figure ();
   hold on
-  i = i_print(1);
   k = 0;
   styles = {"r", "g", "b"};
   for i = i_print
@@ -554,14 +528,14 @@ if 1
 
   ## for tikz
   i = i_print(1);
-  plt_1_h = {mfilename, date, ""; "s in mm", "c* exp. t=9", "c* fit"};
-  plt_1_d = [snp'*1e3 cp_nn(i,:)' (c_fitf(p_fit{i},snp)/c_fitf(p_fit{i},snp(1)))'];
+  plt_1_h = {mfilename, date, ""; "s in mm", "c* exp. t=12", "c* fit"};
+  plt_1_d = [snp'*1e3 cp_nn(i,:)' (c_fitf(p_fit{i},snp)/c_fitf(p_fit{i},snp(1)))' cp_n(i,:)'./c_fitf(p_fit{i},snp(1))'];
   i = i_print(2);
-  plt_2_h = {mfilename, date, ""; "s in mm", "c* exp. t=36", "c* fit"};
-  plt_2_d = [snp'*1e3 cp_nn(i,:)' (c_fitf(p_fit{i},snp)/c_fitf(p_fit{i},snp(1)))'];
+  plt_2_h = {mfilename, date, ""; "s in mm", "c* exp. t=39", "c* fit"};
+  plt_2_d = [snp'*1e3 cp_nn(i,:)' (c_fitf(p_fit{i},snp)/c_fitf(p_fit{i},snp(1)))' cp_n(i,:)'./c_fitf(p_fit{i},snp(1))'];
   i = i_print(3);
-  plt_3_h = {mfilename, date, ""; "s in mm", "c* exp. t=79", "c* fit"};
-  plt_3_d = [snp'*1e3 cp_nn(i,:)' (c_fitf(p_fit{i},snp)/c_fitf(p_fit{i},snp(1)))'];
+  plt_3_h = {mfilename, date, ""; "s in mm", "c* exp. t=81", "c* fit"};
+  plt_3_d = [snp'*1e3 cp_nn(i,:)' (c_fitf(p_fit{i},snp)/c_fitf(p_fit{i},snp(1)))' cp_n(i,:)'./c_fitf(p_fit{i},snp(1))'];
   cell2csv (["tikz_diff-profile-1_h.csv"], plt_1_h)
   csvwrite (["tikz_diff-profile-1_d.csv"], plt_1_d, "append", "off", "precision","%.4e")
   cell2csv (["tikz_diff-profile-2_h.csv"], plt_2_h)
@@ -588,11 +562,6 @@ if 1
   ##  plot ([0 160], [1 1] .* D_fit_1(1),"r-")
   ##  ylim ([0 1e-9])
   ##  xlim ([0 160])
-
-  ## exposure time
-  ## exp time 1: 500 ms  ..Glycerol-W 100 µm / 25 s ... 2 µm per exposure... 1px = 5 µm
-  ## exp time 2: 500 ms  ..Propdiol-W 80 µm / 25 s ... 1.6 µm per exposure... 1px = 2 µm
-  ## ... good
 
   RR = outlier_rm (curvR, movmedian(curvR,21));
   figure (); hold on;

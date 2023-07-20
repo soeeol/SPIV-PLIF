@@ -47,7 +47,7 @@ function [mf, nref, rho, eta, c_sat, D_AB] = get_fp_lm (pdir, id_f, T_get)
       c_sat = 4.75; # see "a_oxygen_diffusivity_solubility.m"
     case "WP141"
       mf_PD_match = 7.2519e-01; # see ("ri_matching_regression.m")
-      ref = get_ri_matching_tab (pdir, fname="propylene glycol-water", pname="ri", T_get, mf=mf_PD_match, ext=[]);
+      nref = get_ri_matching_tab (pdir, fname="propylene glycol-water", pname="ri", T_get, mf=mf_PD_match, ext=[]);
       rho = get_fp_tab (pdir, fname, pname="rho", T_get, mf, ext);
       eta = get_fp_tab (pdir, fname, pname="eta", T_get, mf, ext);
       c_sat = 7.1437e+00; # see "a_oxygen_diffusivity_solubility.m"
