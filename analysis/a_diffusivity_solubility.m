@@ -80,20 +80,23 @@ D_PD_S = f_DAB_S (Ls=L_PD, L=L_O2, mm_PD, eta_PD_W(end), mv_solute, TK(3))
 D_PT_S = f_DAB_S (Ls=L_PT, L=L_O2, mm_PT, eta_3=eta_PT_W(end), mv_solute, TK(3))
 D_W_S = f_DAB_S (Ls=L_W, L=L_O2, mm_W, eta_2=eta_W(3), mv_solute, TK(3))
 ## PT:
-## mixing rule general recommendation ~eta^0.8 (HimmelblauDM1964)
+mre_PT = 0.5;
 x_2 = fp_mx_mf (1-mf, mm_W, mm_PTW_solvent);
 x_3 = fp_mx_mf (mf, mm_PT, mm_PTW_solvent);
 eta_2 = eta_W(3);
 eta_3 = eta_PT_W(end);
 eta_m = [eta_W(3) eta_PT_W(2:end)];
-Dim_S_PT = (x_2*D_W_S*eta_2.^0.8 + x_3*D_PT_S*eta_3.^0.8) ./ eta_m.^0.8;
+Dim_S_PT = (x_2*D_W_S*eta_2.^mre_PT + x_3*D_PT_S*eta_3.^mre_PT) ./ eta_m.^mre_PT;
 ## PD:
+mre_PD = 0.66;
 x_2 = fp_mx_mf (1-mf, mm_W, mm_PDW_solvent);
 x_3 = fp_mx_mf (mf, mm_PD, mm_PDW_solvent);
 eta_2 = eta_W(3)
 eta_3 = eta_PD_W(end)
 eta_m = eta_PD_W;
-Dim_S_PD = (x_2*D_W_S*eta_2.^0.8 + x_3*D_PD_S*eta_3.^0.8) ./ eta_m.^0.8;
+Dim_S_PD = (x_2*D_W_S*eta_2.^mre_PD + x_3*D_PD_S*eta_3.^mre_PD) ./ eta_m.^mre_PD;
+
+
 
 ## fully emperical corrleation of DiazM1987etal @ 25 °C
 ## viscosity proportionality is relaxed vs. Stokes-Einstein type correlations
@@ -103,10 +106,11 @@ f_DAB_DM = @ (mv_A, mv_B, eta_B) 1e-4 * 6.02e-5 * ( (mv_B*1e6)^0.36 / ((eta_B*1e
 D_W_DM  = f_DAB_DM (mv_A=fp_mv_bp_TC(mv_crit_O2), mv_B=fp_mv_bp_TC(mv_crit_W),  eta_B=eta_W(3))
 D_PT_DM = f_DAB_DM (mv_A=fp_mv_bp_TC(mv_crit_O2), mv_B=fp_mv_bp_TC(mv_crit_PT), eta_B=eta_PT_W(end))
 D_PD_DM = f_DAB_DM (mv_A=fp_mv_bp_TC(mv_crit_O2), mv_B=fp_mv_bp_TC(mv_crit_PD), eta_B=eta_PD_W(end))
-
+##D_PD_DM = 5.9e-10;
 D_WPT_DM  = f_DAB_DM (mv_A=fp_mv_bp_TC(mv_crit_W), mv_B=fp_mv_bp_TC(mv_crit_PT),  eta_B=eta_PT_W(end))
-Dim_DM_PT = (x_2 * D_W_DM * eta_2.^0.8 + x_3 * D_PT_DM * eta_3.^0.8) ./ eta_m.^0.8;
-Dim_DM_PD = (x_2 * D_W_DM * eta_2.^0.8 + x_3 * D_PD_DM * eta_3.^0.8) ./ eta_m.^0.8;
+Dim_DM_PT = (x_2 * D_W_DM * eta_2.^mre_PT + x_3 * D_PT_DM * eta_3.^mre_PT) ./ eta_m.^mre_PT;
+Dim_DM_PD = (x_2 * D_W_DM * eta_2.^mre_PD + x_3 * D_PD_DM * eta_3.^mre_PD) ./ eta_m.^mre_PD;
+
 
 ## correlation Tyn Calus 1975
 ## ... note that this should not be used for viscous solvents, they consider above 20-30 mPas as viscous
@@ -126,10 +130,11 @@ Dim_DM_PD = (x_2 * D_W_DM * eta_2.^0.8 + x_3 * D_PD_DM * eta_3.^0.8) ./ eta_m.^0
 ## experimental studies
 ##
 
-## difusivity for O2 in water is well established, still results ranging from 1.6e-9 to 2.6e-9 m^2/s @ 25 °C
+## difusivity for O2 in water is well established, still results ranging from 1.87e-9 to 2.6e-9 m^2/s @ 25 °C
 ##
 ## Diffusivity of oxygen in water by StDenisCE1971et
-D_W_exp_mean = [2.31e-9]; # @ 25 °C
+##D_W_exp_mean = [2.31e-9]; # @ 25 °C
+D_W_exp_mean = 6.92e-10 * TK(3) / eta_W((3)) * 1e-5;
 
 ## NogamiH1962et, polarographic, T = 295.65 K
 ##
@@ -143,9 +148,9 @@ csat_PT_NK = ds.data{3}; # mol/l
 ##phi_PT_NK = [2.6 2.57 2.45 2.3 2.06]; # association factor Wilke Chang
 ## conversion
 mf_PT_NK = vf_PT_NK.*rho_PT(2) ./ (vf_PT_NK.*rho_PT(2) + (1-vf_PT_NK).*rho_W(2));
-eta_NK = get_fp_tab (pdir, fname="glycerol-water", pname="eta", T_get=T_NK, mf_get=mf_PT_NK, ext=[]);
-eta_NK_T25 = get_fp_tab (pdir, fname="glycerol-water", pname="eta", T_get=TK(3), mf_get=mf_PT_NK, ext=[]);
-D_PT_NK_T25 = D_PT_NK .* (TK(2)) ./ T_NK .* eta_NK ./ eta_NK_T25; # temperature correction
+eta_PT_NK = get_fp_tab (pdir, fname="glycerol-water", pname="eta", T_get=T_NK, mf_get=mf_PT_NK, ext=[]);
+eta_PT_NK_T25 = get_fp_tab (pdir, fname="glycerol-water", pname="eta", T_get=TK(3), mf_get=mf_PT_NK, ext=[]);
+D_PT_NK_T25 = D_PT_NK .* (TK(2)) ./ T_NK .* eta_PT_NK ./ eta_PT_NK_T25; # temperature correction
 csat_PT_NK = csat_PT_NK * mm_O2 * 1e6; # mg/l
 ##
 ## PD
@@ -156,9 +161,9 @@ ds = get_fp_dataset (fp, {"PD_W"}, {"c_sat"}, {"NogamiH1962et"});
 csat_PD_NK = ds.data{3}; # mol/l
 ## conversion
 mf_PD_NK = vf_PD_NK.*rho_PD(2) ./ (vf_PD_NK.*rho_PD(2) + (1-vf_PD_NK).*rho_W(2));
-eta_NK = get_fp_tab (pdir, fname="propylene glycol-water", pname="eta", T_get=T_NK, mf_get=mf_PD_NK, ext=[]);
-eta_NK_T25 = get_fp_tab (pdir, fname="propylene glycol-water", pname="eta", T_get=TK(3), mf_get=mf_PD_NK, ext=[]);
-D_PD_NK_T25 = D_PD_NK .* (TK(2)) ./ T_NK .* eta_NK ./ eta_NK_T25; # temperature correction
+eta_PD_NK = get_fp_tab (pdir, fname="propylene glycol-water", pname="eta", T_get=T_NK, mf_get=mf_PD_NK, ext=[]);
+eta_PD_NK_T25 = get_fp_tab (pdir, fname="propylene glycol-water", pname="eta", T_get=TK(3), mf_get=mf_PD_NK, ext=[]);
+D_PD_NK_T25 = D_PD_NK .* (TK(2)) ./ T_NK .* eta_PD_NK ./ eta_PD_NK_T25; # temperature correction
 csat_PD_NK = csat_PD_NK * mm_O2 * 1e6; # mg/l
 
 ## JordanJ1956etal, polarographic, T = 25°C
@@ -177,6 +182,25 @@ mf_Jetal = mf_org_Jetal;
 D_Jetal = D_org_Jetal * 1e-4; # m^2 / s
 Da_Jetal = Da_org_Jetal * 1e-4; # m^2 / s
 c_mg_Jetal = c_org_Jetal * mm_O2 * p_O2/p_total * 1e3; # mg/l
+
+
+## checking the slope vs. viscosity
+##
+mre_deta_NK = 1./(eta_PD_NK_T25).^mre_PD;
+mre_deta_NK_PT = 1./(eta_PT_NK_T25).^0.9;
+mre_deta_Jetal = 1./(eta_Jetal*1e-3).^mre_PT;
+fh = figure (); hold on;
+loglog (eta_PD_NK_T25, D_PD_NK_T25, "d;PD exp. NogamiH1962et;")
+loglog (eta_PT_NK_T25, D_PT_NK_T25, "x;PT exp. NogamiH1962et;")
+loglog (eta_Jetal*1e-3, D_Jetal, "s;PT exp. JordanJ1956etal;")
+loglog (eta_PD_NK_T25, D_PD_NK_T25(1).*mre_deta_NK./mre_deta_NK(1), ";slope mre=0.66;")
+loglog (eta_PT_NK_T25, D_PT_NK_T25(1).*mre_deta_NK_PT./mre_deta_NK_PT(1), ";slope mre=0.8;")
+loglog (eta_Jetal*1e-3, (D_Jetal(2)+D_Jetal(1))/2.*mre_deta_Jetal./mre_deta_Jetal(1), ";slope mre=0.5;")
+xlabel ("dynamic viscosity in Pa s")
+ylabel ("diffusivity in m^2 / s")
+box on
+print (fh, "-djpeg", "-color", ["-r" num2str(500)], [pdir.plot "diffusivity/" "loglog_D_eta"]);
+
 
 ##
 ## PLIF diffusion front measurements GerkeSJexp
@@ -323,17 +347,17 @@ c_sat_iupac_fit = 1e3 * fp_mc_mf (rho_PT_W_model(0,T_fit), rho_O2, mf_O2_iupac_f
 cx = @(p) 2.25e-6 * p + 0; # moles/litre, p in mmHg
 csat_PD_O = 1e6 * cx (160) * mm_O2  # mg/l
 
-## corection of the polarographic diffusivity measurements by solubility based on Ilkovic eq. - possible?
+## correction of the polarographic diffusivity measurements by solubility based on Ilkovic eq. - possible?
 ##
 ##csat_W = c_mg_Jetal(1); # mg/l @ 25°C
 csat_Jetal_corr = f_c_mg_Retal (csat_W(3), Kn_PT(3), fp_mc_mf(rho_W(3), rho_PT(3), mf_Jetal));
 Dcorr_Jetal = 1 .* (csat_Jetal_corr ./ c_mg_Jetal).^2;
 ##
 csat_NK_PT_corr = f_c_mg_Retal (csat_W(2), Kn_PT(2), fp_mc_mf(rho_W(2), rho_PT(2), mf_PT_NK));
-Dcorr_NK = 1 .* (csat_NK_PT_corr ./ csat_PT_NK ).^2;
+Dcorr_NK_PT = 1 .* (csat_NK_PT_corr ./ csat_PT_NK ).^2;
 csat_NK_PD_corr = f_c_mg_Retal (csat_W(2), Kn_PD(2), fp_mc_mf(rho_W(2), rho_PD(2), mf_PD_NK));
 Dcorr_NK_PD = 1 .* (csat_NK_PD_corr ./ csat_PD_NK ).^2;
-
+Dcorr_NK_PD = [Dcorr_NK_PD(1:7) median(Dcorr_NK_PD(1:7))*[1 1 1 1]];
 ## ri matching values for this study
 c_sat_PT_RI_match = f_c_mg_Retal(csat_W(3), Kn_PT(3), fp_mc_mf(rho_W(3), rho_PT(3), mf_SJG_PT))
 c_sat_PD_RI_match = mean ([c_mg_Y(8) c_mg_PD_SJG_min(4)])

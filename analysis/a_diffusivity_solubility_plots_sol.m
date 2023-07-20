@@ -38,7 +38,7 @@ plot(fp_mf_mc (rho_W(3), rho_PT(3), [0:10:rho_PT(3)]), f_c_mg_Retal(csat_W(3), K
 plot(fp_mf_mc (rho_W(4), rho_PT(4), [0:10:rho_PT(4)]), f_c_mg_Retal(csat_W(4), Kn_PT(4), [0:10:rho_PT(4)]),"k-;corr. @30°C RischbieterE1996etal;", "linewidth", 1);
 legend ("location", "eastoutside")
 ##
-print (fh, "-dpng", "-color", ["-r" num2str(1000)], [save_dir "fig_csat_water-glycerol_mf"]);
+print (fh, "-dpng", "-color", ["-r" num2str(500)], [save_dir "fig_csat_water-glycerol_mf"]);
 ## output
 plt_1_h = {mfilename, date; "mf_PT", "c_sat in mg/l; exp. @25°C UMS min. stirred GerkeSJxexp"};
 plt_1_d = [mf_PT_SJG' c_mg_PT_SJG_min'];
@@ -95,7 +95,7 @@ plot (mf_PD_SJG, c_mg_PD_SJG_min, "-.ko;exp. @25°C UMS min. stirred GerkeSJxexp
 plot(fp_mf_mc (rho_W(3), rho_PD(3), [0:10:rho_PD(3)]), f_c_mg_Retal(csat_W(3), Kn_PD(3), [0:10:rho_PD(3)]),"k-;corr. @25°C RischbieterE1996etal;", "linewidth", 1);
 legend ("location", "eastoutside")
 ##
-print (fh, "-dpng", "-color", ["-r" num2str(1000)], [save_dir "fig_csat_water-propylene glycol_mf"]);
+print (fh, "-dpng", "-color", ["-r" num2str(500)], [save_dir "fig_csat_water-propylene glycol_mf"]);
 ## output
 plt_1_h = {mfilename, date; "mf_PD", "c_sat in mg/l; exp. @25°C UMS min. stirred GerkeSJxexp"};
 plt_1_d = [mf_PD_SJG' c_mg_PD_SJG_min'];
@@ -146,7 +146,7 @@ xlabel ("T in K")
 ylabel ("c_s_a_t in mg/l")
 title ("oxygen solubility in water for air (20% O_2, 80% N_2) @ 25°C")
 ##
-print (fh, "-dpng", "-color", ["-r" num2str(1000)], [save_dir "fig_csat_water_T"]);
+print (fh, "-dpng", "-color", ["-r" num2str(500)], [save_dir "fig_csat_water_T"]);
 ## output
 plt_1_h = {mfilename, date; "T_iupac", "(MiyamotoH2014etal, smoothed exp. of RettichTR2000etal) oxygen solubility in water for air (20 % O2) @ 25°C"};
 plt_1_d = [T_iupac' c_sat_iupac'];
