@@ -17,10 +17,9 @@ pp.liquid.data = "WG141";
 pp.tol_if.data = 10;
 pp.y0_if_c.data = 4.5;
 ##
-profile_depth = 1.0; # mm
+profile_depth = 1.2; # mm
 
-proc_type = "2d_diff";
-save_dir = [pdir.plot proc_type "/"];
+save_dir = [pdir.plot "a_2d_diff" "/"];
 
 ##
 ## load data
@@ -32,8 +31,8 @@ sm = size (c_dat{1});
 c_msh = mesh_uc ([1 sm(2)], [1 sm(1)], [], [], pp, "c", []);
 ##
 u_dat = {}
-##fnames = glob ([pdir.data "20220302/M1/1/" "*PIV*"]); l_id = "on"; # laser on, after diff measurement
-fnames = glob ([pdir.data "20220302/M1/2/" "*PIV*"]); l_id = "off"; # laser off, two minutes later
+fnames = glob ([pdir.data "20220302/M1/1/" "*PIV*"]); l_id = "on"; # laser on, after diff measurement
+##fnames = glob ([pdir.data "20220302/M1/2/" "*PIV*"]); l_id = "off"; # laser off, two minutes later
 recs_u = read_recu (fnames{end});
 u_dat = u_reshape (recs_u{end});
 sm = size (u_dat{1});
@@ -115,15 +114,16 @@ xrange = [-4 5];
 S = snp*1e3;
 X = c_msh{1}(1,x_idx_min:x_idx_max);
 [SS, XX] = meshgrid (S, X);
-[SI, XI] = meshgrid ([0:50e-3:1], [-2.2:50e-3:-1.8]);
+sf_ui = sf_u/2;
+[SI, XI] = meshgrid ([0:sf_ui:1.2], [-2.4:sf_ui:-1.6]);
 uprint = [];
 for i=1:4
   uprint{i} = uprofiles{i}(x_idx_min:x_idx_max,:);
-  uprint{i} = interp2 (SS,XX,uprint{i},SI,XI);
+  uprint{i} = interp2 (SS, XX, uprint{i}, SI, XI, "pchip", 0.0);
 endfor
 for i=1:3
   upprint{i} = up{i}(x_idx_min:x_idx_max,:);
-  upprint{i} = interp2 (SS, XX, upprint{i}, SI, XI);
+  upprint{i} = interp2 (SS, XX, upprint{i}, SI, XI, "pchip", 0.0);
 endfor
 
 ## velocity field in the COS of lines mesh
@@ -134,7 +134,7 @@ um2d = vec_mag (uprint{1}, uprint{2});
 [uxn, uyn] = vec_uni_len (upprint{1}, upprint{2});
 surf (SI, XI, um2d);
 shading interp
-quiver3 (SI+25e-3, XI+25e-3, ones(size(uyn)), uyn, uxn, zeros(size(uyn)), scale=0.4, color="k", "linewidth",0.3);
+quiver3 (SI+sf_ui/2, XI+sf_ui/2, ones(size(uyn)), uyn, uxn, zeros(size(uyn)), scale=0.4, color="k", "linewidth",0.3);
 colormap viridis
 colorbar
 xlabel ("sn in mm")
@@ -147,7 +147,7 @@ print (fh, "-djpeg", "-color", ["-r" num2str(1000)], ["velocity-field_" num2str(
 
 ## output vector field for tikz
 plt_1_h = {mfilename, date, "", "", ""; "s in mm", "t in mm", "u_s normalized", "u_t  normalized", "u_m in m/s"};
-plt_1_d = [SI(:)+25e-3 XI(:)-25e-3+2 uxn(:) uyn(:) um2d(:)];
+plt_1_d = [SI(:)+sf_ui/2 XI(:)-sf_ui/2+2 uxn(:) uyn(:) um2d(:)];
 plt_2_h = {mfilename, date, ""; "s in mm", "t in mm", "u_mag in µm/s"};
 plt_2_d = [SI(:) XI(:)+2 um2d(:).*1e6];
 cell2csv (["vec_" num2str(m_id) "_laser_" l_id "_h.csv"], plt_1_h)

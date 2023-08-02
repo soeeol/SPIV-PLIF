@@ -40,7 +40,7 @@ endswitch
 axis equal
 axis off
 grid off
-print (fh, "-dpng", "-color", ["-r" num2str(1000)], [save_dir_m "/fig_diff_chamber_Iq"]);
+print (fh, "-dpng", "-color", ["-r" num2str(1000)], [save_dir_p "/fig_diff_chamber_Iq"]);
 ##
 switch pp.liquid.data
   case {"WG141"}
@@ -53,7 +53,7 @@ endswitch
 axis equal
 axis off
 grid off
-print (fh, "-dpng", "-color", ["-r" num2str(1000)], [save_dir_m "/fig_diff_chamber_cn"]);
+print (fh, "-dpng", "-color", ["-r" num2str(1000)], [save_dir_p "/fig_diff_chamber_cn"]);
 ##
 plt_1_h = {mfilename, date; "x in mm", "interace height in mm"};
 plt_1_d = [pxy_15(:,1) pxy_15(:,2)];
