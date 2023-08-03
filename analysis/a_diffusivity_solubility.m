@@ -29,7 +29,7 @@ rho_O2 = 101325 ./ (const_ug ./ mm_O2 .* TK(3));
 ## oxygen diffusivity
 ##
 
-## Stokes-Einstein eq.
+## Stokes-Einstein equation
 f_D_SE      = @ (T, r_A, eta_B) const_ug .* T ./ const_na ./ (6 .* pi .* eta_B .* r_A);
 f_D_SE_slip = @ (T, r_A, eta_B) const_ug .* T ./ const_na ./ (4 .* pi .* eta_B .* r_A);
 r_O2 = 1/2 * (mv_O2 / const_na) ^ (1/3); # rough oxygen molecular radius estimate
@@ -37,6 +37,8 @@ D_PT_SE = f_D_SE_slip (T=TK(3), r_O2, [eta_W(3), eta_PT_W(2:end)]');
 D_PD_SE = f_D_SE_slip (T=TK(3), r_O2, eta_PD_W');
 
 ## Wilke-Chan correlation
+##
+## Wilke and Chang (1955)
 ##
 ## original Wilke-Chang formulation for D in cm^2/s:
 ## D = 7.4e-8 * T * sqrt (phi_B * mm_B) / (eta_B * mv_A^(0.6))
@@ -57,6 +59,7 @@ mm_PDW_solvent = fp_mm_mf (mf, mm_PD, mm_W);
 mv_solute = fp_mv_bp_TC (mv_crit_O2);
 
 ## PerkinsLR1969et: apply Wilke and Chang for solvent mixture
+## Perkins and Geankoplis (1969), doi: 10.1016/0009-2509(69)80075-8.
 ## PD:
 x_PD = fp_mx_mf (mf, mm_PD, mm_PDW_solvent);
 ## with mixing rule:
@@ -70,16 +73,18 @@ D_Am_PT_WC = f_DAB_WC (K_SI, phi_B=1, mm_B=phi_mm_PTW', eta_B=eta_PT_W', mv_A=mv
 
 ## effective diffusivity from binary diff coeff for gas dissolved in mix of two solvents
 ## HimmelblauDM1964, Tang, "crude estimate"
+## Himmelblau (1964), doi: 10.1021/cr60231a002.
 ## Dim * sqrt(eta_m) = x_2 * D_W * sqrt (eta_2) + x_3 * D_PT * sqrt (eta_3)
 
 ## correlation of SitaramanR1963etal
+## Sitaraman et al. (1963), doi: 10.1021/je60017a017.
 f_DAB_S = @ (Ls, L, mm_B, eta_B, mv_A, T) 8.75e-17 * ((Ls^1/3 .* mm_B.^1/2 .* T) ./ (eta_B .* mv_A.^0.5 .* L^0.3)) .^ 0.93;
 ## Ls solvent , L solute latent heat of vaporization in kJ/kg
 ## O2 6.82 kJ/mol, glycerol 85.8 kJ/mol, water 44.2 kJ/mol
 D_PD_S = f_DAB_S (Ls=L_PD, L=L_O2, mm_PD, eta_PD_W(end), mv_solute, TK(3))
 D_PT_S = f_DAB_S (Ls=L_PT, L=L_O2, mm_PT, eta_3=eta_PT_W(end), mv_solute, TK(3))
 D_W_S = f_DAB_S (Ls=L_W, L=L_O2, mm_W, eta_2=eta_W(3), mv_solute, TK(3))
-## PT:
+## mixing rule of PerkinsLR1969et
 mre_PT = 0.5;
 x_2 = fp_mx_mf (1-mf, mm_W, mm_PTW_solvent);
 x_3 = fp_mx_mf (mf, mm_PT, mm_PTW_solvent);
@@ -87,7 +92,6 @@ eta_2 = eta_W(3);
 eta_3 = eta_PT_W(end);
 eta_m = [eta_W(3) eta_PT_W(2:end)];
 Dim_S_PT = (x_2*D_W_S*eta_2.^mre_PT + x_3*D_PT_S*eta_3.^mre_PT) ./ eta_m.^mre_PT;
-## PD:
 mre_PD = 0.66;
 x_2 = fp_mx_mf (1-mf, mm_W, mm_PDW_solvent);
 x_3 = fp_mx_mf (mf, mm_PD, mm_PDW_solvent);
@@ -96,21 +100,19 @@ eta_3 = eta_PD_W(end)
 eta_m = eta_PD_W;
 Dim_S_PD = (x_2*D_W_S*eta_2.^mre_PD + x_3*D_PD_S*eta_3.^mre_PD) ./ eta_m.^mre_PD;
 
-
-
 ## fully emperical corrleation of DiazM1987etal @ 25 °C
+## Díaz et al. (1987), doi: 10.1080/00986448708911872.
 ## viscosity proportionality is relaxed vs. Stokes-Einstein type correlations
 ##f_DAB_DM = @ (mv_A, mv_B, eta_B) 1e-4 * 6.02e-5 * ( (mv_B*1e6)^0.36 / ((eta_B*1e3)^0.61 * (mv_A*1e6)^0.64) ); # simplyfied option
 f_DAB_DM = @ (mv_A, mv_B, eta_B) 1e-4 * 6.02e-5 * ( (mv_B*1e6)^0.36 / ((eta_B*1e3)^0.61 * (mv_A*1e6)^(0.43*(mv_B*1e6)^0.13)) );
-
 D_W_DM  = f_DAB_DM (mv_A=fp_mv_bp_TC(mv_crit_O2), mv_B=fp_mv_bp_TC(mv_crit_W),  eta_B=eta_W(3))
 D_PT_DM = f_DAB_DM (mv_A=fp_mv_bp_TC(mv_crit_O2), mv_B=fp_mv_bp_TC(mv_crit_PT), eta_B=eta_PT_W(end))
 D_PD_DM = f_DAB_DM (mv_A=fp_mv_bp_TC(mv_crit_O2), mv_B=fp_mv_bp_TC(mv_crit_PD), eta_B=eta_PD_W(end))
 ##D_PD_DM = 5.9e-10;
 D_WPT_DM  = f_DAB_DM (mv_A=fp_mv_bp_TC(mv_crit_W), mv_B=fp_mv_bp_TC(mv_crit_PT),  eta_B=eta_PT_W(end))
+## mixing rule of PerkinsLR1969et
 Dim_DM_PT = (x_2 * D_W_DM * eta_2.^mre_PT + x_3 * D_PT_DM * eta_3.^mre_PT) ./ eta_m.^mre_PT;
 Dim_DM_PD = (x_2 * D_W_DM * eta_2.^mre_PD + x_3 * D_PD_DM * eta_3.^mre_PD) ./ eta_m.^mre_PD;
-
 
 ## correlation Tyn Calus 1975
 ## ... note that this should not be used for viscous solvents, they consider above 20-30 mPas as viscous
@@ -125,7 +127,6 @@ Dim_DM_PD = (x_2 * D_W_DM * eta_2.^mre_PD + x_3 * D_PD_DM * eta_3.^mre_PD) ./ et
 #### f_DAB_WC: water in glycerol ## 4.1896e-12 vs exp D ~ 1.4e-11
 ##f_DAB_WC (K_SI, phi_B=phi_PT, mm_B=mm_PT, eta_B=eta_PT_W(end), mv_A=fp_mv_bp_TC (mv_crit_W), T=TK(3))
 
-
 ##
 ## experimental studies
 ##
@@ -133,11 +134,12 @@ Dim_DM_PD = (x_2 * D_W_DM * eta_2.^mre_PD + x_3 * D_PD_DM * eta_3.^mre_PD) ./ et
 ## difusivity for O2 in water is well established, still results ranging from 1.87e-9 to 2.6e-9 m^2/s @ 25 °C
 ##
 ## Diffusivity of oxygen in water by StDenisCE1971et
+## St-Denis and Fell (1971), doi: 10.1002/cjce.5450490632.
 ##D_W_exp_mean = [2.31e-9]; # @ 25 °C
 D_W_exp_mean = 6.92e-10 * TK(3) / eta_W((3)) * 1e-5;
 
 ## NogamiH1962et, polarographic, T = 295.65 K
-##
+## Nogami and Kato (1962), doi: 10.1248/yakushi1947.82.1_120.
 ## PT
 ds = get_fp_dataset (fp, {"PT_W"}, {"D_AB"}, {"NogamiH1962et"});
 T_NK = ds.data{1};
@@ -167,6 +169,7 @@ D_PD_NK_T25 = D_PD_NK .* (TK(2)) ./ T_NK .* eta_PD_NK ./ eta_PD_NK_T25; # temper
 csat_PD_NK = csat_PD_NK * mm_O2 * 1e6; # mg/l
 
 ## JordanJ1956etal, polarographic, T = 25°C
+## Jordan et al. (1956), doi: 10.1021/ja01594a015.
 ## TODO: move to fluidprop collection
 ##
 ## PT
@@ -183,9 +186,7 @@ D_Jetal = D_org_Jetal * 1e-4; # m^2 / s
 Da_Jetal = Da_org_Jetal * 1e-4; # m^2 / s
 c_mg_Jetal = c_org_Jetal * mm_O2 * p_O2/p_total * 1e3; # mg/l
 
-
-## checking the slope vs. viscosity
-##
+## checking the slope of D vs. viscosity
 mre_deta_NK = 1./(eta_PD_NK_T25).^mre_PD;
 mre_deta_NK_PT = 1./(eta_PT_NK_T25).^0.9;
 mre_deta_Jetal = 1./(eta_Jetal*1e-3).^mre_PT;
@@ -201,10 +202,10 @@ ylabel ("diffusivity in m^2 / s")
 box on
 print (fh, "-djpeg", "-color", ["-r" num2str(500)], [pdir.plot "diffusivity/" "loglog_D_eta"]);
 
+##
+## PLIF diffusion front measurements
+##
 
-##
-## PLIF diffusion front measurements GerkeSJexp
-##
 ## master thesis; 25°C; considered as rough estimate, variance was extremely high with convective currents
 mf_M_PT = 0.59;
 D_M_PT = 0.344e-9;
@@ -219,27 +220,32 @@ D_SJG_PT_2 = D_AB.PLIF2;
 D_SJG_PD_1 = D_AB.PLIF1;
 D_SJG_PD_2 = D_AB.PLIF2;
 
-## other PLIF experiments; solvent: water-ethanol-glycerol !
+## other PLIF experiments; solvent: water - ethanol - glycerol !
 ##
-## JimenezM2012etal-1
+## JimenezM2012etal
+## Jimenez et al. (2012), doi: 10.1002/aic.13805.
 ## 50 W 20 E 30 PT mass fraction
-mf_PT_J = 0.30;
-rho_J = 1042;
-eta_J = 2.4e-3;
+mf_PT_J = [0 0.2 0.3];
+rho_J = [970 1029 1042];
+eta_J = [1 1.7 2.4] * 1e-3;
 T_J = 20 + 273.15;
-D_J_3 = 9.47e-10; # case 3
-D_J_3_T25 = D_J_3 * (25 + 273.15) / T_J * (eta_J / 2e-3); # estimate for 25°C
+D_J_3 = [19 12 9.47] * 1e-10; # case 3
+D_J_3_T25 = D_J_3 .* (25 + 273.15) / T_J * eta_W(3)/eta_J(1); # estimate for 25°C
+
 ## KapoustinaV2019etal
+## Kapoustina et al. (2019), doi: 10.1016/j.cherd.2019.04.022.
 ## 20 W 30 E 50 PT mass fraction
 mf_PT_K = 0.50;
-eta_K = 9.4e-3; # measured at 25°C ...
+eta_K = 9.4e-3; # measured at 25°C
 rho_K = 1053;
 D_K = 3.76e-10;
 T_K = 28 + 273.15; # T = 28°C
 D_K_T25 = D_K * (25 + 273.15) / T_K * (1.1447); # estimate for 25°C
 
-##
 ## comparison solute water in solvent pure glycerol
+##
+## ErricoG2004etal
+## D‘Errico et al. (2004), doi: 10.1021/je049917u.
 ## @25°C
 D_PT_DErrico = D_water_glycerol = 1.4e-11;
 
@@ -247,7 +253,6 @@ D_PT_DErrico = D_water_glycerol = 1.4e-11;
 ## oxygen solubility
 ##
 
-## GerkeSJexp
 ## Own csat measurements with UMS micro sensor in stirred beaker glas
 ## unknown how to measure reliably in viscous media with UMS micro sensor
 ## min flow for non decreasing reading needed to compensate oxygen consumption of probe
@@ -258,9 +263,9 @@ mf_PD_SJG = [0 0.2 0.4 0.725 0.85 0.975];
 c_mg_PD_SJG_min = [8.2 7 6 6.5 7.15 8.5];
 
 ## KutscheI1984etal
-##
-mf_Ketal = 1e-2*[1.31	2.52	3.74	6.16	9.18	12.21	15.23	18.26]; # glycerol
-aipera0 = [0.971	0.967	0.953	0.931	0.902	0.873	0.844	0.815]; # - @ 25°C
+## Kutsche et al. (1984), doi: 10.1021/je00037a018.
+mf_Ketal = 1e-2 * [1.31 2.52 3.74 6.16 9.18 12.21 15.23 18.26]; # glycerol
+aipera0 = [0.971 0.967 0.953 0.931 0.902 0.873 0.844 0.815]; # - @ 25°C
 a0 = 0.0284; # lit.; Bunsen coefficient in water
 a0 = 0.0279; # exp.; Bunsen coefficient in water
 ai = aipera0 * a0;
@@ -271,15 +276,12 @@ c_mg_Ketal = 1e3 * mm_O2 .* p_O2 .* ([Hscp_0 Hscp_i]); # mg/l
 ## K_b = 4.74
 
 ## RischbieterE1996etal
-##
+## Rischbieter et al. (1996), doi: 10.1021/je960039c.
 ## experimental, T = 303.2 K
 m_org_Retal = [0 23.4 46.8 92.7 138 209 492 691]; # kg/m^3, kg of glycerol per m^3
 H_org = 1e3*[88.5 90 94.5 98.8 99.7 107 149.7 203.5]; # Henry's Const in Pa m^3 mol^-1
 mf_Retal = fp_mf_mc (rho_W(4), rho_PT(4), m_org_Retal); # mass fraction in g/g
 c_mg_Retal = mm_O2*1e3 * p_O2 ./ H_org; # x from p = H x in mg/l
-
-## RischbieterE1996etal
-##
 ## model
 f_Kn = @(bn, bgH2O, bgT, T) bn + bgH2O + bgT .* (T - 298.15);
 f_c_mg_Retal = @ (csat_W, Kn, cn) csat_W ./ (10.^(Kn .* (cn)));
@@ -298,7 +300,7 @@ Kn_PD = f_Kn (bn_PD, bgH2O, bgT, T=TK);
 ##bn = 5.25 * 1e-4; # gylcerol m^3 kg^-1  # matches the slope for higer mass fraction
 
 ## YamamotoH1994etal
-##
+## Yamamoto et al. (1994), doi: 10.1252/jcej.27.455.
 ## @ 25°C and 1 atm
 ds = get_fp_dataset (fp, {"PD_W"}, {"c_sat"}, {"YamamotoH1994etal"});
 ##mx_PD_Y = ds.data{2}; # mole fraction propylene glycol
@@ -310,11 +312,10 @@ vf_PD_Y = fp_mf_mx (ds.data{2}, mm_PD/rho_PD(3), mm_W/rho_W(3));
 rho_ideal = p_total / (const_ug / mm_air * TK(3));
 c_mg_Y = 1e3 * ds.data{3} * mf_O2 * rho_ideal;
 
-
 ## oxygen in water
 T_fit = [270:1:330];
 ## BensonBB1979etal
-## oxygen in water
+## Benson et al. (1979), doi: 10.1007/bf01033696.
 ##
 ## f = k * x, assuming ideal gas for air here: p = k x
 ##
@@ -327,7 +328,9 @@ mf_sat_Benson_fit = fp_mf_mx ((p_O2/p_total) ./ f_k_x_Benson(T_fit), mm_O2, mm_W
 c_sat_Benson_fit = 1e3 * fp_mc_mf (rho_PT_W_model(0,T_fit), rho_O2, mf_sat_Benson_fit); # mg/l
 
 ## MiyamotoH2014etal IUPAC solubility series:
+## Miyamoto et al. (2014), doi: 10.1063/1.4883876.
 ## tabulated smoothed values based on RettichTR2000etal
+## Rettich et al. (2000), doi: 10.1006/jcht.1999.0581.
 ## oxygen in water
 T_iupac = [273.15 278.15 283.15 288.15 293.15 298.15 303.15 308.15 313.15 318.15 323.15 328.15];
 H_iupac = 1e9 * [2.5591 2.9242 3.2966 3.6708 4.0415 4.4038 4.7533 5.0859 5.3985 5.6882 5.9531 6.1917];
@@ -342,12 +345,12 @@ mf_O2_iupac_fit = fp_mf_mx (p_O2 ./ f_k_x(T_fit), mm_O2, mm_W); # g/g
 c_sat_iupac_fit = 1e3 * fp_mc_mf (rho_PT_W_model(0,T_fit), rho_O2, mf_O2_iupac_fit); # mg/l
 
 ## O2 in 1,2-propanediol solubility @ 25°C experimental by OsborneAD1965et
-##
+## Osborne and Porter (1965), http://www.jstor.org/stable/2415099
 ##cx = @(p) 6/300 * p + 0; # 1e4 moles/litre, p in mmHg
 cx = @(p) 2.25e-6 * p + 0; # moles/litre, p in mmHg
 csat_PD_O = 1e6 * cx (160) * mm_O2  # mg/l
 
-## correction of the polarographic diffusivity measurements by solubility based on Ilkovic eq. - possible?
+## correction of the polarographic diffusivity measurements by solubility based on Ilkovic equation
 ##
 ##csat_W = c_mg_Jetal(1); # mg/l @ 25°C
 csat_Jetal_corr = f_c_mg_Retal (csat_W(3), Kn_PT(3), fp_mc_mf(rho_W(3), rho_PT(3), mf_Jetal));
