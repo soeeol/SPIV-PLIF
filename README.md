@@ -3,7 +3,7 @@
 Scripts and functions utilized to analyze a variety of fluid dynamic and mass transfer experiments as part of my PhD project. The measurements are performed with a setup combining SPIV (Stereo Particle Image Velocimetry) and PLIF (Planar Light Induced Fluorescence) for the investigation of velocity and concentration distribution in liquid films over flat and non-flat plates.
 
 ---
-## PLIF diffusivity measurement
+## Diffusivity
 
 - [main processing script](processing/p_2d_diff.m)
 
@@ -11,16 +11,26 @@ Scripts and functions utilized to analyze a variety of fluid dynamic and mass tr
 
 ### Section of measured dissolved oxygen normalized concentration field highlighting the diffusion front:
  
-Glycerol - Water   ( 58.1 : 41.9 %wt ) :
+Glycerol - Water ( 58.1 %wt - 41.9 %wt ) :
 
 ![img](supplemental/out1.gif)
 
-Propylene Glycol - Water   ( 72.5 : 27.5 %wt ) :
+Propylene Glycol - Water ( 72.5 %wt: 27.5 %wt ) :
 
 ![img](supplemental/out2.gif)
 
 
 (with $s_n$ the coordinate normal to the gas-liquid interface)
+
+---
+
+## Film Flow Over Structures
+
+### Flat Plate
+
+- [main processing script](processing/p_2d_avg_uIc1.m)
+
+- [main anaylsis script](analysis/a_flat/a_flat_main.m)
 
 ---
 

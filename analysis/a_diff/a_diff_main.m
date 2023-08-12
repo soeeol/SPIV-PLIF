@@ -36,7 +36,7 @@ if 1
 
   testplots = false
 
-  ## c* at max. 2nd. derivative: erfc (n_front / a) =
+  ## c* at max. 2nd. derivative
   cddsnm = erfc (1 / sqrt(2))
 
   ## available processed measurements
@@ -63,7 +63,7 @@ if 1
       ## logged times @ frames recorded
       t_s{1} = [0]; # s ... desorbed
       t_s{2} = [1:79];
-      t_s{3} = 260;
+      t_s{3} = 200;
       t_s{4} = 545;
       t_s{5} = 955;
       t_s{6} = 1425;
@@ -72,7 +72,7 @@ if 1
 endif
 
 ## (1) cn, cp, sn_D
-if 0
+if 1
   ## load processed data (aligned, interpolated on common grid)
   ldirs = glob ([pdir.processed measid "/" "*___" proc_type(3:end) "/"]);
   ldir = ldirs{end} # newest processing result
@@ -213,7 +213,7 @@ if 0
     xlim ([0 profile_depth])
     xlabel ("s in mm")
     ylabel ("cn");
-    for i = 2:numel (cn_s)
+    for i = 1:numel (cn_s)
       plot (snp*1e3, cp(i,:))
       title (["idx = " num2str(i) " , nt = " num2str(tn(i)) ]);
       pause (0.5)
@@ -223,7 +223,8 @@ if 0
   ## bulk and interface estimate for c profile normalization
   cp_b = cp_s = [];
   for i = 1:numel (cn_s)
-    cp_b(i) = min (movmean (cp(i,:), 21));
+    cp_b(i) = min (movmean (cp(i,:), 81));
+##    cp_b(i) = 0.0;
     cp_s(i) = cp(i,1);
   endfor
   ##
@@ -254,7 +255,7 @@ if 0
   if testplots
     figure (); hold on;
     ylim ([0 1]); xlim ([0 profile_depth]); xlabel ("s in mm"); ylabel ("cn");
-    for i = 2:numel (tn)
+    for i = 1:numel (tn)
       plot (snp*1e3, cp_n(i,:))
       title (["idx = " num2str(i) " , t = " num2str(tn(i)) ]);
       pause (0.5)
@@ -272,29 +273,57 @@ if 0
   ##
   p_fit = fitrange = cell (1, numel (tn));
   p_fit(:) = init;
-  a_fit = sn_D = zeros (1, numel (tn));
+  a_fit = sn_D = delta_fit = zeros (1, numel (tn));
   ##
+  switch measid
+    case {"DIFF_M13_A15_T25_WG141_M_G002_X_Z"}
+      sig = 16
+      idx_r = [16 2];
+    case {"DIFF_M26_A15_T25_WP141_M_G002_X_Z"}
+      sig = 32
+      idx_r = [32 4];
+  endswitch
+  if testplots
+    fh = figure ();
+  endif
   cp_nn = cp_n;
   cn0 = ones (1, numel (tn));
+  dcds_idx = numel(snp);
+##
   for i = 1:numel (tn)
     p_fit{i} = init;
-    spf = splinefit (snp(1:end), cp_n(i,1:end), 20, "order", 3);
-    d1s = ppval (ppder(spf), snp(1:end));
-    [PKS, LOC, ~] = findpeaks (abs (d1s));
-    [~, LOCm] = max (PKS);
-    idx_maxd1s = LOC(LOCm);
-  ##  fitrange{i} = [idx_maxd1s-1:min(idx_maxd1s+1+tn(i), numel (snp))];
-    fitrange{i} = [idx_maxd1s-1:numel(snp)];
-    if i == 1
-      fitrange{i} = [1:10];
-    endif
+    cprof_tmp = imsmooth (cp_n(i,1:end), sig);
+    [~, idx_max_dcds] = min (gradient (cprof_tmp(1:end)));
+    idx_max_dcds = idx_max_dcds;
+    fit_l = max (idx_r(2), idx_max_dcds-idx_r(1));
+    fit_u = numel(snp);
+    fitrange{i} = [fit_l:fit_u];
   ##  try
       [p_fit{i}, ~] = nonlin_curvefit (c_fitf, init, snp(fitrange{i})', (cp_n(i,fitrange{i}))', settings);
       cn0(i) = c_fitf (p_fit{i}, 0);
-      cp_nn(i,1:idx_maxd1s+1) = c_fitf (p_fit{i}, snp(1:idx_maxd1s+1));
+      cp_nn(i,1:idx_max_dcds) = c_fitf (p_fit{i}, snp(1:idx_max_dcds));
       cp_nn(i,:) = cp_nn(i,:) / cn0(i);
       a_fit(i) = p_fit{i}(1) * 1e-4;
       sn_D(i) = a_fit(i) / sqrt(2);
+      delta_fit(i) = a_fit(i) * sqrt(pi) / 2;
+      if testplots
+        hold on;
+        plot (snp, cp_n(i,:)/cn0(i), "b-")
+        plot (snp, cp_nn(i,:), "k-")
+        plot (snp, cprof_tmp/cn0(i), "m-")
+        plot (snp(idx_max_dcds), cp_n(i,idx_max_dcds)/cn0(i), "r-*")
+        plot (snp, c_fitf(p_fit{i},snp)/cn0(i), "g")
+        plot ([0 0], [0 1.1], "k")
+        plot ([0 delta_fit(i)], [1 0], "r")
+        title (num2str(i))
+        title ([num2str(tn(i)), " s"])
+        xlim ([-1e-3*4*sf_p 500e-6])
+        ylim ([0 1.1])
+        xlabel ("sn in m")
+        ylabel ("cn in -")
+        pause (0.25)
+        clf
+      endif
   ##  catch
   ##    warning (["fit issue at i = " num2str(i)]);
   ##  end
@@ -315,7 +344,7 @@ if 0
   plot3 (sn_D*1e3, tn, 1.1*ones(1,length(tn))*cddsnm, "r", "linewidth", 1)
 
   ## sn_D from intersection with cddsnm
-  [~, idx_D] = min ( abs (cp_nn - cddsnm), [], 2)
+  [~, idx_D] = min ( abs (cp_nn - cddsnm), [], 2);
   sn_Di = snp(idx_D);
 
   if testplots
@@ -374,11 +403,11 @@ if 1
     case {"WG141"}
       idx_ref = 2;
       t_range_1 = 3:16;
-      t_range_2 = 40:160;
+      t_range_2 = 36:161;
     case {"WP141"}
       idx_ref = 2;
-      t_range_1 = [3:14];
-      t_range_2 = 15:70;
+      t_range_1 = [3:15];
+      t_range_2 = 16:81;
   endswitch
   ## slope of  sn_D(t)^2 / 2 is proportional to diffusivity
   sfsq = (sn_D.^2) / 2; # D = sn_D^2 / (2 * t)
