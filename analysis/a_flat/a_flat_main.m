@@ -33,13 +33,15 @@ if 1
   ##
   a_type = "a_flat_x_stitch";
   c_method = "linear"; # "linear" "nonlin"
-  c_if_method = "calib"; # "calib" "calib-if"
-##  measid_mask = "FLAT_M13_A60_T25_WG141_M##_G002_X###_Z+00";
+##  c_method = "nonlin"; # "linear" "nonlin"
+##  c_if_method = "calib"; # "calib" "calib-if"
+  c_if_method = "calib-if"; # "calib" "calib-if"
 
   ## iterators
   it_A = 1:numel(aid.ids_A); # angles
   it_C = 1:numel(aid.ids_C); # cells
   it_M = 1:numel(aid.ids_M); # mass flow rates
+  it_M = 1
   it_X = 1:numel(aid.ids_X); # scanned x sections
   ## fixed
   i_L = i_O = 1; # liquid, optical setup
@@ -61,16 +63,14 @@ if 1
 
   ## mass fraction of actual liquid mixture in the tank during experiment
   ##
-  ## logged data for the flat plate experiments 20211208 - 20211209
-  ## log on 02.12.2021 (tracer + seeding inside)
+  ## logged fluid properties on 02.12.2021 (tracer + seeding inside)
   ## probe from 20 feeding liter tank
   T_test = 298.15;
   eta_test = 8.421e-3;
   nref_test = 1.41065;
   rho_test = 1147.7;
   ## mass fraction from test
-  mf_exp = ri_match_PT_mf_from_ri (1.41275, T_test)
-##  mf_exp = ri_match_PT_mf_from_ri (nref_test, T_test)
+  mf_exp = ri_match_PT_mf_from_ri (nref_test, T_test)
   ## compare to tabulated fp
   rho_exp = get_fp_tab (pdir, fname="glycerol-water", pname="rho", T_test, mf_exp, ext=[])
   eta_exp = get_fp_tab (pdir, fname, pname="eta", T_test, mf_exp, ext)
@@ -93,7 +93,7 @@ if 1
     save_dir_m = save_dirs{i_M}
     run "load_gl_2d.m"
     testplots = false
-    testplots_fit = false
+    testplots_fit = true
     run "a_flat_profiles.m"
     run "save_profile_data.m"
     close all
@@ -134,6 +134,7 @@ if 1
     fit_idx_M{i_M} = fit_idx;
     cp_fit_M{i_M} = cp_fit;
     D_fit_M{i_M} = D_fit;
+    snD_M{i_M} = snD;
     delta_fit_M{i_M} = delta_fit;
   endfor
   h_w = (median (h_w_M, 2)); # same for all i_M
@@ -147,11 +148,12 @@ if 1
 endif
 
 ## (4) reference inflow and velocity profile, related inlet Reynolds number
-if 1
+if 0
   yoff = [];
   y_Nu_nd_plt = [0:0.01:1];
   u_Nu_nd_plt = model_filmflow_laminar_u_profile (y_Nu_nd_plt, 1, 1);
-  idx_sec = (x<8) | (x>-8);
+##  idx_sec = (x<=1) | (x>-1);
+  idx_sec = (x<=20);
   ## test interface curvature
   if testplots
     for i_M = it_M
@@ -177,16 +179,13 @@ if 1
     idx = (u_x_mean>0.3*u_m_max(i_M)) & (u_x_mean<=1*u_m_max(i_M));
     p_uy_fit = polyfit (y_M{i_M}(idx), u_x_mean(idx), 2);
     yoff(i_M) = min (roots (p_uy_fit))
-    h_u_max(i_M) = y_M{i_M}(h_u_max_i) - 1*yoff(i_M)/1;
-##    if i_M == 1
-##      h_u_max(i_M) = h_u_max(i_M)+0.02;
-##    endif
+    h_u_max(i_M) = y_M{i_M}(h_u_max_i) - 1*yoff(i_M);
     y_u_plt{i_M} = y_M{i_M} - 1*yoff(i_M);
     plot (u_x_mean/u_m_max(i_M), y_u_plt{i_M}/h_u_max(i_M), ["x;" num2str(i_M) ";"])
 ##    plot (polyval(p_uy_fit,y)/u_m_max(i_M), (y-yoff(i_M))/(h_u_max(i_M)-yoff(i_M)), ["k-;" num2str(i_M) ";"])
     ## cell width related local mass flow flat film region to compare theory to
     idx_mf = (u_x_mean/u_m_max(i_M) >= 0.05) & (u_x_mean/u_m_max(i_M) <= 1);
-    mf_exp(i_M) = cell_width/1e3 * sum(u_x_mean(idx_mf))*sf(2)/1e3*3600 * rho; # kg / h
+    mfr_exp(i_M) = cell_width/1e3 * sum(u_x_mean(idx_mf))*sf(2)/1e3*3600 * rho; # kg / h
   endfor
   xlim([0 1]); ylim([0 1]);
   ylabel ("y / h"); xlabel ("u / u_h");
@@ -195,13 +194,13 @@ if 1
   print (fh, "-dpng", "-color", ["-r" num2str(250)], [save_dir_p "ux_prof_dimless"]);
   close (fh)
   ## mass flow spec. Reynolds number
-  re_l = nd_re_inlet (mf_exp/rho_exp*rho/3600, cell_width/1e3, eta);
-  re_l_exp = nd_re_inlet (mf_exp/3600, cell_width/1e3, eta_exp);
+  re_l = nd_re_inlet (mfr_exp/rho_exp*rho/3600, cell_width/1e3, eta);
+  re_l_exp = nd_re_inlet (mfr_exp/3600, cell_width/1e3, eta_exp);
   ## Nusselt profile
   [h_Nu, u_s_Nu] = model_filmflow_laminar_u_profile_p (eta/rho, deg2rad(aid.ids_A), re_l);
   [h_Nu_exp, u_s_Nu_exp] = model_filmflow_laminar_u_profile_p (eta_exp/rho_exp, deg2rad(aid.ids_A), re_l_exp);
   ## output table
-  mf_local = mf_exp;
+  mf_local = mfr_exp;
   re_plt = re_l_exp;
   h_Nu_plt = h_Nu_exp * 1e3; # mm
   u_s_Nu_plt = u_s_Nu_exp;
@@ -223,8 +222,8 @@ if 1
 endif
 cd (save_dir)
 load -text "inlet_local_Re.txt"
-## (5) fluid dynamic
-if 1
+## (5) fluid dynamics
+if 0
   ## output wall and interface
   plt_1_h = {mfilename, date, ""; "x in mm", "h_w in mm", "h_g in mm"};
   plt_1_d = [x' h_w h_g_M];
@@ -247,7 +246,7 @@ if 1
   ##
 
   ## non-flat / influenced section
-  idx_sec = (x<11) & (x>-11);
+  idx_sec = (x <= 11) & (x >= -11);
 
   ## point on interface with minimal distance to structure
   for i_M = it_M
@@ -260,7 +259,7 @@ if 1
   ## local film height normalized with structure height
   fh = figure (); hold on;
   draw_cell (aid.ids_C{i_C}, [], 1);
-  plot (x, h_w / median(h_w (abs(x)<1)), ["k"])
+  plot (x, h_w / 1, ["k"])
   for i_M = it_M
     h_g_rel_M(:,i_M) = (h_g_M(:,i_M))/1; # rel. to structure height
 ##    plot (x, (h_g_M(:,i_M)-h_w)/h_meas(i_M), [";" num2str(i_M) ";"])
@@ -310,10 +309,9 @@ if 1
 
   ## contact time
   Re_Nu_tc = [1:0.1:50];
-  [~, u_s_Nu_tc] = model_filmflow_laminar_u_profile_p (eta_exp/rho_exp, deg2rad(aid.ids_A), Re_Nu_tc);
+  [~, u_s_Nu_tc, ~] = model_filmflow_laminar_u_profile_p (eta_exp/rho_exp, deg2rad(aid.ids_A), Re_Nu_tc);
   tc_flat = 22e-3 ./ u_s_Nu_tc; # s
-##  tc_flat_rel_lim = (22e-3 + 2e-3) / 22e-3; # s  ... extra length of structure contour
-  tc_ms = (max(st_abs_M(idx_sec,:))-min(st_abs_M(idx_sec,:)))./us_avg_M;
+  tc_ms = (max(st_abs_M(idx_sec,:)) - min(st_abs_M(idx_sec,:))) ./ us_avg_M;
 ##  tc_ms_rel = (tc_ms) ./ tc_flat;
   fh = figure (); hold on;
   plot (re_l_exp, tc_ms, ["*;exp. " aid.ids_C{1} ";"])
@@ -325,34 +323,18 @@ if 1
 
   ## liquid hold up
   lh_stat = hu_liq_stat (aid.ids_C{1}, deg2rad(aid.ids_A)); # static hold-up of the struture
+  lh_flat = h_Nu_exp*1e3 * 22; # mm^2
   for i_M = it_M
-    lh_flat(i_M) = h_meas(i_M) * 22; # mm^2
     lh_film(i_M) = sum (h_g_M(idx_sec,i_M) - h_w(idx_sec)) * sf(1); # mm^2
   endfor
   ## extra liquid hold-up
   lh_excess = lh_film - lh_flat;
-##  ## measure recirculation regions hold-up
-##  cd (save_dir)
-##  if !exist("recirc_stat.txt", "file")
-##    iter = [1e3 2e3 1e3];
-##    xposis = [-1.25 0 1.25];
-##    ymaxis = [0.9 2.25 0.9];
-##    for i_M = it_M
-##      [lh_recirc(i_M) area_recirc{i_M} cent_recirc{i_M}] =  meas_recirc (msh_M{i_M}, [-4 4], [0 2.5], ux_M{i_M}, uy_M{i_M}, mask_w_M{i_M}, mask_g_M{i_M}, iter, xposis, ymaxis, 5)
-##    endfor
-##    save -text "recirc_stat.txt" lh_recirc area_recirc cent_recirc
-##  else
-##    load -text "recirc_stat.txt"
-##  endif
-  lh_recirc = 0.0 * [1 1 1 1];
-
   fh = figure (); hold on;
   plot (re_l_exp, lh_excess, ["--x;excess due to " aid.ids_C{1} ";"])
-  plot (re_l_exp, lh_recirc, "--d;in recirc;")
   plot ([0 40], lh_stat * [1 1], "-;static;")
   xlabel ("Re inlet in -")
   ylabel ("hold-up in mm")
-  title ("extra liquid hold up")
+  title ("extra liquid hold up vs. theoretical flat film")
   print (fh, "-dpng", "-color", ["-r" num2str(500)], [save_dir_p "holdup_vs_Re"]);
 
   idx_sec = (x<=1.25) & (x>=-1.25);
@@ -383,7 +365,7 @@ if 1
   csvwrite ([save_dir_p "tc_vs_Re_flat_d.csv"], plt_1_d, "append", "off", "precision","%01.04f")
   ##
   plt_1_h = {mfilename, date, " ", " ", " ", " ", " ", " "; "Re inlet", "extra interface length in mm", "u_s / u_s flat ", "contact time in s", "lh flat in mm", "lh film in mm", "lh static in mm", "lh excess"};
-  plt_1_d = [re_l_exp' s_plus' us_avg_rel_M' tc_ms' lh_flat' lh_film' lh_stat*ones(4,1) lh_excess' lh_recirc' rot_uxy_z_max'];
+  plt_1_d = [re_l_exp' s_plus' us_avg_rel_M' tc_ms' lh_flat' lh_film' lh_stat*ones(4,1) lh_excess' [0 0 0 0]' rot_uxy_z_max'];
   cell2csv ([save_dir_p "re_vs_splus_us_tc_lh_rot_h.csv"], plt_1_h)
   csvwrite ([save_dir_p "re_vs_splus_us_tc_lh_rot_d.csv"], plt_1_d, "append", "off", "precision","%01.04f")
 
@@ -580,7 +562,7 @@ if 1
   plt_1_d = [L_x_eq' L_x_nd_eq Sh_h_eq (Sh_h_eq/(Sc_eq.^0.5))];
   csvwrite ([save_dir_p "model_Sh_h_ShSc_vs_xnd_d.csv"], plt_1_d, "append", "off", "precision", "%.4e")
   ## output for plotting laminar film integral mass transfer nondimensional equation
-  x_nd_out = 0.00001:0.00001:0.01;
+  x_nd_out = 0.00001:0.0001:1;
   Sh_nd_out = model_filmflow_laminar_nd_sh (x_nd_out);
   ##
   plt_1_h = {mfilename, date, ""; "x in -", "Sh_h (eq.) in -", "Sh/Sc^0.5 (eq.) in -"};
@@ -597,12 +579,19 @@ if 1
   for i_M = it_M
     D_fit_x_M(i_M,:) = outlier_rm (D_fit_M{i_M}, movmedian(D_fit_M{i_M},41));
     Dfit_M(i_M) = median (D_fit_x_M(i_M,idx));
+    ## different effective diffusivity from fit depending on surface velocity choice
+    D_fit_x_usm_M(i_M,:) = D_fit_M{i_M} ./ us_x_M(:,i_M)' * u_s_meas(i_M); # related to inlet velocity
+    D_fit_x_usm_M(i_M,:) = outlier_rm (D_fit_x_usm_M(i_M,:), movmedian(D_fit_x_usm_M(i_M,:),41));
+    Dfit_usm_M(i_M) = median (D_fit_x_usm_M(i_M,idx));
   endfor
+
   fh = figure (); hold on;
   for i_M = it_M
 ##    plot (D_fit_M{i_M}, [";i_M = " num2str(i_M) ";"])
     plot ([x_abs(1) x_abs(end)], Dfit_M(i_M)*[1 1], "-")
+    plot ([x_abs(1) x_abs(end)], Dfit_usm_M(i_M)*[1 1], "-")
     plot (x_abs, D_fit_x_M(i_M,:))
+    plot (x_abs, D_fit_x_usm_M(i_M,:))
   endfor
   print (fh, "-dpng", "-color", ["-r" num2str(500)], [save_dir_p "D_fit_vs_x"]);
   #
@@ -612,29 +601,30 @@ if 1
   csvwrite ([save_dir_p "D_fit_vs_x_d.csv"], plt_1_d, "append", "off", "precision", "%.4e")
 
   ## delta_c from measured interface normal concentraion profiles
-  delta_c_x_Dfit = delta_std = [];
+  delta_c_x_eq_Dfit = delta_std = [];
   for i_M = it_M
-    delta_c_x_Dfit(i_M,:) = sqrt (pi * Dfit_M(i_M) * x_abs / u_s_meas(i_M));
-    delta_c_x_M(i_M,:) = outlier_rm (delta_fit_M{i_M}, movmedian(delta_fit_M{i_M},41));
+    delta_c_x_eq_Dfit(i_M,:) = sqrt (pi * Dfit_M(i_M) * x_abs / u_s_meas(i_M));
+##    delta_c_x_eq_Dfit(i_M,:) = sqrt (pi * Dfit_usm_M(i_M) * x_abs / u_s_meas(i_M));
+    delta_c_x_M(i_M,:) = outlier_rm (delta_fit_M{i_M}, movmedian(delta_fit_M{i_M},81));
   endfor
-  ## alternative delta_c estimation
-  for i_M = it_M
-    ## delta_c from c*(delta_c) intersection
-    [~, idx_delta_c ] = min (abs (cp_nn_M{i_M}' - erfc (sqrt (pi/4))), [], 1);
-    delta_c_i(i_M,:) = snp_M{i_M}(idx_delta_c); # m
-    delta_c_i_M(i_M,:) = outlier_rm (delta_c_i(i_M,:), movmean(delta_c_i(i_M,:),41));
-  endfor
+##  ## alternative delta_c estimation
+##  for i_M = it_M
+##    ## delta_c from c*(delta_c) intersection
+##    [~, idx_delta_c ] = min (abs (cp_nn_M{i_M}' - erfc (sqrt (pi/4))), [], 1);
+##    delta_c_i(i_M,:) = snp_M{i_M}(idx_delta_c); # m
+##    delta_c_i_M(i_M,:) = outlier_rm (delta_c_i(i_M,:), movmean(delta_c_i(i_M,:),41));
+##  endfor
   fh = figure (); hold on;
   for i_M = it_M
-    plot (x_abs, delta_c_i_M(i_M,:), "k");
+##    plot (x_abs, delta_c_i_M(i_M,:), "k");
     plot (x_abs, delta_c_x_M(i_M,:), [";i_M = " num2str(i_M) ";"])
-    plot (x_abs, delta_c_x_Dfit(i_M,:), [";i_M = " num2str(i_M) ";"])
+    plot (x_abs, delta_c_x_eq_Dfit(i_M,:), ["k;(eq. w. Dfit) i_M = " num2str(i_M) ";"])
   endfor
   print (fh, "-dpng", "-color", ["-r" num2str(500)], [save_dir_p "delta_vs_x"]);
   ##
   plt_1_h = {mfilename, date, "", "", "", ""; "x in mm", "x_abs in m", "delta_c in m for M1 to M4", "delta_c in m; eq. with effective (median) D_fit for M1 to M4", "delta_c in mm for M1 to M4", "delta_c in mm; eq. with effective (median) D_fit for M1 to M4"};
   cell2csv ([save_dir_p "delta_c_vs_x_h.csv"], plt_1_h)
-  plt_1_d = [x' x_abs' delta_c_x_M' delta_c_x_Dfit' 1e3*delta_c_x_M' 1e3*delta_c_x_Dfit'];
+  plt_1_d = [x' x_abs' delta_c_x_M' delta_c_x_eq_Dfit' 1e3*delta_c_x_M' 1e3*delta_c_x_eq_Dfit'];
   csvwrite ([save_dir_p "delta_c_vs_x_d.csv"], plt_1_d, "append", "off", "precision", "%.4e")
 
   ## contour plots of measured cn
@@ -657,7 +647,7 @@ if 1
   # delta ~ 1/sqrt(u_s)
   figure (); hold on;
   plot (sqrt (1 ./ u_s_eq), median (delta_c_x_eq, 2), "k-")
-  plot (sqrt (1 ./ u_s_meas), median (delta_c_x_Dfit, 2), "b*-")
+  plot (sqrt (1 ./ u_s_meas), median (delta_c_x_eq_Dfit, 2), "b*-")
   plot (sqrt (1 ./ u_s_meas), median (delta_c_x_M, 2), "r*-")
 
   ## dimensionless normalized profile every 1 mm downstrean
@@ -715,7 +705,7 @@ if 1
   plot (x_sec, [0 0 0 0 0; 10e-5*[1 1 1 1 1]], "k")
   for i_M = it_M
     plot (x_abs, delta_c_x_M(i_M,:), ["-;meas M" num2str(i_M) ";"])
-    plot (x_abs, delta_c_x_Dfit(i_M,:), ["-.k;eq. with median D_fit M" num2str(i_M) ";"])
+    plot (x_abs, delta_c_x_eq_Dfit(i_M,:), ["-.k;eq. with median D_fit M" num2str(i_M) ";"])
     plot (x_eq, delta_c_x_eq(i_M,:), ["b-; laminar film for M" num2str(i_M) ";"])
   endfor
   title ([c_method " _ " c_if_method "_ D = " num2str(D_eq)])
@@ -726,17 +716,20 @@ if 1
   ## local mass transfer
   ##
 
-  beta_c_x = beta_c_x_Dfit = beta_c_x_M_Dfit = [];
+  beta_c_x = beta_c_x_Dfit = beta_c_x_M_Dfit = beta_c_x_usm_M = [];
+  for i_M = it_M
+    beta_c_x_M(i_M,:) = def_beta_x (delta_c_x_M(i_M,:), D_AB.PLIF2);
+    ## variants
+    beta_c_x_M_Dfit(i_M,:) = def_beta_x (delta_c_x_M(i_M,:), D_fit_x_M(i_M,:));
+    beta_c_x_Dfit(i_M,:) = def_beta_x (delta_c_x_eq_Dfit(i_M,:), Dfit_M(i_M));
+    beta_c_x_usm_M(i_M,:) = def_beta_x (delta_c_x_M(i_M,:), D_fit_x_usm_M(i_M,:));
+  endfor
   fh = figure (); hold on;
+  styles = {"k", "r", "g", "b"};
   plot (x_sec, [0 0 0 0 0; 7e-5*[1 1 1 1 1]], "k")
   for i_M = it_M
-    beta_c_x_M_Dfit(i_M,:) = def_beta_x (delta_c_x_M(i_M,:), D_fit_x_M(i_M,:));
-    beta_c_x_Dfit(i_M,:) = def_beta_x (delta_c_x_Dfit(i_M,:), Dfit_M(i_M));
-    beta_c_x_M(i_M,:) = def_beta_x (delta_c_x_M(i_M,:), D_AB.PLIF2);
-##    beta_c_x_M(i_M,:) = outlier_rm (beta_c_x(i_M,:), movmedian(beta_c_x(i_M,:),41));
-    plot (x_abs, beta_c_x_M(i_M,:),[styles{i_M} ";meas M" num2str(i_M) ";"])
-  endfor
-  for i_M = it_M
+##    plot (x_abs, beta_c_x_M(i_M,:),[styles{i_M} ";D_2 M" num2str(i_M) ";"])
+##    plot (x_abs, beta_c_x_usm_M(i_M,:),[styles{i_M} ";D_2 M" num2str(i_M) ";"])
     plot (x_abs, beta_c_x_M_Dfit(i_M,:), ["-;Dfit_M M" num2str(i_M) ";"])
     plot (x_eq, beta_x_eq(i_M,:), ["-.; laminar film for M" num2str(i_M) ";"]);
   endfor
@@ -759,7 +752,7 @@ if 1
   for i_sec = 1:4
     idx_sec = (x_abs>x_sec(1,i_sec)) & (x_abs<x_sec(1,i_sec+1));
     mean_delta_c_sec(:,i_sec) = median (delta_c_x_M(:,idx_sec), 2);
-    mean_delta_c_Dfit_sec(:,i_sec) = median (delta_c_x_Dfit(:,idx_sec), 2);
+    mean_delta_c_Dfit_sec(:,i_sec) = median (delta_c_x_eq_Dfit(:,idx_sec), 2);
     mean_delta_eq_sec(:,i_sec) = median (model_filmflow_laminar_delta_x (x_abs(idx_sec)', D_AB.PLIF2, us_eq_out'),1);
     mean_beta_c_sec(:,i_sec) = median (beta_c_x_M(:,idx_sec), 2);
     mean_beta_c_Dfit_sec(:,i_sec) = median (beta_c_x_Dfit(:,idx_sec), 2);
@@ -812,10 +805,10 @@ if 1
   ## integral mass transfer coefficient calculation from PLIF cn(x,y) measurement and analytical cn(x,y) field to test the integration
   ##
   L_x = 1e-3 * [48:0.25:80]; # length from inlet to meas-eq comparision position in m
-  avg_width = 1e-3 * 0.2; # delta x for avg c profile in m
-##  avg_width = 1e-3 * 0.05; # avg width should be small for  y-profile based integral
+  avg_width = 1e-3 * 0.2; # delta x for averaging c profile in m
+##  avg_width = 1e-3 * 0.05; # avg width should be small for y-profile based integral
   cn_in_M = 0; # assuming bulk concentration at inlet
-  clear D_fit_LL cn_out_M cn_out_eq uavg_M vfr_M
+  clear D_fit_LL cn_out_M cn_out_eq uavg_M vfr_M dh_M beta_c_x_avg
   for i_L = 1:numel(L_x)
 ##    L_c = st_abs_M(round((idx_x_u+idx_x_l)/2),i_M); # flat film equivalent of curved interface
     [~, idx_x_l] = min (abs (x_abs - (L_x(i_L) - avg_width/2)));
@@ -823,7 +816,13 @@ if 1
     idx_range = [idx_x_l:idx_x_u];
     [~, idx_x_eq] = min (abs (x_eq - L_x(i_L)));
     for i_M = it_M
+      ## integration of beta_c_x
+##      beta_c_x_avg(i_L,i_M) = sf(1)*1e-3 * sum (beta_c_x_M(i_M,x_abs<=L_x(i_L))) / L_x(i_L) + sqrt ( 6/pi * D_eq/x_abs(1) * u_s_meas(i_M)/3*2 );
+      beta_c_x_avg(i_L,i_M) = sf(1)*1e-3 * sum (beta_x_eq(i_M,x_eq<=L_x(i_L))) / (L_x(i_L)-L_x(1)) + sqrt ( 6/pi * D_eq/L_x(1) * u_s_eq(i_M)/3*2 );
+##      beta_c_x_avg(i_L,i_M) = sqrt ( 6/pi * D_eq/L_x(i_L) * u_s_meas(i_M)/3*2 );
+      ##
       D_fit_LL(i_L,i_M) = median (D_fit_x_M(i_M,idx_range));
+      dh_M(i_L,i_M) = median (h_g_M(idx_range,i_M)-h_w_M(idx_range,i_M)); # slot film thickness
       yhp = median (h_g_M(idx_range,i_M), 1) * 1e-3;
       hp = median (h_g_M(idx_range,i_M) - 1*h_w(idx_range), 1) * 1e-3;
 ##      ## outlet c(y) - profile from calibration
@@ -897,6 +896,7 @@ if 1
 ##    beta_c(i_L,:) = def_beta_unit (vfr_M(i_L,:), A_c, 1, cn_in_M, cn_out_M(i_L,:));
     Sh_h_M_Dfit(i_L,:) = nd_sh (beta_c(i_L,:), h_meas*1e-3, D_fit_LL(i_L,:));
     Sh_h_M(i_L,:) = nd_sh (beta_c(i_L,:), h_meas*1e-3, D_AB.PLIF2);
+##    Sh_h_x_M(i_L,:) = nd_sh (beta_c(i_L,:), dh_M(i_L,:)*1e-3, D_AB.PLIF2);
     Sh_h_Dfit(i_L,:) = nd_sh (beta_c(i_L,:), h_meas*1e-3, Dfit_M);
 ##    Sh_L_M(i_L,:) = nd_sh (beta_c(i_L,:), L_x(i_L), D_fit_LL(i_L,:));
 ##    Sh_L_M(i_L,:) = nd_sh (beta_c(i_L,:), L_x(i_L), D_AB.PLIF2);
@@ -919,9 +919,11 @@ if 1
   fh = figure (); hold on
   for i_M = it_M
     plot (L_x_nd(:,i_M), Sh_h_M(:,i_M), ["*;" num2str(i_M) ";"])
-    plot (L_x_nd_Dfit(:,i_M), Sh_h_M_Dfit(:,i_M), ["x;" num2str(i_M) ";"])
-    plot (L_x_nd_Dfit(:,i_M), Sh_h_Dfit(:,i_M), ["d;" num2str(i_M) ";"])
-##    plot (L_x_nd(:,i_M), Sh_h_c_eq(:,i_M), ["-;eq. c" num2str(i_M) ";"])
+    plot (L_x_nd(:,i_M), (beta_c_x_avg(:,i_M)*h_meas(i_M)*1e-3/D_AB.PLIF2), ["x;" num2str(i_M) ";"])
+##    plot (L_x_nd(:,i_M), Sh_h_x_M(:,i_M), ["k*;" num2str(i_M) ";"])
+##    plot (L_x_nd_Dfit(:,i_M), Sh_h_M_Dfit(:,i_M), ["x;" num2str(i_M) ";"])
+##    plot (L_x_nd_Dfit(:,i_M), Sh_h_Dfit(:,i_M), ["d;" num2str(i_M) ";"])
+    plot (L_x_nd(:,i_M), Sh_h_c_eq(:,i_M), ["-;eq. c" num2str(i_M) ";"])
   endfor
   plot (x_nd_out, Sh_nd_out, "k-;eq.;")
   plot (L_x_nd_eq, Sh_h_x_nd_eq, ";eq.;")
