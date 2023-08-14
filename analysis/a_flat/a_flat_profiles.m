@@ -85,8 +85,8 @@ st_abs = x_abs(1) + 1e-3 * st; # m
 cp_mm_b = movmean (cp, 21, "Endpoints", 0.0);
 cp_b = cp_s = up_s = sn_max = zeros (1,size(cp,1));
 for i = 1:size(cp,1)
-  cp_b(i) = mean (cp_mm_b(i,end-50:end));
-##  cp_b(i) = 0;
+##  cp_b(i) = mean (cp_mm_b(i,end-50:end));
+  cp_b(i) = 0;
   cp_s(i) = cp(i,snp==0);
   [cp_s(i), sn_max(i)] = max (cp(i,1:20));
   up_s(i) =  max (up_n(i,1:20));
@@ -168,7 +168,7 @@ dcds_idx = 16;
 sig = 2;
 switch i_M
   case 1
-    idx_r = [2 12];
+    idx_r = [2 8];
   case 2
     idx_r = [2 8];
   case 3
@@ -181,7 +181,7 @@ endswitch
 ski_p = 1;
 if testplots_fit
   fh = figure ();
-  ski_p = 10;
+  ski_p = 20;
 endif
 ##
 for i = 1:ski_p:size(cp_n,1)
