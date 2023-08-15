@@ -83,7 +83,7 @@ st_abs = x_abs(1) + 1e-3 * st; # m
 
 ## per profile: measured bulk concentration, interface concentration and surface velocity
 cp_mm_b = movmean (cp, 21, "Endpoints", 0.0);
-cp_b = cp_s = up_s = sn_max = zeros (1,size(cp,1));
+cp_b = cp_s = up_s = sn_max = zeros (1, size(cp,1));
 for i = 1:size(cp,1)
 ##  cp_b(i) = mean (cp_mm_b(i,end-50:end));
   cp_b(i) = 0;
