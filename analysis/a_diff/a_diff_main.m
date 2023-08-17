@@ -267,7 +267,7 @@ if 1
   ##
   ## estimate D from position of maximum of second derivative of cp
   ##
-  c_fitf = @ (p, s) fitfn_cn_diff (p, s);
+  c_fitf = @ (p, s) fitfn_cn_diff (p, s, 1e-4);
   settings = optimset ("lbound", [0.01; 1], "ubound", [100; 10], "TolFun", 1e-16);
   init = [2.0 1.0]'
   ##
