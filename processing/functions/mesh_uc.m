@@ -7,28 +7,30 @@
 ##
 
 function msh = mesh_uc (idxx, idxy, xmin, ymin, pp, method, sf)
-  switch (pp.optset.data)
-    case {"M13", "M13b", "M13c"}
-      sf_c = 5 * 1e-3; # mm / px
-      sf_u = 40 * 1e-3;
-      if isempty (xmin)
-        xmin = - 4.5; # mm
-      endif
-      if isempty (ymin)
-        ymin = - 0.5; # initial guess
-      endif
-    case "M26"
-      sf_c = 2 * 1e-3; # mm / px
-      sf_u = 16 * 1e-3;
-      if isempty (xmin)
-        xmin = - 2; # mm
-      endif
-      if isempty (ymin)
-        ymin = - 0.25; # initial guess
-      endif
-    otherwise
-      error ("no matching optical setup identifier");
-  endswitch
+  if (!isempty(pp))
+    switch (pp.optset.data)
+      case {"M13", "M13b", "M13c"}
+        sf_c = 5 * 1e-3; # mm / px
+        sf_u = 40 * 1e-3;
+        if isempty (xmin)
+          xmin = - 4.5; # mm
+        endif
+        if isempty (ymin)
+          ymin = - 0.5; # initial guess
+        endif
+      case "M26"
+        sf_c = 2 * 1e-3; # mm / px
+        sf_u = 16 * 1e-3;
+        if isempty (xmin)
+          xmin = - 2; # mm
+        endif
+        if isempty (ymin)
+          ymin = - 0.25; # initial guess
+        endif
+      otherwise
+        error ("no matching optical setup identifier");
+    endswitch
+  endif
   ## selet scaling factor
   if isempty (sf)
     switch (method)

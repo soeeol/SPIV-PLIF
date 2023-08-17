@@ -12,6 +12,5 @@ function fh = plot_map_msh (msh, map)
   view ([0 0 1]);
   shading flat;
   colormap viridis;
-  xlabel ("y in mm");
-  ylabel ("x in mm");
+  grid off;
 endfunction

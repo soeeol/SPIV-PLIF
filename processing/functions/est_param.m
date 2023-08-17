@@ -1,7 +1,7 @@
 ##  SPDX-License-Identifier: BSD-3-Clause
 ##  Copyright (c) 2023, Sören Jakob Gerke
 
-## manual rotational and translational offset estimation
+## rotational and translational offset estimation
 ##
 ## Author: Sören J. Gerke
 ##
