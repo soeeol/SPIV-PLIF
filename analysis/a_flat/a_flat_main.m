@@ -33,15 +33,11 @@ if 1
   ##
   a_type = "a_flat_x_stitch";
   c_method = "linear"; # "linear" "nonlin"
-##  c_method = "nonlin"; # "linear" "nonlin"
   c_if_method = "calib"; # "calib" "calib-if"
-##  c_if_method = "calib-if"; # "calib" "calib-if"
-
   ## iterators
   it_A = 1:numel(aid.ids_A); # angles
   it_C = 1:numel(aid.ids_C); # cells
-  it_M = 1:numel(aid.ids_M); # mass flow rates
-  it_M = 1
+  it_M = 1:numel(aid.ids_M); # mass flow rate
   it_X = 1:numel(aid.ids_X); # scanned x sections
   ## fixed
   i_L = i_O = 1; # liquid, optical setup
@@ -57,10 +53,8 @@ if 1
     save_dirs{i_M} = [save_dir "c-" c_method "_" c_if_method "_" measid_stitch{i_M} "/"];
     mkdir (save_dirs{i_M});
   endfor
-
   ## set interface normal profile depth in mm
   pd_M = [0.3 0.35 0.4 0.5];
-
   ## mass fraction of actual liquid mixture in the tank during experiment
   ##
   ## logged fluid properties on 02.12.2021 (tracer + seeding inside)
@@ -107,6 +101,9 @@ if 1
     run "load_gl_2d.m"
 ##    x_M{i_M} = x; # same for all i_M
 ##    x_abs_M{i_M} = x_abs; # same for all i_M
+    ## section limits
+    x_sec = 0.06 + 1e-3 * repmat (-4 + 8*[-1:3], 2, 1);
+    x_abs = x*1e-3 + 0.06;
     msh_M{i_M} = msh;
     y_M{i_M} = y;
     h_w_M(:,i_M) = h_w;
@@ -137,6 +134,7 @@ if 1
     snD_M{i_M} = snD;
     delta_fit_M{i_M} = delta_fit;
   endfor
+  ##
   h_w = (median (h_w_M, 2)); # same for all i_M
   ## rebuild wall mask and est. surface velocity
   for i_M = it_M
@@ -584,13 +582,14 @@ if 1
   for i_M = it_M
 ##    plot (x_abs, delta_c_i_M(i_M,:), "k");
     plot (x_abs, delta_c_x_M(i_M,:), [";i_M = " num2str(i_M) ";"])
+    plot (x_eq, delta_c_x_eq(i_M,:), ["b;(eq.) i_M = " num2str(i_M) ";"])
     plot (x_abs, delta_c_x_eq_Dfit(i_M,:), ["k;(eq. w. Dfit) i_M = " num2str(i_M) ";"])
   endfor
   print (fh, "-dpng", "-color", ["-r" num2str(500)], [save_dir_p "delta_vs_x"]);
   ##
-  plt_1_h = {mfilename, date, "", "", "", ""; "x in mm", "x_abs in m", "delta_c in m for M1 to M4", "delta_c in m; eq. with effective (median) D_fit for M1 to M4", "delta_c in mm for M1 to M4", "delta_c in mm; eq. with effective (median) D_fit for M1 to M4"};
+  plt_1_h = {mfilename, date, "", "", "", ""; "x in mm", "x_abs in m", "delta_c in mm for M1 to M4", "delta_c in mm; eq. with effective (median) D_fit for M1 to M4", "delta_c in mm for M1 to M4", "delta_c in mm; eq. with effective (median) D_fit for M1 to M4"};
   cell2csv ([save_dir_p "delta_c_vs_x_h.csv"], plt_1_h)
-  plt_1_d = [x' x_abs' delta_c_x_M' delta_c_x_eq_Dfit' 1e3*delta_c_x_M' 1e3*delta_c_x_eq_Dfit'];
+  plt_1_d = [x' x_abs' 1e3*delta_c_x_M' 1e3*delta_c_x_eq_Dfit' 1e3*delta_c_x_M' 1e3*delta_c_x_eq_Dfit'];
   csvwrite ([save_dir_p "delta_c_vs_x_d.csv"], plt_1_d, "append", "off", "precision", "%.4e")
 
   ## contour plots of measured cn
@@ -662,10 +661,6 @@ if 1
   cell2csv ([save_dir_p "cn_eq_prof_vs_sn_h.csv"], plt_1_h)
   plt_1_d = [(y_eq/delta_c_x_eq(1,1))' (c_eq{1}(:,1))];
   csvwrite ([save_dir_p "cn_eq_prof_vs_sn_d.csv"], plt_1_d, "append", "off", "precision", "%.4e")
-
-  ## section limits
-  x_sec = 0.06 + 1e-3 * repmat (-4 + 8*[-1:3], 2, 1);
-  x_abs = x*1e-3 + 0.06;
 
   fh = figure (); hold on;
   plot (x_sec, [0 0 0 0 0; 10e-5*[1 1 1 1 1]], "k")

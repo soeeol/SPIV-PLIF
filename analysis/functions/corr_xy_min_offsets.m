@@ -59,7 +59,7 @@ function pdat = corr_xy_min_offsets (pdat, a_type, it_A, it_C, it_M, it_X, moff)
 ##            xoffset = moff(i_X,1); # systematic shift of Ic1 relative to Ic0 & Ic
             xoffset = moff(1); # systematic shift of Ic1 relative to Ic0 & Ic
           endif
-          xoffset
+##          xoffset
           opt_val = [];
           yoffs = -12:1:12;
 ##            opt1 = Ic_2(21:(idx_y_max+25-20),:);
@@ -84,7 +84,7 @@ function pdat = corr_xy_min_offsets (pdat, a_type, it_A, it_C, it_M, it_X, moff)
 ##            yoffset = moff(i_X,2);
             yoffset = moff(2);
           endif
-          yoffset
+##          yoffset
 ##          Ic_1 = imtranslate (Ic_1, 0, 0, "crop"); # used for c_h detection
 ##          Ic_2 = imtranslate (Ic_2, 0, 0, "crop"); # used for wall detection
           Ic_3 = imtranslate (Ic_3, round(xoffset), round(yoffset), "crop"); # only move this independently

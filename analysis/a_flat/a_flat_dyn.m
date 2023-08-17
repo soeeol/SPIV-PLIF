@@ -35,13 +35,13 @@ if 1
 ##  it_M = 1:numel(aid.ids_M); # mass flow rate
   it_M = 1; # mass flow rate
   it_X = 1:numel(aid.ids_X); # scanned x sections
-  it_X = 3; # scanned x sections
+  it_X = 1; # scanned x sections
   ## fixed
   i_L = i_O = 1; # liquid, optical setup
   i_A = 1;
   i_C = 1;
   i_M = 1;
-  i_X = 3;
+  i_X = 1;
 
   ## set interface normal profile depth in mm
   pd_M = [0.3 0.35 0.4 0.5];
@@ -76,6 +76,7 @@ if 1
   sf_c = get_sf (c_msh);
   sf_u = get_sf (u_msh);
   n_t = numel (c_dat(1,:))
+##  n_t = 1
 endif
 
 ## (2) per section alignment of Ic recordings; concentration field, interface detection and statistics
@@ -99,6 +100,8 @@ if 1
     pdat.c_dat{i_A, i_C, i_M, i_X}{1} = c_dat{1,i_t};
     pdat_n{i_t} = corr_y_offsets (p_dat, it_A, it_C, it_M, it_X);
   endfor
+
+  ## TODO: adjust mesh
 
   ## concentration field
   ## linear 2 point ref calib, with intensity reduction towards interface in calib
@@ -275,7 +278,7 @@ if 1
 endif
 
 ##
-## TODO: interface normal concentration profile analysis
+## interface normal concentration profile analysis
 ##
 if 1
   sf = sf_c;
@@ -286,10 +289,13 @@ if 1
   ## concentration profile coordinates
   snp = sf_p * (-sn_idx_off:numel(linspace(0,profile_depth,round(profile_depth/sf_p+1)))-1) * 1e-3; # m
   ##
+  p_msh = mesh_uc ([0 numel(snp)-1], [0 numel(px)-1], 0, xmin, [], "c", [sf_p sf(1)]);
   cp = cell (1, n_t);
   for i_t = 1:n_t
+    printf ([">>> interpolation on interface normal lines: " num2str(i_t) " of " num2str(n_t) " records \n"]);
     ## interface normal line mesh
     h_g = h_c_g_fit{i_t};
+##    h_g = imsmooth (h_c_g_mean', 16); # test
     py = h_g';
     ap = angle2Points ([px(1:end-1) py(1:end-1)], [px(2:end) py(2:end)]);
     ## concentration profile lines normal to interface
@@ -334,7 +340,7 @@ if 1
 ##    cp_mm_b = movmean (cp{i_t}, 21, "Endpoints", 0.0);
     cp_b{i_t} = cp_s{i_t} = sn_max{i_t} = zeros (1, size(cp{i_t},1));
     for i_p = 1:size(cp{i_t},1)
-      ##  cp_b(i) = mean (cp_mm_b(i,end-50:end));
+##      cp_b{i_t}(i_p) = mean (cp{i_t}(i_p,end-50:end));
       cp_b{i_t}(i_p) = 0;
 ##      cp_s{i_t}(i_p) = cp(i_p,snp==0);
       [cp_s{i_t}(i_p), sn_max{i_t}(i_p)] = max (cp{i_t}(i_p,1:20));
@@ -352,6 +358,19 @@ if 1
       ylabel ("surface concentration")
     endif
     cp_s{i_t} = cp_s_r{i_t};
+    ##
+    cp_b_mm = movmedian (cp_b{i_t}, 81);
+    [cp_b_r{i_t}, isout] = outlier_rm (cp_b{i_t}, cp_b_mm);
+    if (i_t == 1)
+      fh = figure (); hold on;
+      plot (x, cp_b{i_t}, "k");
+      plot (x, cp_b_r{i_t}, "g");
+      plot (x, cp_b_mm, "b");
+      plot (x, movmean (cp_b_r{i_t}, 21), "m");
+      plot (x(isout==1), cp_b{i_t}(isout==1), "*r");
+      xlabel ("x")
+      ylabel ("bulk concentration")
+    endif
 
     ## normalize from measured cn_bulk to cn_interface
     cp_n{i_t} = [];
@@ -374,23 +393,38 @@ if 1
   endfor
 
   ## profile fit
-  cp_nn = delta_fit = cn0 = p_c_fit = {};
-  for i_t = 1:n_t
-    dcds_idx = 16;
-    switch i_M
-      case 1
-        idx_r = [2 8];
-      case 2
-        idx_r = [2 8];
-      case 3
-        idx_r = [2 6];
-      case 4
-        idx_r = [2 4];
-        dcds_idx = 12;
-    endswitch
-    [delta_fit{i_t} cp_nn{i_t} cn0{i_t} p_c_fit{i_t} p_sc ~] = erfc_profile_fit (snp, cp_n{i_t}, sf_p, 0, sig=2, idx_r, dcds_idx, false);
-    printf ([">>> profile fit done: " num2str(i_t) " of " num2str(n_t) " records \n"]);
-  endfor
+  cp_nn = delta_fit = cn0 = p_c_fit = dcdsnp0 = {};
+  dcds_idx = 16;
+  switch i_M
+    case 1
+      idx_r = [2 3];
+      dcds_idx = 10;
+      sig = 0.5;
+    case 2
+      idx_r = [2 8];
+    case 3
+      idx_r = [2 6];
+    case 4
+      idx_r = [2 4];
+      dcds_idx = 12;
+  endswitch
+  testplots_fit = 0
+  ## profile fit singe thread
+##  t1 = tic
+##  for i_t = 1
+##    printf ([">>> profile fit: " num2str(i_t) " of " num2str(n_t) " records \n"]);
+##    [delta_fit{i_t} cp_nn{i_t} cn0{i_t} p_c_fit{i_t} p_sc ~] = erfc_profile_fit (snp, cp_n{i_t}, sf_p, 0, sig, idx_r, dcds_idx, testplots_fit);
+##  endfor
+##  toc (t1)
+##  dt1 = toc (t1);
+  ## profile fit in parallel ~ 3 x speed up with 4 cores
+  nthreads = round (nproc/2); # no use of SMT for this
+  printf ([">>> profile fit: " num2str(nthreads) " cores process " num2str(n_t) " records \n"]);
+  t2 = tic
+  [delta_fit, cp_nn, cn0, p_c_fit, p_sc, ~] = parcellfun (nthreads, @(par_var) erfc_profile_fit(snp, par_var, sf_p, 0, sig, idx_r, dcds_idx, 0), cp_n, "UniformOutput", false);
+  toc (t2)
+##  dt2 = toc (t2);
+##  dt2 / dt1
   ##
   delta_all = [];
   for i_t = 1:numel(delta_fit)
@@ -404,14 +438,56 @@ if 1
   ##
   fh = figure (); hold on;
   for i_t = 1:numel(delta_fit)
-    plot (x, delta_fit{i_t}, [";i_M = " num2str(i_t) ";"])
+    clf (fh)
+     hold on;
+    plot (x, delta_mean, ["k;median;"], "linewidth", 2)
+##    plot (x, delta_fit{i_t}, [";i_M = " num2str(i_t) ";"])
+    plot (x, outlier_rm(delta_fit{i_t}, movmedian(delta_fit{i_t},81)), [";i_M = " num2str(i_t) ";"])
+    pause (0.5)
   endfor
   plot (x, delta_mean, ["k;median;"], "linewidth", 2)
-  plot (x, delta_mean+2*delta_std, ["k--;+2 STD;"], "linewidth", 2)
-  plot (x, delta_mean-2*delta_std, ["k--;-2 STD;"], "linewidth", 2)
+  plot (x, delta_mean+2*delta_std, ["r--;+2 STD;"], "linewidth", 2)
+  plot (x, delta_mean-2*delta_std, ["r--;-2 STD;"], "linewidth", 2)
   median (delta_mean)
   median (delta_std)
   100 * 2 * median (delta_std) ./ median (delta_mean)
+
+  plot_map_msh (p_msh, cp_nn{1})
+  hold on
+  [mi, ixd_s] = min ( abs(cp_nn{1}-0.21),[],2);
+  delta_i = ixd_s*sf_p;
+  plot3 ((delta_i'), x, ones(1,numel(delta_mean)), "b")
+  plot3 ((delta_fit{1}' * 1e3), x, ones(1,numel(delta_mean)), "g")
+  plot3 ((delta_mean' * 1e3), x, ones(1,numel(delta_mean)), "r")
+
+  plot (x, (delta_mean' * 1e3), "r")
+  plot (x, (movmedian(delta_mean,81)' * 1e3), "k")
+  plot (x, imsmooth(movmedian(delta_mean,81),8)' * 1e3, "g")
+
+  valid = [];
+  for i_t = 1:n_t
+    p_test = polyfit (x(10:end-10), delta_fit{i_t}(10:end-10), 1);
+    valid(i_t) = logical(p_test(1)>=0);
+  endfor
+
+
+  delta_all = [];
+  k = 0
+  for i_t = 1:numel(delta_fit)
+    if (valid(i_t))
+      k++;
+      for i = 1:numel(delta_fit{1})
+        delta_all(i,k) = delta_fit{i_t}(i);
+      endfor
+    endif
+  endfor
+  delta_mean = median (delta_all, 2);
+  delta_std = std (delta_all, [], 2);
+
+  delta_mean = outlier_rm (delta_mean, movmedian(delta_mean,81));
+##  delta_mean = imsmooth (delta_mean,32);
+  ## TODO: x_stitch result
+  ## TODO: load single frame analysis in a_flat_main
 
   ## output result per section
   mkdir ([save_dir "/" id])
@@ -426,7 +502,4 @@ if 1
   csvwrite ([save_dir_p "delta_dyn_mean.csv"], plt_1_d, "append", "off", "precision", "%.4e")
 
 endif
-##
-##
-
 ##

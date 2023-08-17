@@ -3,9 +3,13 @@
 
 ## fit function diffusivity measurements
 ##
+## p_1, p_2 .. fit parameters
+## sn       .. coordinate
+## p_sc     .. scaling factor of denominator aiding the numerical optimization
+##
 ## Author: Sören J. Gerke
 ##
 
-function cout = fitfn_cn_diff (p, s)
-   cout = p(2) * erfc (s / (p(1) * 1e-4));
+function cout = fitfn_cn_diff (p, sn, p_sc)
+   cout = p(2) * erfc (sn / (p(1) * p_sc));
 endfunction

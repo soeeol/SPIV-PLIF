@@ -30,8 +30,8 @@ function pdat = corr_y_offsets (pdat, it_A, it_C, it_M, it_X)
           [~, i1] = max (gradient (opt1));
           [~, i2] = max (gradient (opt2));
           [~, i3] = max (gradient (opt3));
-          yoff2 = i2 - i1
-          yoff3 = i3 - i1
+          yoff2 = i2 - i1;
+          yoff3 = i3 - i1;
           if testplots
             figure (); hold on;
             plot (opt1); plot (i1, opt1(i1), "*");

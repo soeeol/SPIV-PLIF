@@ -85,8 +85,8 @@ st_abs = x_abs(1) + 1e-3 * st; # m
 cp_mm_b = movmean (cp, 21, "Endpoints", 0.0);
 cp_b = cp_s = up_s = sn_max = zeros (1, size(cp,1));
 for i = 1:size(cp,1)
-##  cp_b(i) = mean (cp_mm_b(i,end-50:end));
-  cp_b(i) = 0;
+  cp_b(i) = mean (cp_mm_b(i,end-50:end));
+##  cp_b(i) = 0;
   cp_s(i) = cp(i,snp==0);
   [cp_s(i), sn_max(i)] = max (cp(i,1:20));
   up_s(i) =  max (up_n(i,1:20));
@@ -153,14 +153,12 @@ endif
 ## c (x, y) = c_s * erfc ( y / sqrt (4 * D * x / u_s) )
 ## sqrt (4 * D * x / u_s) = p(1) * 1e-5
 ## D = u_s / x / 4 * (p(1) * 1e-5)^2
-p_sc = 1e-5;
-c_fitf = @ (p, st) p(2) * erfc (st / (p(1) * p_sc));
-##
 settings = optimset ("lbound", [0.1; 0.1],"ubound", [10; 10], "TolFun", 1e-16);
-p_c_fit = {};
-fit_idx = [];
 init = [1.0 1.0]'
-p_c_fit = cn_ds_0_fit = cn0 = delta_fit = [];
+p_sc = 1e-5; # D ~ 1e-10
+c_fitf = @(p, sn) fitfn_cn_diff (p, sn, p_sc);
+##
+p_c_fit = fit_idx = cn_ds_0_fit = cn0 = delta_fit = [];
 ##
 cp_nn = zeros (size (cp_n));
 ##
@@ -178,56 +176,7 @@ switch i_M
     dcds_idx = 12;
 endswitch
 ##
-ski_p = 1;
-if testplots_fit
-  fh = figure ();
-  ski_p = 20;
-endif
-##
-for i = 1:ski_p:size(cp_n,1)
-  p_c_fit{i} = init;
-  cprof_tmp = imsmooth (cp_n(i,:), sig);
-  [~, idx_max_dcds] = min (gradient (cprof_tmp(1+sn_idx_off:1+sn_idx_off+dcds_idx)));
-  idx_max_dcds = idx_max_dcds + sn_idx_off;
-  fit_l = max (4+sn_idx_off, idx_max_dcds-idx_r(1));
-  fit_u = fit_l + idx_r(2);
-  fit_idx(i,:) = [fit_l fit_u];
-  ## find fit parameters
-  [p_c_fit{i}, ~] = nonlin_curvefit (c_fitf, init, [snp(fit_idx(i,1):fit_idx(i,2))]', [cp_n(i,fit_idx(i,1):fit_idx(i,2))]', settings);
-  cn0(i) = p_c_fit{i}(2);
-##  cn0(i) = c_fitf (p_c_fit{i}, 0);
-  ## fit function gradient at sn = 0
-  cn_ds_0_fit(i) = -2 * p_c_fit{i}(2) / ((p_c_fit{i}(1) * p_sc) * sqrt(pi) ); # analytical
-##  cn_ds_0_fit(i) = - max (abs (gradient (c_fitf (p_c_fit{i}, snp(snp>=0)), sf_p*1e-3)));
-  ## boundary layer thickness
-  delta_fit(i) = ((p_c_fit{i}(1) * p_sc) * sqrt (pi)) / 2; # analytical
-##  delta_fit(i) = - cn0(i) / cn_ds_0_fit(i);
-  ## replace deviating near interface values and normalize concentration profile
-  cp_nn(i,:) = cp_n(i,:);
-##  cp_nn(i,1:fit_l-0) = c_fitf (p_c_fit{i}, snp(1:fit_l-0));
-  cp_nn(i,1:idx_max_dcds+1) = c_fitf (p_c_fit{i}, snp(1:idx_max_dcds+1));
-  cp_nn(i,:) = cp_nn(i,:) / cn0(i);
-  if testplots_fit
-    hold on;
-    plot (snp, cp_n(i,:), "b-x")
-    plot (snp, cp_nn(i,:), "k-d")
-    plot (snp, cprof_tmp, "c-x")
-    plot (snp(fit_l), cp_n(i,fit_l), "r-s")
-    plot (snp(idx_max_dcds), cp_n(i,idx_max_dcds), "m-s")
-    plot (snp(fit_u), cp_n(i,fit_u), "r-s")
-    plot (snp, c_fitf(p_c_fit{i}, snp), "g")
-    plot ([0 0], [0 1.5], "k")
-    plot ([0 delta_fit(i)], [1 0], "r")
-##    title (num2str(i))
-    title ([num2str(x_abs(i)*1e3), "mm"])
-    xlim ([-1e-3*sn_idx_off*sf_p 100e-6])
-    ylim ([0 1.5])
-    xlabel ("sn in m")
-    ylabel ("cn in -")
-    pause (0.25)
-    clf
-  endif
-endfor
+[delta_fit cp_nn cn0 p_c_fit p_sc ~] = erfc_profile_fit (snp, cp_n, sf_p, 0, sig, idx_r, dcds_idx, testplots_fit);
 
 fh = plot_map (cp_nn);
 xlabel ("sn"); ylabel ("st");
