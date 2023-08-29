@@ -6,11 +6,18 @@
 ## https://doi.org/10.1007/s00348-018-2527-y
 ## https://static-content.springer.com/esm/art%3A10.1007%2Fs00348-018-2527-y/MediaObjects/348_2018_2527_MOESM1_ESM.m
 ##
+## input:
+## - T_K  .. temperature in K
+## - mf   .. mass fraction glycerol
+##
+## output:
+## - rho  .. density of water - glycerol mixture in kg / m^3
+##
 ## Author: Sören J. Gerke
 ##
 
-function rho = rho_PT_W_model (mf, T)
-  T = T - 273.15;
+function rho = rho_PT_W_model (mf, T_K)
+  T = T_K - 273.15; # T for model is in °C
   c = 1.78e-6*T.^2 - 1.82e-4*T + 1.41e-2;
   kappa = 1 + (c .* sin(mf.^1.31 .* pi).^0.81);
   rho_H2O = 1000 * (1 - abs((T - 3.98) ./ 615).^1.71);

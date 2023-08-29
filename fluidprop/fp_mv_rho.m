@@ -1,7 +1,7 @@
 ##  SPDX-License-Identifier: BSD-3-Clause
 ##  Copyright (c) 2023, Sören Jakob Gerke
 
-## molar volume molar mass density
+## molar volume from molar mass and density
 ##
 ## Author: Sören J. Gerke
 ##

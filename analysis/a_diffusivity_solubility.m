@@ -57,7 +57,6 @@ phi_W  = 2.6;## water phi = 2.6
 ## data for Wilke and Chang correlation:
 mm_PTW_solvent = fp_mm_mf (mf, mm_PT, mm_W);
 mm_PDW_solvent = fp_mm_mf (mf, mm_PD, mm_W);
-mv_solute = fp_mv_bp_TC (mv_crit_O2);
 
 ## PerkinsLR1969et: apply Wilke and Chang for solvent mixture
 ## Perkins and Geankoplis (1969), doi: 10.1016/0009-2509(69)80075-8.
@@ -65,12 +64,12 @@ mv_solute = fp_mv_bp_TC (mv_crit_O2);
 x_PD = fp_mx_mf (mf, mm_PD, mm_PDW_solvent);
 ## with mixing rule:
 phi_mm_PDW = x_PD*phi_PD*mm_PD + (1-x_PD)*phi_W*mm_W;
-D_Am_PD_WC = f_DAB_WC (K_SI, phi_B=1, mm_B=phi_mm_PDW', eta_B=eta_PD_W', mv_A=mv_solute, T=T_ref);
+D_Am_PD_WC = f_DAB_WC (K_SI, phi_B=1, mm_B=phi_mm_PDW', eta_B=eta_PD_W', mv_A=mv_O2, T=T_ref);
 ## PT:
 x_PT = fp_mx_mf (mf, mm_PT, mm_PTW_solvent);
 ## with mixing rule:
 phi_mm_PTW = x_PT*phi_PT*mm_PT + (1-x_PT)*phi_W*mm_W;
-D_Am_PT_WC = f_DAB_WC (K_SI, phi_B=1, mm_B=phi_mm_PTW', eta_B=eta_PT_W', mv_A=mv_solute, T=T_ref);
+D_Am_PT_WC = f_DAB_WC (K_SI, phi_B=1, mm_B=phi_mm_PTW', eta_B=eta_PT_W', mv_A=mv_O2, T=T_ref);
 
 ## effective diffusivity from binary diff coeff for gas dissolved in mix of two solvents
 ## HimmelblauDM1964, Tang, "crude estimate"
@@ -82,9 +81,9 @@ D_Am_PT_WC = f_DAB_WC (K_SI, phi_B=1, mm_B=phi_mm_PTW', eta_B=eta_PT_W', mv_A=mv
 f_DAB_S = @ (Ls, L, mm_B, eta_B, mv_A, T) 8.75e-17 * ((Ls^1/3 .* mm_B.^1/2 .* T) ./ (eta_B .* mv_A.^0.5 .* L^0.3)) .^ 0.93;
 ## Ls solvent , L solute latent heat of vaporization in kJ/kg
 ## O2 6.82 kJ/mol, glycerol 85.8 kJ/mol, water 44.2 kJ/mol
-D_PD_S = f_DAB_S (Ls=L_PD, L=L_O2, mm_PD, eta_PD_W(end), mv_solute, T_ref)
-D_PT_S = f_DAB_S (Ls=L_PT, L=L_O2, mm_PT, eta_3=eta_PT_W(end), mv_solute, T_ref)
-D_W_S = f_DAB_S (Ls=L_W, L=L_O2, mm_W, eta_2=eta_W(TK==T_ref), mv_solute, T_ref)
+D_PD_S = f_DAB_S (Ls=L_PD, L=L_O2, mm_PD, eta_PD_W(end), mv_O2, T_ref)
+D_PT_S = f_DAB_S (Ls=L_PT, L=L_O2, mm_PT, eta_3=eta_PT_W(end), mv_O2, T_ref)
+D_W_S = f_DAB_S (Ls=L_W, L=L_O2, mm_W, eta_2=eta_W(TK==T_ref), mv_O2, T_ref)
 ## mixing rule of PerkinsLR1969et
 mre_PT = 0.5;
 x_2 = fp_mx_mf (1-mf, mm_W, mm_PTW_solvent);
@@ -106,11 +105,11 @@ Dim_S_PD = (x_2*D_W_S*eta_2.^mre_PD + x_3*D_PD_S*eta_3.^mre_PD) ./ eta_m.^mre_PD
 ## viscosity proportionality is relaxed vs. Stokes-Einstein type correlations
 ##f_DAB_DM = @ (mv_A, mv_B, eta_B) 1e-4 * 6.02e-5 * ( (mv_B*1e6)^0.36 / ((eta_B*1e3)^0.61 * (mv_A*1e6)^0.64) ); # simplyfied option
 f_DAB_DM = @ (mv_A, mv_B, eta_B) 1e-4 * 6.02e-5 * ( (mv_B*1e6)^0.36 / ((eta_B*1e3)^0.61 * (mv_A*1e6)^(0.43*(mv_B*1e6)^0.13)) );
-D_W_DM  = f_DAB_DM (mv_A=fp_mv_bp_TC(mv_crit_O2), mv_B=fp_mv_bp_TC(mv_crit_W), eta_B=eta_W(TK==T_ref))
-D_PT_DM = f_DAB_DM (mv_A=fp_mv_bp_TC(mv_crit_O2), mv_B=fp_mv_bp_TC(mv_crit_PT), eta_B=eta_PT_W(end))
-D_PD_DM = f_DAB_DM (mv_A=fp_mv_bp_TC(mv_crit_O2), mv_B=fp_mv_bp_TC(mv_crit_PD), eta_B=eta_PD_W(end))
+D_W_DM  = f_DAB_DM (mv_A=mv_O2, mv_B=mv_W, eta_B=eta_W(TK==T_ref))
+D_PT_DM = f_DAB_DM (mv_A=mv_O2, mv_B=mv_PT, eta_B=eta_PT_W(end))
+D_PD_DM = f_DAB_DM (mv_A=mv_O2, mv_B=mv_PD, eta_B=eta_PD_W(end))
 ##D_PD_DM = 5.9e-10;
-D_WPT_DM  = f_DAB_DM (mv_A=fp_mv_bp_TC(mv_crit_W), mv_B=fp_mv_bp_TC(mv_crit_PT), eta_B=eta_PT_W(end))
+D_WPT_DM  = f_DAB_DM (mv_A=mv_W, mv_B=mv_PT, eta_B=eta_PT_W(end))
 ## mixing rule of PerkinsLR1969et
 Dim_DM_PT = (x_2 * D_W_DM * eta_2.^mre_PT + x_3 * D_PT_DM * eta_3.^mre_PT) ./ eta_m.^mre_PT;
 Dim_DM_PD = (x_2 * D_W_DM * eta_2.^mre_PD + x_3 * D_PD_DM * eta_3.^mre_PD) ./ eta_m.^mre_PD;
@@ -124,9 +123,9 @@ Dim_DM_PD = (x_2 * D_W_DM * eta_2.^mre_PD + x_3 * D_PD_DM * eta_3.^mre_PD) ./ et
 ## water in glycerol comparison
 ##
 #### f_DAB_S: water in glycerol ## 3.87e-12 vs exp D ~ 1.4e-11
-##D_WPT_S = f_DAB_S (Ls=L_PT, L=L_W, mm_PT, eta_PT_W(end), fp_mv_bp_TC(mv_crit_W), T=T_ref)
+##D_WPT_S = f_DAB_S (Ls=L_PT, L=L_W, mm_PT, eta_PT_W(end), mv_W, T=T_ref)
 #### f_DAB_WC: water in glycerol ## 4.1896e-12 vs exp D ~ 1.4e-11
-##f_DAB_WC (K_SI, phi_B=phi_PT, mm_B=mm_PT, eta_B=eta_PT_W(end), mv_A=fp_mv_bp_TC (mv_crit_W), T=T_ref)
+##f_DAB_WC (K_SI, phi_B=phi_PT, mm_B=mm_PT, eta_B=eta_PT_W(end), mv_A=mv_W, T=T_ref)
 
 ##
 ## experimental studies
@@ -330,7 +329,6 @@ T_fit = [270:1:330];
 ## c_sol - solubility of oxygen O2 in water in mg / l
 f_k_x_Benson = @(T) (e .^ (3.71814 + 5596.17 ./ T - 1049668 ./ T .^ 2)); # atm
 mf_sat_Benson_fit = fp_mf_mx ((p_O2/p_total) ./ f_k_x_Benson(T_fit), mm_O2, mm_W); # g/g
-##c_sat_Benson_fit = 1e3 * rho_W(TK==T_ref) .* mf_sat_Benson_fit # mg/l
 c_sat_Benson_fit = 1e3 * fp_mc_mf (rho_PT_W_model(0,T_fit), rho_O2, mf_sat_Benson_fit); # mg/l
 
 ## MiyamotoH2014etal IUPAC solubility series:
@@ -347,7 +345,6 @@ c_sat_iupac = 1e3 * fp_mc_mf (rho_PT_W_model(0,T_iupac), rho_O2, mf_O2_iupac); #
 ##ln k_x = 14.989460 + 5.742622e3 ./ T - 1.070683e6 ./ (T.^2);
 f_k_x = @(T) e.^(14.989460 + 5.742622e3 ./ T - 1.070683e6 ./ (T.^2)); # k_x in Pa
 mf_O2_iupac_fit = fp_mf_mx (p_O2 ./ f_k_x(T_fit), mm_O2, mm_W); # g/g
-##c_sat_iupac_fit = 1e3 * rho_W(TK==T_ref) .* mf_sat_iupac_fit # mg/l
 c_sat_iupac_fit = 1e3 * fp_mc_mf (rho_PT_W_model(0,T_fit), rho_O2, mf_O2_iupac_fit); # mg/l
 
 ## O2 in 1,2-propanediol solubility @ 25°C experimental by OsborneAD1965et

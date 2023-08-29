@@ -1,7 +1,7 @@
 ##  SPDX-License-Identifier: BSD-3-Clause
 ##  Copyright (c) 2023, Sören Jakob Gerke
 
-## mass fraction from molar mass
+## mass fraction from molar fraction
 ##
 ## Author: Sören J. Gerke
 ##
