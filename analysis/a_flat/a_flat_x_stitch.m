@@ -121,6 +121,7 @@ title ("normalized concentration from c0 to csat")
 ##
 ## interface detection from cn
 ##
+printf ([">>> interface detection ... \n"])
 ## uncomment next line to click select upstream inital interface start
 ##  pp_stitch.y0_if_c.data = [];
 [ifg_meas, ~, ispeak] = interface_xy (msh_c, cn, 10, "max", pp_stitch, []);

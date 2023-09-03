@@ -81,7 +81,7 @@ if 0
 endif
 
 ## (2) extract profiles
-if 1
+if 0
   for i_M = it_M
     profile_depth = pd_M(i_M);
     save_dir_m = save_dirs{i_M}
@@ -221,7 +221,7 @@ endif
 cd (save_dir)
 load -text "inlet_local_Re.txt"
 ## (5) fluid dynamics
-if 0
+if 1
   ## output wall and interface
   plt_1_h = {mfilename, date, ""; "x in mm", "h_w in mm", "h_g in mm"};
   plt_1_d = [x' h_w h_g_M];
@@ -532,22 +532,26 @@ if 1
 
   ## diffusivity estimate from snD vs. tc slope
   ## contact time tc
+  ## i_M 1, 2, 3(part wise) and 4 support the diffusivity D_AB.PLIF2
+  i_M = 3
+  delta_c_cmp = model_filmflow_laminar_delta_x (x_eq, D_eq, u_s_meas);
   tc = x_abs / u_s_meas(i_M);
   figure ()
   hold on
-  plot (tc, snD.^2/2, "x")
-  plot (x_eq / u_s_eq(i_M), (delta_c_x_eq(i_M,:)*(sqrt (2 / pi))).^2 / 2,  "-")
-  xlim ([0 1])
-  ylim ([0 1e-9])
-  idx_fit = (x>0) & (x<12);
-  p_D_fit = polyfit (tc(idx_fit), snD(idx_fit).^2/2, 1)
-  plot ([0 1], polyval (p_D_fit, [0 1]))
+  plot (tc, snD_M{i_M}.^2/2, "x")
+  plot (x_eq / u_s_eq(i_M), (delta_c_x_eq(i_M,:)*(sqrt (2 / pi))).^2 / 2,  "r-")
+  plot (x_eq / u_s_meas(i_M), (delta_c_cmp(i_M,:)*(sqrt (2 / pi))).^2 / 2,  "m-")
+  idx_fit = (x>-12) & (x<20);
+  p_D_fit_1 = polyfit (tc(idx_fit), snD_M{i_M}(idx_fit).^2/2, 1)
+  plot ([0 1], polyval (p_D_fit_1, [0 1]), "g")
   idx_fit = (x>-12) & (x<-7);
-  p_D_fit = polyfit (tc(idx_fit), snD(idx_fit).^2/2, 1)
-  plot ([0 1], polyval (p_D_fit, [0 1]))
+  p_D_fit_2 = polyfit (tc(idx_fit), snD_M{i_M}(idx_fit).^2/2, 1)
+  plot ([0 1], polyval (p_D_fit_2, [0 1]), "b-")
   plot ([0 1], polyval ([D_AB.PLIF2 -8e-11], [0 1]), "--")
   plot ([0 1], polyval ([D_AB.PLIF2 18e-11], [0 1]), "--")
-  plot (x_sec./ u_s_meas(i_M), [0 0 0 0 0; 10e-9*[1 1 1 1 1]], "k")
+  plot (x_sec./ u_s_meas(i_M), [0 0 0 0 0; 1e-9*[1 1 1 1 1]], "k")
+## xlim ([0 0.5])
+##  ylim ([0 1e-9])
 
   fh = figure (); hold on;
   for i_M = it_M

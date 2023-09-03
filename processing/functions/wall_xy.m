@@ -66,9 +66,7 @@ function [xy_wall, xy_idx, thrs] = wall_xy (msh, map, tol, ini, method)
       error (["method " '"' method '"' " not implemented"]);
   endswitch
   xy_idx((xy_idx(:,2)==0),2) = median (xy_idx(:,2));
-##  idx = xy_idx(:,2) > 0;
-##  xy_idx = xy_idx(idx,:);
-##  xy_wall = xy_wall(idx,:);
-  ## minimal smoothing
-  xy_wall(:,2) = movmedian (xy_wall(:,2),3);
+  ## remove far outliers
+  xy_idx(:,2) = round (outlier_rm (xy_idx(:,2), movmedian (xy_idx(:,2), 41)));
+  xy_wall(:,2) = outlier_rm (xy_wall(:,2), movmedian (xy_wall(:,2), 41));
 endfunction

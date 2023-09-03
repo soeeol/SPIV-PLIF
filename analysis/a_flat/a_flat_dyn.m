@@ -273,7 +273,7 @@ if 1
   ylabel ("dispersion measures in mm")
   print (fh4, "-djpeg", "-color", ["-r" num2str(250)], [save_dir_p "/if_stat.jpg"]);
 
-  cd (save_dir_p);
+  cd (save_dir);
   save -v7 "if_stat.v7" n_t x c_h mmax_dev mmad_dev mstd_dev max_dev mad_dev std_dev
 endif
 
@@ -295,7 +295,6 @@ if 1
     printf ([">>> interpolation on interface normal lines: " num2str(i_t) " of " num2str(n_t) " records \n"]);
     ## interface normal line mesh
     h_g = h_c_g_fit{i_t};
-##    h_g = imsmooth (h_c_g_mean', 16); # test
     py = h_g';
     ap = angle2Points ([px(1:end-1) py(1:end-1)], [px(2:end) py(2:end)]);
     ## concentration profile lines normal to interface
@@ -340,8 +339,8 @@ if 1
 ##    cp_mm_b = movmean (cp{i_t}, 21, "Endpoints", 0.0);
     cp_b{i_t} = cp_s{i_t} = sn_max{i_t} = zeros (1, size(cp{i_t},1));
     for i_p = 1:size(cp{i_t},1)
-##      cp_b{i_t}(i_p) = mean (cp{i_t}(i_p,end-50:end));
-      cp_b{i_t}(i_p) = 0;
+      cp_b{i_t}(i_p) = mean (cp{i_t}(i_p,end-50:end));
+##      cp_b{i_t}(i_p) = 0;
 ##      cp_s{i_t}(i_p) = cp(i_p,snp==0);
       [cp_s{i_t}(i_p), sn_max{i_t}(i_p)] = max (cp{i_t}(i_p,1:20));
     endfor
@@ -408,6 +407,24 @@ if 1
       idx_r = [2 4];
       dcds_idx = 12;
   endswitch
+  switch i_M
+  case 1
+    idx_r = [2 12];
+    dcds_idx = 12;
+    sig = 1;
+  case 2
+    idx_r = [2 8];
+    dcds_idx = 16;
+    sig = 1;
+  case 3
+    idx_r = [2 6];
+    dcds_idx = 8;
+    sig = 1;
+  case 4
+    idx_r = [1 5];
+    dcds_idx = 8;
+    sig = 1;
+endswitch
   testplots_fit = 0
   ## profile fit singe thread
 ##  t1 = tic
@@ -417,9 +434,8 @@ if 1
 ##  endfor
 ##  toc (t1)
 ##  dt1 = toc (t1);
-  ## profile fit in parallel ~ 3 x speed up with 4 cores
   nthreads = round (nproc/2); # no use of SMT for this
-  printf ([">>> profile fit: " num2str(nthreads) " cores process " num2str(n_t) " records \n"]);
+  printf ([">>> profile fit: " num2str(nthreads) " threads to process " num2str(n_t) " records \n"]);
   t2 = tic
   [delta_fit, cp_nn, cn0, p_c_fit, p_sc, ~] = parcellfun (nthreads, @(par_var) erfc_profile_fit(snp, par_var, sf_p, 0, sig, idx_r, dcds_idx, 0), cp_n, "UniformOutput", false);
   toc (t2)

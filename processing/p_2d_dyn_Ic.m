@@ -1,14 +1,13 @@
 ##  SPDX-License-Identifier: BSD-3-Clause
 ##  Copyright (c) 2023, Sören Jakob Gerke
 
-## "Interactive" script to process the measurements of type 2d-dyn_Ic
+## "Interactive" script to process the measurements of type 2d_dyn_Ic
 ##
 ## Author: Sören J. Gerke
 ##
 
 ## processing definition table linking the records
-ltabpath = [pdir.data "MeasID.csv"];
-ltab = csv2cell (ltabpath);
+ltab = csv2cell (pdir.ltab);
 ## init processing parameters struct
 pp = init_param ();
 
@@ -16,43 +15,24 @@ pp = init_param ();
 pp.type.data = "2d_dyn_Ic";
 
 ## select measurement to process by setting the matching parameters
-measid = char ();
 pp.cell.data = "flat"; # "flat" "2d-c10" "2d-t10" "2d-r10" "2d-r10-60" "2d-r10-40" "2d-r10-20"
 pp.optset.data = "M13"; # set M13 (including M13 M13b M13c) or M26
 pp.alpha.data = 60; # ° 15 60
 pp.liquid.data = "WG141"; # WG141
-pp.M.data = 8; # kg/h 8 16 32 64
-pp.X.data = 8; # mm 8 0 -8 -16
+pp.M.data = 64; # kg/h 8 16 32 64
+pp.X.data = -16; # mm 8 0 -8 -16
 pp.Z.data = 0; # mm
 pp.G.data = 2; # Nl/min
 pp.T.data = 25; # °C
+f_Hz = 10;
 
 testplots = false;
-
-f_Hz = 10;
 
 ## mixture properties
 [~, ~, rho, eta, ~, ~] = get_fp_lm (pdir, pp.liquid.data, pp.T.data+273.15);
 
-## pp pos in table header
-head{1} = head{2} = cell ();
-i = 0;
-for [val, key] = pp
-  i++;
-  head{1}(i) = val.id;
-  head{2}(i) = {find(ismember(ltab(1,:),val.id(:))==1)};
-endfor
-
-## find measurement
-idx_measid = get_measidx (ltab, head, pp);
-
-## read parameters from table
-for [val, key] = pp
-  col = get_col (head, val.id(:));
-  if (! isempty (col))
-    pp.(key).data = ltab(idx_measid,:){col};
-  endif
-endfor
+## read parameters from linking table if available
+[pp, idx_measid, head] = get_pp_ltab (ltab, pp);
 
 ## build measid
 measid = get_measid_pp (pp)
@@ -70,7 +50,7 @@ recids_avg = {"recid_Ic0" "recid_Ic1"};
 ##clear method_piv;
 
 ## load fluorescence intensity data
-nmap_c = numel(recs)
+nmap_c = numel (recs)
 c_dat = {};
 for i = 1:nmap_c
   c_dat(1,i) = recs{i};
@@ -90,7 +70,7 @@ if testplots
   fh = figure ()
   for i = 1:nmap_c
     clf (fh)
-    surf (c_dat{i}{1});
+    surf (c_dat{1,i});
     shading flat
     view ([0 0 1]);
     colorbar;
@@ -113,7 +93,7 @@ sf_c = get_sf (c_msh{1}) # mm/px
 ##  are Ic Ic0 Ic1 and u correctly linked in measid table?
 if (isempty(pp.valid.data) || ! pp.valid.data || testplots)
   pp.valid.data = check_input_data (pp.measid.data, c_dat(1:3), []);
-  csv_param_update (idx_measid, ltab, ltabpath, pp, head);
+  csv_param_update (idx_measid, ltab, pdir.ltab, pp, head);
 endif
 
 ##
@@ -140,7 +120,7 @@ pp.tol_wall.data = 10;
 xy_wall = update_wall_xy (c_msh, c_dat(1:3,1), pp, thrs);
 
 ## visual check
-fh1 = plot_map_msh (c_msh{1}, c_dat{1}); #{1}{1}, c_msh{1}{2}, c_msh{1}{3}
+fh1 = plot_map_msh (c_msh{1}, c_dat{1});
 hold on
 grid off
 styles = {"-c.", "-m.", "-g."};
@@ -153,13 +133,13 @@ if (strcmp (questdlg (["did the wall estimation work ok?"], "@processing",
                         "Yes", "No", "Yes"), "Yes"))
   close (fh1)
   ## update ltab on disk
-  csv_param_update (idx_measid, ltab, ltabpath, pp, head);
+  csv_param_update (idx_measid, ltab, pdir.ltab, pp, head);
 else
   error ("adjust tolerance or manual estimate");
   close (fh1)
 endif
 
-printf ([">>> aglignment of maps and meshes \n"])
+printf ([">>> alignment of maps and meshes \n"])
 ## rotate c maps and rebuild meshes
 for i = 1:nmap_cmsh
   [pp.rot_c.data, ~] = calc_rot (xy_wall{i}, pp, testplots);
@@ -180,16 +160,12 @@ endfor
 ## visual check
 fh2 = figure (); grid on; hold on
 for i = 1:nmap_cmsh
-  plot3 (xy_wall{i}(:,1), xy_wall{i}(:,2), ones(numel(xy_wall{i}(:,1)),1), styles{i} ,"MarkerSize",8);
+  plot3 (xy_wall{i}(:,1), xy_wall{i}(:,2), ones(numel(xy_wall{i}(:,1)),1), styles{i}, "MarkerSize",8);
 endfor
-xticks (domain.xmin:0.5:domain.xmax);
-yticks (-0.5:0.125:3);
 axis auto
 legend ("wall Ic1", "wall Ic0", "wall Ic")
 hold off;
-figure (fh2, "position", get (0, "screensize")); pause (0.5);
-if strcmp(questdlg(["is the alignment ok?"], ...
-  "@processing","Yes","No", "Yes"),"Yes")
+if strcmp(questdlg(["is the alignment ok?"], "@processing", "Yes", "No", "Yes"), "Yes")
   close ([fh2])
 else
   error ("adjust tolerance or manual estimate");
@@ -226,7 +202,7 @@ else
 endif
 pp.y0_if_c.data = xy_if{1}(1,2);
 ## update ltab on disk
-csv_param_update (idx_measid, ltab, ltabpath, pp, head);
+csv_param_update (idx_measid, ltab, pdir.ltab, pp, head);
 
 ## interpolate c_dat and u_dat on common grid
 ymax = max(c_msh{1}{2}(:,1));
@@ -260,9 +236,6 @@ if testplots
   surf (c_msh{1}, c_msh{2}, c_masks.gas.*c_masks.wall)
   shading flat; view ([0 0 1]); axis image; colormap flag;
 endif
-
-## print check plots
-fp = fig_param ({"combo", "single", "elsevier"});
 
 ## x pos for profile plots
 [~, xpos ] = min ( abs ( c_msh{1}(1,:) - 0));
@@ -374,12 +347,12 @@ if strcmp (questdlg (["store results in \n " save_dir], "@processing", "Yes", "N
   if status
     pp.savedate.data = date_str;
     ## update ltab on disk
-    csv_param_update (idx_measid, ltab, ltabpath, pp, head);
+    csv_param_update (idx_measid, ltab, pdir.ltab, pp, head);
     ##
-    print (fig_ift, "-djpeg", "-color", ["-r" num2str(fp.dpi)], [save_dir "overview_5_ift.jpg"]);
-    print (fig_ifp, "-djpeg", "-color", ["-r" num2str(fp.dpi)], [save_dir "overview_5_ifp.jpg"]);
-    print (fig_ifs, "-djpeg", "-color", ["-r" num2str(fp.dpi)], [save_dir "overview_5_ifs.jpg"]);
-    print (fig_if, "-djpeg", "-color", ["-r" num2str(fp.dpi)], [save_dir "overview_5_if.jpg"]);
+    print (fig_ift, "-djpeg", "-color", ["-r" num2str(250)], [save_dir "overview_5_ift.jpg"]);
+    print (fig_ifp, "-djpeg", "-color", ["-r" num2str(250)], [save_dir "overview_5_ifp.jpg"]);
+    print (fig_ifs, "-djpeg", "-color", ["-r" num2str(250)], [save_dir "overview_5_ifs.jpg"]);
+    print (fig_if, "-djpeg", "-color", ["-r" num2str(250)], [save_dir "overview_5_if.jpg"]);
   endif
 else
   error ("not ready to save");

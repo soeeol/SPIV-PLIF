@@ -166,14 +166,21 @@ dcds_idx = 16;
 sig = 2;
 switch i_M
   case 1
-    idx_r = [2 8];
+    idx_r = [2 12];
+    dcds_idx = 12;
+    sig = 1;
   case 2
     idx_r = [2 8];
+    dcds_idx = 16;
+    sig = 1;
   case 3
     idx_r = [2 6];
+    dcds_idx = 8;
+    sig = 1;
   case 4
-    idx_r = [2 4];
-    dcds_idx = 12;
+    idx_r = [1 5];
+    dcds_idx = 8;
+    sig = 1;
 endswitch
 ##
 [delta_fit cp_nn cn0 p_c_fit p_sc ~] = erfc_profile_fit (snp, cp_n, sf_p, 0, sig, idx_r, dcds_idx, testplots_fit);

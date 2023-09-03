@@ -8,7 +8,7 @@
 ##
 
 ## theoretical concentration field for measurement domain
-x_eq = 1e-3 * (x_abs_meas + [-12+5e-3:5e-3:20]);
+x_eq = 1e-3 * (x_abs_meas + [-12+5e-3-20:5e-3:20+20]);
 y_eq = 1e-3 * [0:1e-3:max(pd_M)];
 [XX_eq, YY_eq] = meshgrid (x_eq, y_eq);
 ##  D_eq = D_AB.PLIF1;

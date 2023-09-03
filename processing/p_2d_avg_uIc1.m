@@ -1,14 +1,14 @@
 ##  SPDX-License-Identifier: BSD-3-Clause
 ##  Copyright (c) 2023, Sören Jakob Gerke
 
-## "Interactive" script to process the measurements of type 2d-avg_uIc1
+## "Interactive" script to process the measurements of type 2d_avg_uIc1
 ##
 ## Author: Sören J. Gerke
 ##
 
 ## processing definition table linking the records
-ltabpath = [pdir.data "MeasID.csv"];
-ltab = csv2cell (ltabpath);
+ltab = csv2cell (pdir.ltab);
+
 ## init processing parameters struct
 pp = init_param ();
 
@@ -17,12 +17,12 @@ pp.type.data = "2d_avg_uIc1";
 
 ## select measurement to process by setting the matching parameters
 measid = char ();
-pp.cell.data = "2d-r10"; # "flat" "2d-c10" "2d-t10" "2d-r10" "2d-r10-60" "2d-r10-40" "2d-r10-20"
+pp.cell.data = "flat"; # "flat" "2d-c10" "2d-t10" "2d-r10" "2d-r10-60" "2d-r10-40" "2d-r10-20"
 pp.optset.data = "M13"; # set M13 (including M13 M13b M13c) or M26
 pp.alpha.data = 60; # ° 15 60
 pp.liquid.data = "WG141";
-pp.M.data = 64; # kg/h 8 16 32 64
-pp.X.data = 0; # mm 8 0 -8 -16
+pp.M.data = 16; # kg/h 8 16 32 64
+pp.X.data = -16; # mm 8 0 -8 -16
 pp.Z.data = 0; # mm
 pp.G.data = 2; # Nl/min
 pp.T.data = 25; # °C
@@ -32,28 +32,11 @@ testplots = false;
 ## mixture properties
 [~, ~, rho, eta, ~, ~] = get_fp_lm (pdir, pp.liquid.data, pp.T.data+273.15);
 
-## pp pos in table header
-head{1} = head{2} = cell ();
-i = 0;
-for [val, key] = pp
-  i++;
-  head{1}(i) = val.id;
-  head{2}(i) = {find(ismember(ltab(1,:),val.id(:))==1)};
-endfor
-
-## find measurement
-idx_measid = get_measidx (ltab, head, pp);
-
-## read parameters from table
-for [val, key] = pp
-  col = get_col (head, val.id(:));
-  if (! isempty (col))
-    pp.(key).data = ltab(idx_measid,:){col};
-  endif
-endfor
+## read parameters from linking table if available
+[pp, idx_measid, head] = get_pp_ltab (ltab, pp);
 
 ## build measid
-measid  =  get_measid_pp (pp)
+measid = get_measid_pp (pp)
 pp.measid.data = measid;
 
 ## limits for common grid
@@ -91,25 +74,16 @@ endfor
 sf_c = get_sf (c_msh{1}) # mm/px
 sf_u = get_sf (u_msh) # mm/px
 
-
 ## validity check for input raw data matching measurement point
 ##  are Ic Ic0 Ic1 and u correctly linked in measid table?
 if (isempty(pp.valid.data) || ! pp.valid.data || testplots)
   pp.valid.data = check_input_data (pp.measid.data, c_dat, u_dat);
-  csv_param_update (idx_measid, ltab, ltabpath, pp, head);
+  csv_param_update (idx_measid, ltab, pdir.ltab, pp, head);
 endif
 
 ##
 ## alignment of maps
 ##
-##  PLIF coordinates need to be rotated before offset estimation, because SPIV
-##  coordinates are rotated relative to orginial calibration grid from
-##  calibration refinement step and calibration grid was not guaranteed to
-##  perfectly align with wall while recording x pos of Ic records was slightly
-##  different since meas cell was positioned several times in the scanning
-##  process involving mechanical play of linear stage and pos meas error of linear
-##  gauge - typical overall deviation approx 25 um but rotational offset and y
-##  was found to be stable
 
 ## correct initial offset in Ic maps
 
@@ -131,27 +105,26 @@ pp.tol_wall.data = 15;
 xy_wall = update_wall_xy (c_msh, c_dat, pp, thrs);
 
 ## visual check
-fh1 = figure ();
-view ([0 0 1]); grid on; hold on
-surf (c_msh{1}{1}, c_msh{1}{2}, c_msh{1}{3}, c_dat{1});
-shading flat; colormap viridis; axis image;
+fh1 = plot_map_msh (c_msh{1}, c_dat{1});
+grid off
+hold on
 styles = {"-c.", "-m.", "-g."};
 for i = 1:nmap_c
-  plot3 (xy_wall{i}(:,1), xy_wall{i}(:,2), ones(numel(xy_wall{i}(:,1)),1), styles{i} ,"MarkerSize", 8);
+  plot3 (xy_wall{i}(:,1), xy_wall{i}(:,2), ones(numel(xy_wall{i}(:,1)),1), styles{i}, "MarkerSize", 8);
 endfor
 xlabel ("x in mm"); ylabel ("y in mm"); title ("estimated wall coordinates");
 legend ("Ic map", "wall Ic", "wall Ic0", "wall Ic1");
-figure (fh1, "position", get (0, "screensize")); pause (0.5);
 if (strcmp (questdlg (["did the wall estimation work ok?"], "@processing",
                         "Yes", "No", "Yes"), "Yes"))
   close (fh1)
   ## update ltab on disk
-  csv_param_update (idx_measid, ltab, ltabpath, pp, head);
+  csv_param_update (idx_measid, ltab, pdir.ltab, pp, head);
 else
   error ("adjust tolerance or manual estimate");
   close (fh1)
 endif
 
+printf ([">>> alignment of maps and meshes \n"])
 ## rotate c maps and rebuild meshes
 for i = 1:nmap_c
   [pp.rot_c.data, ~] = calc_rot (xy_wall{i}, pp, testplots);
@@ -166,16 +139,12 @@ endfor
 ## visual check
 fh2 = figure (); grid on; hold on
 for i = 1:nmap_c
-  plot3 (xy_wall{i}(:,1), xy_wall{i}(:,2), ones(numel(xy_wall{i}(:,1)),1), styles{i} ,"MarkerSize",8);
+  plot3 (xy_wall{i}(:,1), xy_wall{i}(:,2), ones(numel(xy_wall{i}(:,1)),1), styles{i}, "MarkerSize", 8);
 endfor
-xticks(domain.xmin:0.5:domain.xmax);
-yticks(-0.5:0.125:3);
 axis auto
 legend ("wall Ic1", "wall Ic0", "wall Ic")
 hold off;
-figure (fh2, "position", get (0, "screensize")); pause (0.5);
-if strcmp(questdlg(["is the alignment ok?"], ...
-  "@processing","Yes","No", "Yes"),"Yes")
+if strcmp(questdlg(["is the alignment ok?"], "@processing","Yes","No", "Yes"),"Yes")
   close ([fh2])
 else
   error ("adjust tolerance or manual estimate");
@@ -183,17 +152,15 @@ endif
 
 if testplots
   for i = 1:nmap_c
-    figure ()
-    surfplot1 (c_msh{i}, c_dat{i})
-    view ([0 0 1]); shading flat; hold on
-    plot3 (xy_wall{i}(:,1), xy_wall{i}(:,2), ones(1, numel (xy_wall{i}(:, 2))),
-            "r", "LineWidth", 2)
-    caxis ([0 max(max(c_dat{2}))]); colormap viridis; colorbar; axis image
+    plot_map_msh (c_msh{i}, c_dat{i})
+    hold on
+    plot3 (xy_wall{i}(:,1), xy_wall{i}(:,2), ones(1, numel (xy_wall{i}(:, 2))), "r", "LineWidth", 2)
+    caxis ([0 max(max(c_dat{2}))]);
     title (recids{i}, "Interpreter", "none");
-    figure (gcf, "position", get (0, "screensize"));
   endfor
 endif
 
+printf ([">>> interface detection ... \n"])
 ## gas-liquid interface detection
 pp.tol_if.data = tol = int32(10);
 ## Ic usually passes detection due to strong signal, use result to initialzie search for Ic0 and Ic1
@@ -235,7 +202,7 @@ else
 endif
 pp.y0_if_c.data = xy_if{1}(1,2);
 ## update ltab on disk
-csv_param_update (idx_measid, ltab, ltabpath, pp, head);
+csv_param_update (idx_measid, ltab, pdir.ltab, pp, head);
 
 ## alignment of u_dat
 if strcmp (method_piv, "APIV")
@@ -245,7 +212,7 @@ else
   wg = {xy_wall{1},xy_if{1}};
   pp.rot_u.data  = est_param (u_msh, ind_wall_u (u_dat{4}, 0.05), wg, "rot_u", pp, "man");
 end
-csv_param_update (idx_measid, ltab, ltabpath, pp, head);
+csv_param_update (idx_measid, ltab, pdir.ltab, pp, head);
 ## rotate u maps
 for i = 1:numel(u_dat)
   [u_dat{i}, idxx, idxy] = rotate_map (u_dat{i}, pp.rot_u.data);
@@ -273,7 +240,7 @@ switch pp.cell.data
     endif
 endswitch
 pp.xoff_u.data = pp.xoff_u.data + xcenter_ms;
-csv_param_update (idx_measid, ltab, ltabpath, pp, head);
+csv_param_update (idx_measid, ltab, pdir.ltab, pp, head);
 ##
 [u_msh] = tform_mesh (u_msh, pp, "xoff_u", []);
 
@@ -291,7 +258,7 @@ else
 ##  pp.yoff_u.data = est_param (u_msh, u_ind, wg, "yoff_u", pp, "man");
   pp.yoff_u.data = est_param (u_msh, ind_wall_u (u_dat{4}, 1), wg, "yoff_u", pp, "man");
 endif
-csv_param_update (idx_measid, ltab, ltabpath, pp, head);
+csv_param_update (idx_measid, ltab, pdir.ltab, pp, head);
 ##
 [u_msh] = tform_mesh (u_msh, pp, "yoff_u", []);
 
@@ -348,7 +315,7 @@ endif
 ## mass flow along x
 massflow = zeros (1, numel (u_dat{1}(1,:)));
 for i = 1:numel (u_dat{1}(1,:))
-  uprofi = u_dat{1}(:,i).*u_masks.gas(:,i).*u_masks.wall(:,i);
+  uprofi = u_dat{1}(:,i) .* u_masks.gas(:,i) .* u_masks.wall(:,i);
   uprofi(isnan(uprofi)) = 0.0;
   massflow(i) = sum (uprofi) * sf_u(2) / 1000 * cell_width / 1000 * 3600 * rho;
 endfor
@@ -368,7 +335,6 @@ u_dat_ip{4} = sqrt (u_dat_ip{1}.^2 + u_dat_ip{2}.^2 + u_dat_ip{3}.^2);
 ## print check plots
 
 ## mass flow plots
-fp = fig_param ({"combo", "double", "elsevier"});
 fh4 = fig_overview_m (pp, pdir, c_msh, c_dat, c_h, c_masks, u_msh, u_dat_ip, u_h, u_masks, massflow, holdup);
 fh5 = fig_overview_p (pp, pdir, c_msh, c_dat, c_masks, u_msh, u_dat_ip, u_masks, massflow);
 fh6 = fig_overview_u (pp, u_msh, u_dat_ip, u_masks, c_msh, c_h, c_masks);
@@ -386,12 +352,12 @@ if strcmp (questdlg (["alignment good - ready to store it in: \n \n " save_dir],
   if status
     pp.savedate.data = date_str;
     ## update ltab on disk
-    csv_param_update (idx_measid, ltab, ltabpath, pp, head);
+    csv_param_update (idx_measid, ltab, pdir.ltab, pp, head);
     ##
-    print (fh5, "-dtiff", "-color", ["-r" num2str(fp.dpi)], [save_dir "/overview3_p.tiff"]);
-    print (fh4, "-dtiff", "-color", ["-r" num2str(fp.dpi)], [save_dir "/overview4_m.tiff"]);
-    print (fh6, "-dtiff", "-color", ["-r" num2str(fp.dpi)], [save_dir "/overview1_u.tiff"]);
-    print (fh7, "-dtiff", "-color", ["-r" num2str(fp.dpi)], [save_dir "/overview2_Ic.tiff"]);
+    print (fh6, "-djpeg", "-color", ["-r" num2str(250)], [save_dir "/overview_1_u.jpg"]);
+    print (fh7, "-djpeg", "-color", ["-r" num2str(250)], [save_dir "/overview_2_Ic.jpg"]);
+    print (fh5, "-djpeg", "-color", ["-r" num2str(250)], [save_dir "/overview_3_p.jpg"]);
+    print (fh4, "-djpeg", "-color", ["-r" num2str(250)], [save_dir "/overview_4_m.jpg"]);
 ##    warndlg ("saved data, linking table and figures")
   endif
 else

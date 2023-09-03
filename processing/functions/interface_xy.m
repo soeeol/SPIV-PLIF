@@ -143,4 +143,6 @@ function [xy_interface, xy_idx, ispeak] = interface_xy (msh, map, tol, peak_meth
     xy_interface(i,1) = msh{1}(int32(xy_idx(i,kpeak)),xy_idx(i,1));
     xy_interface(i,2) = msh{2}(int32(xy_idx(i,kpeak)),xy_idx(i,1));
   endfor
+  ##
+  xy_interface(:,2) = outlier_rm (xy_interface(:,2), movmedian (xy_interface(:,2), 41));
 endfunction
