@@ -3,7 +3,7 @@
 
 ## find and replate outliers with moving median
 ##
-## Author: Sören J. Gerke <soeren@T490>
+## Author: Sören J. Gerke
 ##
 
 function [dat_out, isol] = outlier_rm (vec_in, vec_in_mm)

@@ -7,19 +7,19 @@
 ##
 
 function gl_u = stitch_all_2d_u (pdir, aid, pdat, it_A, it_C, it_M, it_X, ncoords, wlen, rmbk)
-  for id_A = it_A
-    for id_C = it_C
-      for id_M = it_M
-        printf([">>> u: stitching id_A = " num2str(id_A) ", id_C = " num2str(id_C) ", id_M = " num2str(id_M) " \n"]);
+  for i_A = it_A
+    for i_C = it_C
+      for i_M = it_M
+        printf([">>> u: stitching i_A = " num2str(i_A) ", i_C = " num2str(i_C) ", i_M = " num2str(i_M) " \n"]);
         [u_msh_gl, u_dat_gl, u_mask_g_gl, u_mask_w_gl, u_h_g_gl, u_h_w_gl] = ...
-          stitch_x (pdir, pdat.pp(id_A, id_C, id_M, it_X), aid, pdat.u_msh(id_A, id_C, id_M, it_X), pdat.u_dat(id_A, id_C, id_M, it_X), pdat.u_masks(id_A, id_C, id_M, it_X), pdat.u_h(id_A, id_C, id_M, it_X), ncoords, wlen, rmbk);
+          stitch_x (pdir, aid, pdat.u_msh(i_A, i_C, i_M, it_X), pdat.u_dat(i_A, i_C, i_M, it_X), pdat.u_masks(i_A, i_C, i_M, it_X), pdat.u_h(i_A, i_C, i_M, it_X), ncoords, wlen, rmbk);
         ## collect stitched data
-        u_g_mask_gl_all{id_A, id_C, id_M} = u_mask_g_gl;
-        u_w_mask_gl_all{id_A, id_C, id_M} = u_mask_w_gl;
-        u_h_g_gl_all{id_A, id_C, id_M} = u_h_g_gl;
-        u_h_w_gl_all{id_A, id_C, id_M} = u_h_w_gl;
-        u_dat_gl_all{id_A, id_C, id_M} = u_dat_gl;
-        u_msh_gl_all{id_A, id_C, id_M} = u_msh_gl;
+        u_g_mask_gl_all{i_A,i_C,i_M} = u_mask_g_gl;
+        u_w_mask_gl_all{i_A,i_C,i_M} = u_mask_w_gl;
+        u_h_g_gl_all{i_A,i_C,i_M} = u_h_g_gl;
+        u_h_w_gl_all{i_A,i_C,i_M} = u_h_w_gl;
+        u_dat_gl_all{i_A,i_C,i_M} = u_dat_gl;
+        u_msh_gl_all{i_A,i_C,i_M} = u_msh_gl;
       endfor
     endfor
   endfor

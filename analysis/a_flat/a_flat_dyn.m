@@ -28,20 +28,20 @@ if 1
   ##
   a_type = "a_flat_dyn";
   c_method = "linear"; # "linear" "nonlin"
-  c_if_method = "calib"; # "calib" "calib-if"
+  c_if_method = "calib-if"; # "calib" "calib-if"
   ## iterators
   it_A = 1:numel(aid.ids_A); # angles
   it_C = 1:numel(aid.ids_C); # cells
 ##  it_M = 1:numel(aid.ids_M); # mass flow rate
   it_M = 1; # mass flow rate
   it_X = 1:numel(aid.ids_X); # scanned x sections
-  it_X = 1; # scanned x sections
+  it_X = 4; # scanned x sections
   ## fixed
   i_L = i_O = 1; # liquid, optical setup
   i_A = 1;
   i_C = 1;
-  i_M = 1;
-  i_X = 1;
+  i_M = it_M;
+  i_X = it_X;
 
   ## set interface normal profile depth in mm
   pd_M = [0.3 0.35 0.4 0.5];
@@ -53,13 +53,29 @@ if 1
   ##
   for i_M = it_M
     measid_stitch{i_M} = get_measid (aid.ids_C{i_C}, aid.ids_O{i_O}, aid.ids_A(i_A), id_T, aid.ids_L{i_L}, aid.ids_M(i_M), id_G, [], id_Z);
-    save_dirs{i_M} = [save_dir "c-" c_method "_" c_if_method "_" measid_stitch{i_M} "/"];
-    mkdir (save_dirs{i_M});
+##    save_dirs{i_M} = [save_dir "c-" c_method "_" c_if_method "_" measid_stitch{i_M} "/"];
+##    mkdir (save_dirs{i_M});
   endfor
+
+    ## mass fraction of actual liquid mixture in the tank during experiment
+  ##
+  ## logged fluid properties on 02.12.2021 (tracer + seeding inside)
+  ## probe from 20 feeding liter tank
+  T_test = 298.15;
+  eta_test = 8.421e-3;
+  nref_test = 1.41065;
+  rho_test = 1147.7;
+  ## mass fraction from test
+  mf_exp = ri_match_PT_mf_from_ri (nref_test, T_test)
+  ## compare to tabulated fp
+  rho_exp = get_fp_tab (pdir, fname="glycerol-water", pname="rho", T_test, mf_exp, ext=[])
+  eta_exp = get_fp_tab (pdir, fname, pname="eta", T_test, mf_exp, ext)
+  ##
+  [~, ~, ~, ~, ~, D_AB] = get_fp_lm (pdir, aid.ids_L{i_L}, id_T+273.15);
 endif
 
 ## (1) load processed data (aligned, interpolated on common grid)
-if 1
+if 0
   id = get_measid (aid.ids_C{i_C}, aid.ids_O{i_O}, aid.ids_A(i_A), id_T, aid.ids_L{i_L}, aid.ids_M(i_M), id_G, aid.ids_X(i_X), id_Z)
   filename = [pdir.processed id "/*" aid.proc_type "*"];
   files = glob (filename);
@@ -77,10 +93,12 @@ if 1
   sf_u = get_sf (u_msh);
   n_t = numel (c_dat(1,:))
 ##  n_t = 1
+  mkdir ([save_dir id "/"])
+  mkdir ([save_dir_p id "/"])
 endif
 
 ## (2) per section alignment of Ic recordings; concentration field, interface detection and statistics
-if 1
+if 0
   ## correct offsets betweens Ic recordings (per x-section)
   xoff = yoff = zeros (numel(it_X), 1);
   switch aid.ids_M(i_M)
@@ -100,8 +118,6 @@ if 1
     pdat.c_dat{i_A, i_C, i_M, i_X}{1} = c_dat{1,i_t};
     pdat_n{i_t} = corr_y_offsets (p_dat, it_A, it_C, it_M, it_X);
   endfor
-
-  ## TODO: adjust mesh
 
   ## concentration field
   ## linear 2 point ref calib, with intensity reduction towards interface in calib
@@ -167,6 +183,31 @@ if 1
   spf = splinefit (x(ispeak==1), h_c_g_mean(ispeak==1), round(numel(it_X)*sps*1), "order", 3, "beta", 0.75);
   h_c_g_fit_mean = ppval (spf, x);
 
+
+  ## replace interface region in calibration reference records with smeared version
+  ## (homogeneous, reduced fluorescence loss at interface)
+  mask_if_u = masking ("c", "gas", size(c_dat{1,1}), ymin, h_c_g_fit_mean, sf_c, +20, val_mask=0);
+  mask_if_l = masking ("c", "gas", size(c_dat{1,1}), ymin, h_c_g_fit_mean, sf_c, -20, val_mask);
+  mask_if = mask_if_u - mask_if_l;
+  dat_Ic_sm = {};
+  for i = 2:3 # for Ic0 and Ic1
+    Ic_sm = (c_dat{i,1});
+    Ic_sm(isnan(Ic_sm))=0;
+    Ic_sm(Ic_sm<=0)=1e-6;
+    Ic_sm = movmedian (Ic_sm, [24], 1, "Endpoints", 1e-6);
+    Ic_sm = imsmooth (Ic_sm, 3);
+  ##
+    Ic = (c_dat{i,1});
+    Ic(isnan(Ic))=0;
+    Ic(Ic<=0)=1e-6;
+    Ic(mask_if==1) = Ic_sm(mask_if==1);
+    dat_Ic_sm(i) = {Ic};
+  endfor
+  cn_if = cell (1, n_t);
+  for i_t = 1:n_t
+    cn_if{i_t} = calc_cn ({c_dat{1,i_t} dat_Ic_sm{2} dat_Ic_sm{3}}, [0 1], c_method, sig=2, testplots=false);
+  endfor
+
   ## interface fit check
   fh = plot_map_msh (c_msh, cn_mean);
   hold on;
@@ -217,7 +258,7 @@ if 1
     ylim ([max(h_c_g_fit_mean)-0.5 1.1*max(h_c_g_fit_mean)])
     zlim ([-1 1])
 ##    pause (0.1);
-    print (fh, "-djpeg", "-color", ["-r" num2str(250)], [save_dir_p "/cn_t_" num2str(i_t) ".jpg"]);
+    print (fh, "-djpeg", "-color", ["-r" num2str(250)], [save_dir_p id "/cn_t_" num2str(i_t) ".jpg"]);
   endfor
 
   x_idx = round (rand(1) * numel(cn_mean(1,:)))
@@ -226,7 +267,7 @@ if 1
     clf (fh);
     hold on;
     plot (y, cn{i_t}(:,x_idx), "b")
-    plot (y,cn_mean(:,x_idx), "k")
+    plot (y, cn_mean(:,x_idx), "k")
     plot (h_c_g_fit{i_t}(x_idx)*[1 1], [0 1], "b-")
     plot (h_c_g_fit_mean(x_idx)*[1 1], [0 1], "k-")
     xlim ([max(h_c_g_fit_mean)-0.5 1.1*max(h_c_g_fit_mean)])
@@ -234,7 +275,7 @@ if 1
     ylabel ("cn in -")
     title (["cn t#" num2str(i_t) " (for one random pixel row)"]);
 ##    pause (0.1);
-    print (fh, "-djpeg", "-color", ["-r" num2str(250)], [save_dir_p "/cn_prof_t_" num2str(i_t) ".jpg"]);
+    print (fh, "-djpeg", "-color", ["-r" num2str(250)], [save_dir_p id "/cn_prof_t_" num2str(i_t) ".jpg"]);
   endfor
 
   ##
@@ -271,16 +312,14 @@ if 1
   title ("deviation from mean interface position")
   xlabel ("x in mm")
   ylabel ("dispersion measures in mm")
-  print (fh4, "-djpeg", "-color", ["-r" num2str(250)], [save_dir_p "/if_stat.jpg"]);
+  print (fh4, "-djpeg", "-color", ["-r" num2str(250)], [save_dir id "/if_stat.jpg"]);
 
-  cd (save_dir);
+  cd ([save_dir id "/"]);
   save -v7 "if_stat.v7" n_t x c_h mmax_dev mmad_dev mstd_dev max_dev mad_dev std_dev
 endif
 
-##
-## interface normal concentration profile analysis
-##
-if 1
+## (3) interface normal concentration profile estimation
+if 0
   sf = sf_c;
   sf_p = 0.5 * sf(1); # resolution along profile line
   px = x';
@@ -319,7 +358,7 @@ if 1
       xlim ([-4 4])
       ylim ([0 1.1*max(h_c_g_fit_mean)])
       plot (x, h_g, "r")
-      print (fh, "-dpng", "-color", ["-r" num2str(500)], [save_dir_p "profile-lines-test"]);
+      print (fh, "-dpng", "-color", ["-r" num2str(500)], [save_dir_p id "/profile-lines-test"]);
     endif
     ## interpolate fields on line meshes
     switch c_if_method
@@ -393,47 +432,34 @@ if 1
 
   ## profile fit
   cp_nn = delta_fit = cn0 = p_c_fit = dcdsnp0 = {};
-  dcds_idx = 16;
   switch i_M
     case 1
-      idx_r = [2 3];
-      dcds_idx = 10;
-      sig = 0.5;
+      idx_r = [2 12];
+      dcds_idx = 12;
+      sig = 1;
     case 2
       idx_r = [2 8];
+      dcds_idx = 16;
+      sig = 1;
     case 3
       idx_r = [2 6];
+      dcds_idx = 8;
+      sig = 1;
     case 4
-      idx_r = [2 4];
-      dcds_idx = 12;
+      idx_r = [1 5];
+      dcds_idx = 8;
+      sig = 1;
   endswitch
-  switch i_M
-  case 1
-    idx_r = [2 12];
-    dcds_idx = 12;
-    sig = 1;
-  case 2
-    idx_r = [2 8];
-    dcds_idx = 16;
-    sig = 1;
-  case 3
-    idx_r = [2 6];
-    dcds_idx = 8;
-    sig = 1;
-  case 4
-    idx_r = [1 5];
-    dcds_idx = 8;
-    sig = 1;
-endswitch
-  testplots_fit = 0
-  ## profile fit singe thread
-##  t1 = tic
-##  for i_t = 1
-##    printf ([">>> profile fit: " num2str(i_t) " of " num2str(n_t) " records \n"]);
-##    [delta_fit{i_t} cp_nn{i_t} cn0{i_t} p_c_fit{i_t} p_sc ~] = erfc_profile_fit (snp, cp_n{i_t}, sf_p, 0, sig, idx_r, dcds_idx, testplots_fit);
-##  endfor
-##  toc (t1)
-##  dt1 = toc (t1);
+  ## profile fit test section
+  testplots_fit = 1
+  t1 = tic
+  for i_t = 1
+    printf ([">>> profile fit: " num2str(i_t) " of " num2str(n_t) " records \n"]);
+    [delta_fit{i_t} cp_nn{i_t} cn0{i_t} p_c_fit{i_t} p_sc ~] = erfc_profile_fit (snp, cp_n{i_t}, sf_p, 0, sig, idx_r, dcds_idx, testplots_fit);
+  endfor
+  toc (t1)
+  dt1 = toc (t1);
+  ## final profile fit
   nthreads = round (nproc/2); # no use of SMT for this
   printf ([">>> profile fit: " num2str(nthreads) " threads to process " num2str(n_t) " records \n"]);
   t2 = tic
@@ -476,46 +502,142 @@ endswitch
   plot3 ((delta_fit{1}' * 1e3), x, ones(1,numel(delta_mean)), "g")
   plot3 ((delta_mean' * 1e3), x, ones(1,numel(delta_mean)), "r")
 
+  figure ()
+  hold on
   plot (x, (delta_mean' * 1e3), "r")
   plot (x, (movmedian(delta_mean,81)' * 1e3), "k")
   plot (x, imsmooth(movmedian(delta_mean,81),8)' * 1e3, "g")
 
-  valid = [];
-  for i_t = 1:n_t
-    p_test = polyfit (x(10:end-10), delta_fit{i_t}(10:end-10), 1);
-    valid(i_t) = logical(p_test(1)>=0);
-  endfor
-
-
-  delta_all = [];
-  k = 0
-  for i_t = 1:numel(delta_fit)
-    if (valid(i_t))
-      k++;
-      for i = 1:numel(delta_fit{1})
-        delta_all(i,k) = delta_fit{i_t}(i);
-      endfor
-    endif
-  endfor
-  delta_mean = median (delta_all, 2);
-  delta_std = std (delta_all, [], 2);
-
-  delta_mean = outlier_rm (delta_mean, movmedian(delta_mean,81));
+##  valid = [];
+##  for i_t = 1:n_t
+##    p_test = polyfit (x(10:end-10), delta_fit{i_t}(10:end-10), 1);
+##    valid(i_t) = logical(p_test(1)>=0);
+##  endfor
+##
+##
+##  delta_all = [];
+##  k = 0
+##  for i_t = 1:numel(delta_fit)
+##    if (valid(i_t))
+##      k++;
+##      for i = 1:numel(delta_fit{1})
+##        delta_all(i,k) = delta_fit{i_t}(i);
+##      endfor
+##    endif
+##  endfor
+##  delta_mean = median (delta_all, 2);
+##  delta_std = std (delta_all, [], 2);
+##
+##  delta_mean = outlier_rm (delta_mean, movmedian(delta_mean,81));
 ##  delta_mean = imsmooth (delta_mean,32);
   ## TODO: x_stitch result
   ## TODO: load single frame analysis in a_flat_main
+  ## TODO: save results and plot dir cleanup
 
   ## output result per section
-  mkdir ([save_dir "/" id])
+##  mkdir ([save_dir "/" id])
   cd ([save_dir "/" id])
   save -v7 "profiles_dyn_c.v7" cp cp_s cp_b cp_n
   save -v7 "profiles_dyn_msh.v7" profile_depth sf_p snp msh_n x_abs
   save -v7 "profiles_dyn_fit.v7" cn0 cp_nn delta_fit
   ##
-  plt_1_h = {mfilename, date, "", ""; "x in mm", "x_abs in m", "delta_c in m", "STD(delta_c) in m"};
-  cell2csv ([save_dir_p "delta_dyn_mean.csv"], plt_1_h)
-  plt_1_d = [(x+aid.ids_X(i_X))' x_abs' delta_mean*1e3 delta_std*1e3];
-  csvwrite ([save_dir_p "delta_dyn_mean.csv"], plt_1_d, "append", "off", "precision", "%.4e")
+##  plt_1_h = {mfilename, date, "", ""; "x in mm", "x_abs in m", "delta_c in m", "STD(delta_c) in m"};
+##  cell2csv ([save_dir id "/delta_dyn_mean.csv"], plt_1_h)
+##  plt_1_d = [(x+aid.ids_X(i_X))' x_abs' delta_mean*1e3 delta_std*1e3];
+##  csvwrite ([save_dir id "/delta_dyn_mean.csv"], plt_1_d, "append", "off", "precision", "%.4e")
 
 endif
-##
+## stitch relevant data
+if 1
+  ##
+  it_X = 1:numel(aid.ids_X);
+  it_M = 1:numel(aid.ids_M);
+
+  ##
+
+  for i_M = it_M
+  ##  save_dir_m = save_dirs{i_M};
+    run "a_flat_dyn_x_stitch.m"
+##    plot_map_msh (msh_gl{i_M}, cnn_gl{i_M}{1})
+##    hold on
+##    plot (msh_gl{i_M}{1}(1,:), delta_gl_mean{i_M}{1} * 1e3)
+  endfor
+
+  ## output for plotting
+  ## contour plots of measured cn
+  lim_x_out = [-12 20];
+  imsc = 1; # print img px per meas px
+  xsc = 2; # aspect ratio
+  sf_p = 2.5e-3;
+  [XI, YI] = meshgrid ([lim_x_out(1):sf_p(1)*xsc/imsc:lim_x_out(2)], [0:sf_p(1)/imsc:0.1]);
+  for i_M = it_M
+    cprint = interp2 (msh_gl{i_M}{1}, msh_gl{i_M}{2}, cnn_gl{i_M}{1}, XI, YI, "pchip");
+    cprint(cprint<0) = 0.0;
+    cprint(cprint>1) = 1.0;
+    imwrite (ind2rgb(gray2ind(cprint), colormap("viridis")), [save_dir_p "/M" num2str(i_M) "_cn_norm.png"])
+    close all
+  endfor
+  ## measured dyn avg delta plus theoretical delta with D_AB.PLIF2 assumed
+  load ("-text", [pdir.analyzed "a_flat_x_stitch" "/inlet_local_Re.txt"]); # u_s_meas
+  for i_M = it_M
+    delta_dyn_mean_out = interp1 (msh_gl{i_M}{1}(1,:), delta_gl_mean{i_M}{1}, XI(1,:));
+    delta_dyn_std_out = interp1 (msh_gl{i_M}{1}(1,:), delta_gl_std{i_M}{1}, XI(1,:));
+    delta_eq = model_filmflow_laminar_delta_x ((XI(1,:)'+60)*1e-3, D_AB.PLIF2, u_s_meas(i_M));
+    plt_1_h = {mfilename, date, "", ""; "x in mm", "x_abs in m", "delta_c in m", "STD(delta_c) in m"};
+    cell2csv ([save_dir "/M" num2str(i_M) "_delta_dyn_mean.csv"], plt_1_h)
+    plt_1_d = [XI(1,:)' (XI(1,:)'+60)*1e-3 delta_dyn_mean_out'*1e3 delta_dyn_std_out'*1e3 delta_eq*1e3];
+    csvwrite ([save_dir "/M" num2str(i_M) "_delta_dyn_mean.csv"], plt_1_d, "append", "off", "precision", "%.4e")
+  endfor
+endif
+
+## diffusivity estimate
+if 1
+  ## theoretical values
+  run "a_flat_laminar_model.m"
+  ##
+  x_abs = (msh_gl{i_M}{1}(1,:) + 60) / 1e3;
+  ##
+  figure (); hold on
+  ## all valid sections
+  delta_all = [delta_gl_mean{4}{1} delta_gl_mean{3}{1} delta_gl_mean{2}{1} delta_gl_mean{1}{1}(1:1700)];
+  tc_all = [x_abs/u_s_meas(4) x_abs/u_s_meas(3) x_abs/u_s_meas(2) x_abs(1:1700)/u_s_meas(1)];
+  ##delta_all = [delta_gl_mean{4}{1} delta_gl_mean{3}{1} delta_gl_mean{1}{1}(1:1200)];
+  ##tc_all = [x_abs/u_s_meas(4) x_abs/u_s_meas(3) x_abs(1:1200)/u_s_meas(1)];
+  delta_all = outlier_rm (delta_all, movmedian(delta_all,81));
+  ##
+  p_D_fit_all = polyfit (tc_all, (delta_all*(sqrt (2 / pi))).^2/2, 1)
+  plot ([0 1], polyval (p_D_fit_all, [0 1])-0*p_D_fit_all(2), "r;allall;")
+  plot ([0 1], polyval (p_D_fit_all, [0 1])-1*p_D_fit_all(2), "r;allall;")
+  ##
+  delta_c_cmp = model_filmflow_laminar_delta_x (x_eq, D_eq, u_s_meas);
+  for i_M = it_M
+    plot (x_eq / u_s_meas(i_M), (delta_c_cmp(i_M,:)*(sqrt (2 / pi))).^2 / 2,  "m-;eq. abs.;")
+  endfor
+  plot ([0 1], polyval ([D_AB.PLIF1 0], [0 1]), "--;D_1 PLIF;")
+  ##plot ([0 1], polyval ([D_AB.PLIF1 13e-11], [0 1]), "--;D_2 PLIF;")
+  plot ([0 1], polyval ([D_AB.PLIF2 0], [0 1]), "--;D_2 PLIF;")
+  ##plot ([0 1], polyval ([D_APLIF2F2 13e-11], [0 1]), "--;D_1 PLIF;")
+  ##
+  plot (tc_all, (delta_all*sqrt(2/pi)).^2/2, "x")
+
+  for i_M = it_M
+
+    plot (x_eq / u_s_meas(i_M), (delta_c_cmp(i_M,:)*(sqrt (2 / pi))).^2 / 2,  "m-;eq. abs.;")
+    tc = x_abs / u_s_meas(i_M);
+  ##  switch i_M
+  ##    case
+  ##  endswitch
+  ##  p_D_fit_1 = polyfit (tc, (delta_gl_mean{i_M}{1}*(sqrt (2 / pi))).^2/2, 1);
+  ##  plot ([0 1], polyval (p_D_fit_1, [0 1]) - p_D_fit_all(2), "g;fit all;")
+  ##  plot (tc, ((delta_gl_mean{i_M}{1}+1*-i_M*2.5e-6)*(sqrt (2 / pi))).^2/2, "x")
+    plot (tc, ((delta_gl_mean{i_M}{1})*(sqrt (2 / pi))).^2/2-1*p_D_fit_all(2), "x")
+
+    legend ("autoupdate", "off")
+    plot (x_sec./ u_s_meas(i_M), [0 0 0 0 0; 1e-9*[1 1 1 1 1]], "k")
+  endfor
+  xlim ([0 0.6])
+  ylim ([0 8e-10])
+
+endif
+
+

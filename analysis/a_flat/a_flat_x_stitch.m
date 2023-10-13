@@ -66,7 +66,7 @@ for i = 1:numel(dat_Ic)
   dat_Ic{i}(isnan(dat_Ic{i})) = 0.0;
   dat_Ic{i}(dat_Ic{i}<=0.0) = 1e-6;
 endfor
-## finally assure that (x=0,y=0) = (x-center, base) of the R10 structure
+## finally assure that (x=0,y=0) = (x-center, base)
 x_off = y_off = [];
 xy_wall = [];
 id_Ic = [1,3];

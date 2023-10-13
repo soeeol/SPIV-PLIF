@@ -221,7 +221,7 @@ endif
 cd (save_dir)
 load -text "inlet_local_Re.txt"
 ## (5) fluid dynamics
-if 1
+if 0
   ## output wall and interface
   plt_1_h = {mfilename, date, ""; "x in mm", "h_w in mm", "h_g in mm"};
   plt_1_d = [x' h_w h_g_M];
@@ -509,11 +509,28 @@ endif
 
 
 ## (6) mass transfer
-if 1
+if 0
   ##
   ## MODEL - flat laminar film
   ##
   run "a_flat_laminar_model.m"
+  ## write relevant output
+  plt_1_h = {mfilename, date; "M# run", "eta_eq rho_exp nu_eq D_eq Sc_eq h_eq u_s_eq u_avg_eq Re_eq"};
+  cell2csv ([save_dir_p "mt_model_param_h.csv"], plt_1_h)
+  plt_1_d = [[1:4]' [1 1 1 1]'.*[eta_eq rho_exp nu_eq D_eq Sc_eq] h_eq' u_s_eq' u_avg_eq' Re_eq'];
+  csvwrite ([save_dir_p "mt_model_param_d.csv"], plt_1_d, "append", "off", "precision", "%.4e")
+  plt_1_h = {mfilename, date, "", ""; "x in mm", "x_abs in m", "delta_c (eq.) in m for M1 to M4", "belta eq. in m/s for M1 to M4"};
+  cell2csv ([save_dir_p "model_delta_beta_vs_x_h.csv"], plt_1_h)
+  plt_1_d = [x_eq'*1e3-x_abs_meas x_eq' delta_c_x_eq' beta_x_eq'];
+  csvwrite ([save_dir_p "model_delta_beta_vs_x_d.csv"], plt_1_d, "append", "off", "precision", "%.4e")
+  plt_1_h = {mfilename, date, "", ""; "x_abs in m", "x in -", "Sh_h (eq.) in - for M1 to M4", "Sh/Sc^0.5 (eq.) in - for M1 to M4"};
+  cell2csv ([save_dir_p "model_Sh_h_ShSc_vs_xnd_h.csv"], plt_1_h)
+  plt_1_d = [L_x_eq' L_x_nd_eq Sh_h_eq (Sh_h_eq/(Sc_eq.^0.5))];
+  csvwrite ([save_dir_p "model_Sh_h_ShSc_vs_xnd_d.csv"], plt_1_d, "append", "off", "precision", "%.4e")
+  plt_1_h = {mfilename, date, ""; "x in -", "Sh_h (eq.) in -", "Sh/Sc^0.5 (eq.) in -"};
+  cell2csv ([save_dir_p "model_eq_Sh_vs_xnd_h.csv"], plt_1_h)
+  plt_1_d = [x_nd_out' Sh_nd_out' (Sh_nd_out/sqrt(Sc_eq))'];
+  csvwrite ([save_dir_p "model_eq_Sh_vs_xnd_d.csv"], plt_1_d, "append", "off", "precision", "%.4e")
 
   ##
   ## MEASURED
@@ -533,25 +550,107 @@ if 1
   ## diffusivity estimate from snD vs. tc slope
   ## contact time tc
   ## i_M 1, 2, 3(part wise) and 4 support the diffusivity D_AB.PLIF2
-  i_M = 3
+  fh = figure ()
+  hold on
+  for i_M = it_M
   delta_c_cmp = model_filmflow_laminar_delta_x (x_eq, D_eq, u_s_meas);
   tc = x_abs / u_s_meas(i_M);
-  figure ()
-  hold on
-  plot (tc, snD_M{i_M}.^2/2, "x")
-  plot (x_eq / u_s_eq(i_M), (delta_c_x_eq(i_M,:)*(sqrt (2 / pi))).^2 / 2,  "r-")
-  plot (x_eq / u_s_meas(i_M), (delta_c_cmp(i_M,:)*(sqrt (2 / pi))).^2 / 2,  "m-")
-  idx_fit = (x>-12) & (x<20);
-  p_D_fit_1 = polyfit (tc(idx_fit), snD_M{i_M}(idx_fit).^2/2, 1)
-  plot ([0 1], polyval (p_D_fit_1, [0 1]), "g")
-  idx_fit = (x>-12) & (x<-7);
-  p_D_fit_2 = polyfit (tc(idx_fit), snD_M{i_M}(idx_fit).^2/2, 1)
-  plot ([0 1], polyval (p_D_fit_2, [0 1]), "b-")
-  plot ([0 1], polyval ([D_AB.PLIF2 -8e-11], [0 1]), "--")
-  plot ([0 1], polyval ([D_AB.PLIF2 18e-11], [0 1]), "--")
-  plot (x_sec./ u_s_meas(i_M), [0 0 0 0 0; 1e-9*[1 1 1 1 1]], "k")
-## xlim ([0 0.5])
-##  ylim ([0 1e-9])
+##    plot (tc, snD_M{i_M}.^2/2, "x")
+  ##  plot (x_eq / u_s_eq(i_M), (delta_c_x_eq(i_M,:)*(sqrt (2 / pi))).^2 / 2,  "r-")
+    plot (x_eq / u_s_meas(i_M), (delta_c_cmp(i_M,:)*(sqrt (2 / pi))).^2 / 2,  "m-;eq. abs.;")
+##    idx_fit = (x>-12) & (x<20);
+##    p_D_fit_1 = polyfit (tc(idx_fit), snD_M{i_M}(idx_fit).^2/2, 1)
+##    plot ([0 1], polyval (p_D_fit_1, [0 1]), "g;fit all;")
+##    ## section
+##    switch i_M
+##      case 4
+##        idx_fit = (x>4) & (x<20);
+##      case 3
+##        idx_fit = (x>-11) & (x<16);
+##      case 2
+##        idx_fit = (x>-4) & (x<12);
+##      case 1
+##        idx_fit = (x>4) & (x<20);
+##    endswitch
+##    p_D_fit_2 = polyfit (tc(idx_fit), snD_M{i_M}(idx_fit).^2/2, 1)
+##    plot ([0 1], polyval (p_D_fit_2, [0 1]), "b-;fit section;")
+##    for i = 1:4
+##      idx_fit = (x>(x_sec(1,i)*1e3-60)) & (x<(x_sec(1,i+1)*1e3-60));
+##      p_D_fit_sec(i,:) = polyfit (tc(idx_fit), (snD_M{i_M}(idx_fit)-0*5e-6*sqrt(2/pi)).^2/2, 1);
+##      plot (tc(idx_fit), polyval (p_D_fit_sec(i,:), tc(idx_fit)), "k-;fit sec;")
+##    endfor
+##    plot ([0 1], polyval ([D_AB.PLIF2 -8e-11], [0 1]), "--;D_2 PLIF;")
+    plot ([0 1], polyval ([D_AB.PLIF2 13e-11], [0 1]), "--;D_2 PLIF;")
+    plot ([0 1], polyval ([D_AB.PLIF1 13e-11], [0 1]), "--;D_1 PLIF;")
+    legend ("autoupdate", "off")
+    plot (x_sec./ u_s_meas(i_M), [0 0 0 0 0; 1e-9*[1 1 1 1 1]], "k")
+##    p_D_fit_sec
+##    median (p_D_fit_sec, 1)
+##    mean (p_D_fit_sec, 1)
+
+  endfor
+
+
+  dyncase = [pdir.analyzed "a_flat_dyn/FLAT_M13_A60_T25_WG141_M08_G002_X+00_Z+00/"]
+  dyncase = [pdir.analyzed "a_flat_dyn/FLAT_M13_A60_T25_WG141_M16_G002_X+00_Z+00/"]
+
+  casefiles = glob ([pdir.analyzed "a_flat_dyn/FLAT_M13_A60_T25_WG141_M64_G002_X*_Z+00/"]); i_M = 4;
+  casefiles = glob ([pdir.analyzed "a_flat_dyn/FLAT_M13_A60_T25_WG141_M32_G002_X*_Z+00/"]); i_M = 3;
+  casefiles = glob ([pdir.analyzed "a_flat_dyn/FLAT_M13_A60_T25_WG141_M16_G002_X*_Z+00/"]); i_M = 2;
+  casefiles = glob ([pdir.analyzed "a_flat_dyn/FLAT_M13_A60_T25_WG141_M*_G002_X*_Z+00/"]); i_M = 1;
+
+  for i_M = it_M
+    for i_X = it_X
+      dyncase = get_measid (aid.ids_C{i_C}, aid.ids_O{i_O}, aid.ids_A(i_A), id_T, aid.ids_L{i_L}, aid.ids_M(i_M), id_G, aid.ids_X(i_X), id_Z);
+      filenme = [pdir.analyzed "a_flat_dyn/" dyncase "/profiles_dyn_fit.v7"];
+      dyn_fit = load (filenme, "-v7", "delta_fit");
+      filenme = [pdir.analyzed "a_flat_dyn/" dyncase "/profiles_dyn_msh.v7"];
+      dyn_msh = load (filenme, "-v7", "x_abs");
+      valid = [];
+      p_test = [];
+      for i_t = 1:20
+        p_test(i_t,:) = polyfit (dyn_msh.x_abs(10:1801-10), (dyn_fit.delta_fit{i_t}(10:1801-10)*sqrt(2/pi)).^2/2, 1);
+        valid(i_t) = logical((p_test(i_t,1))>0e-10);
+  ##      valid(i_t) = logical((abs(p_test(i_t,1))<4*8e-10)&&((p_test(i_t,1))>0e-10));
+  ##      valid(i_t) = logical((abs(p_test(i_t,1))<4*8e-10));
+      endfor
+      p_test;
+      sum (valid)
+      mean (p_test(valid==1,1), 1)
+      median (p_test(valid==1,1), 1)
+
+      delta_all = [];
+      k = 0
+      for i_t = 1:numel(dyn_fit.delta_fit)
+        if 1#(valid(i_t))
+          k++;
+          for i = 1:numel(dyn_fit.delta_fit{1})
+            delta_all(i,k) = dyn_fit.delta_fit{i_t}(i);
+          endfor
+        endif
+      endfor
+      delta_mean = median (delta_all, 2);
+      delta_mean = mean (delta_all, 2);
+      delta_std = std (delta_all, [], 2);
+##      plot (dyn_msh.x_abs/u_s_meas(i_M), ((delta_mean+0*-4*2.5e-6)*sqrt(2/pi)).^2/2, "g")
+      plot (dyn_msh.x_abs/u_s_meas(i_M), ((delta_mean+0*-4*2.5e-6)*sqrt(2/pi)).^2/2)
+    endfor
+  endfor
+
+  delta_all = [];
+  k = 0
+  for i_t = 1:numel(dyn_fit.delta_fit)
+    if (valid(i_t))
+      k++;
+      for i = 1:numel(dyn_fit.delta_fit{1})
+        delta_all(i,k) = dyn_fit.delta_fit{i_t}(i);
+      endfor
+    endif
+  endfor
+  delta_mean = median (delta_all, 2);
+  delta_std = std (delta_all, [], 2);
+  plot (dyn_msh.x_abs/u_s_meas(4), ((delta_mean+0*-4*2.5e-6)*sqrt(2/pi)).^2/2, "g")
+
 
   fh = figure (); hold on;
   for i_M = it_M

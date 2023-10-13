@@ -7,13 +7,13 @@
 ##
 
 function out = stitch_x_cat (n, it_X, A)
-  B = [];
+  B = {};
   if ( (n > 1) && (size(A,1) == 1) && iscell(A{1}) )
   ## cat meshes
     for i = 1:n
       dummycat = [];
-      for id_X = it_X
-        dummycat = cat (2, dummycat, A{id_X}{i});
+      for i_X = it_X
+        dummycat = cat (2, dummycat, A{i_X}{i});
       endfor
       B{i} = dummycat;
     endfor
@@ -21,18 +21,18 @@ function out = stitch_x_cat (n, it_X, A)
   ## cat maps
     for i = 1:n
       dummycat = [];
-      for id_X = it_X
-        dummycat = cat (2, dummycat, A{id_X,i});
+      for i_X = it_X
+        dummycat = cat (2, dummycat, A{i_X,i});
       endfor
       B{i} = dummycat;
     endfor
   else
   ## other
     dummycat = [];
-    for id_X = it_X
-      dummycat = cat (2, dummycat, A{id_X});
+    for i_X = it_X
+      dummycat = cat (2, dummycat, A{i_X});
     endfor
-    B = dummycat;
+    B = {dummycat};
   endif
   out = B;
 endfunction

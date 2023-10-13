@@ -7,23 +7,29 @@
 ## Author: Sören J. Gerke
 ##
 
-function [cn] = calc_cn (phi_dat, cref, method, sig, testplots)
+function [cn ext] = calc_cn (phi_dat, cref, method, sig, testplots)
+  ext = [];
   conc = cn = [];
-  cscale = cref(2) - cref(1);
-  ## phi_dat proportional to photon flux
-  phi = (phi_dat{1}); # quenching measurement Ic: desobed liquid in contact with air
+  c_sat_ref = cref(2);
+  c_des_ref = cref(1);
+  cscale = c_sat_ref - c_des_ref;
+  ## quenching measurement Ic: desobed liquid in contact with air
+  phi = (phi_dat{1}); #
   phi(isnan(phi)) = 0;
   phi(phi<=0) = 1e-6;
-  ##
-  phi_des = (phi_dat{2}); # minimal quenching reference Ic0: desorbed liquid in equilibrium with nitrogen
+  ## minimal quenching reference Ic0: desorbed liquid in equilibrium with nitrogen
+  phi_des = (phi_dat{2}); #
   phi_des(isnan(phi_des)) = 0;
   phi_des(phi_des<=0) = 1e-6;
-  phi_des = imsmooth (phi_des, sig);
-  ##
-  phi_sat = (phi_dat{3}); # maximum quenching reference Ic1: saturated liquid in equilibrium with air
+  ## maximum quenching reference Ic1: saturated liquid in equilibrium with air
+  phi_sat = (phi_dat{3}); #
   phi_sat(isnan(phi_sat)) = 0;
   phi_sat(phi_sat<=0) = 1e-6;
-  phi_sat = imsmooth (phi_sat, sig);
+  if (! isempty (sig) )
+    ## smoothing of calibration reference points
+    phi_des = imsmooth (phi_des, sig);
+    phi_sat = imsmooth (phi_sat, sig);
+  endif
   if testplots
     plot_map (phi);
     title ("phi")
@@ -35,7 +41,11 @@ function [cn] = calc_cn (phi_dat, cref, method, sig, testplots)
   switch method
     ##  linear, SV1 and SV2 give the same result
     case "linear" ## linear quenching
-      cn = ((1./phi - 1./phi_des) ./ (1./phi_sat - 1./phi_des));
+      K1 = (c_sat_ref - c_des_ref) .* (phi_des .* phi_sat ./ (phi_des - phi_sat));
+      K0 = (c_sat_ref - c_des_ref) .* (         - phi_sat ./ (phi_des - phi_sat)) + c_des_ref;
+      cn = K1 .* (1 ./ phi) + K0;
+      ext.K1 = K1;
+      ext.K0 = K0;
     case "SV1" ## weak excitation Stern-Volmer formulation
       SV = 1 ./ cscale .* (phi_des ./ phi_sat - 1); ## pixel wise scale factor from ref data
       conc = 1./SV .* (phi_des ./ phi - 1) + cref(1);
@@ -63,7 +73,7 @@ function [cn] = calc_cn (phi_dat, cref, method, sig, testplots)
         plot([cref(1) cref(2)], [phi_des(idx_y,idx_x) phi_sat(idx_y,idx_x)], "bx-"); hold on;
         plot([cref(1) cref(2)], [phi(idx_y,idx_x) phi(idx_y,idx_x)] ,"r-");
         xlabel("c in mg/l")
-        ylabel(" phi")
+        ylabel("phi")
       endif
       conc = (phi0_0 ./ phi - 1) ./ KSVe;
       if testplots
@@ -90,6 +100,8 @@ function [cn] = calc_cn (phi_dat, cref, method, sig, testplots)
       psi2 = (phi0./phi_sat-1)./cref(2);
       m2 = (psi2 - psi1) / (cscale); ## m = KS * KD
       psi0 = (psi2 - m2*cref(2)); ## n = KS + KS
+      conc = 1./(2.*m2) .* (-psi0 + sqrt (psi0 .^ 2 - 4 .* m2 .* (-(1*phi0 ./ phi - 1)))); # pos. solution
+      conc = real (conc);
       if testplots
         ## check for one pixel
         idx_x = 2429; idx_y = 423;
@@ -108,10 +120,7 @@ function [cn] = calc_cn (phi_dat, cref, method, sig, testplots)
         coeff = [mpp, n, -(F0/F-1)];
         c = (roots(coeff)); c = c(c>0);
         plot (c, (F0/F-1)/c,"ro")
-      endif
-      conc = 1./(2.*m2) .* (-psi0 + sqrt (psi0 .^ 2 - 4 .* m2 .* (-(1*phi0 ./ phi - 1)))); # pos. solution
-      conc = real (conc);
-      if testplots
+        ##
         plot_map (real(conc))
         caxis ([0 2])
         colorbar
@@ -120,9 +129,11 @@ function [cn] = calc_cn (phi_dat, cref, method, sig, testplots)
         colorbar
       endif
   endswitch
+  ##
   if !isempty(conc)
     cn = (conc - cref(1)) ./ cscale;
   endif
+  ##
   cn(cn<-0.025) = -0.025; # bulk might fluctuate around zero
   cn(cn>1) = 1;
 endfunction

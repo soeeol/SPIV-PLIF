@@ -4,7 +4,7 @@
 ## correction attempt of y offset between section using Ic0 y gradient
 ##
 ## input:
-## ma    .. region for y gradient comparison at x extends of sectoins
+## ma    .. region for y gradient comparison at x extends of sections
 ## moff  .. manual additional y offset in mm
 ##
 ## Author: Sören J. Gerke
