@@ -427,8 +427,18 @@ if 1
   std_D1_rel = abs (std_D1 ./ D_fit_1') * 100
   std_D2_rel = abs (std_D2 ./ D_fit_2') * 100
 
+  ## coefficient of determination simple linear regression
+  ## Pearson product-moment correlation coefficient
+  [Rxy1, ~] = corrcoef (tvec(t_range_1), sfsq(t_range_1));
+  [Rxy2, ~] = corrcoef (tvec(t_range_2), sfsq(t_range_2));
+  Rsq1 = Rxy1(1,2) * Rxy1(1,2)
+  Rsq2 = Rxy2(1,2) * Rxy2(1,2)
+  ## general definition for regression, same result as above for linear
+  Rsq1_eq = 1 - (S1.normr / norm (sfsq(t_range_1) - mean (sfsq(t_range_1)))) ^ 2
+  Rsq2_eq = 1 - (S2.normr / norm (sfsq(t_range_2) - mean (sfsq(t_range_2)))) ^ 2
+
   cd (save_dir)
-  save -v7 "D.v7" D_fit_1 D_fit_2 std_D1 std_D2 std_D1_rel std_D2_rel
+  save -v7 "D.v7" D_fit_1 D_fit_2 std_D1 std_D2 std_D1_rel std_D2_rel Rsq1 Rsq2
 
   ##
   fh = figure (); hold on;
