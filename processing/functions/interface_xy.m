@@ -12,14 +12,7 @@ function [xy_interface, xy_idx, ispeak] = interface_xy (msh, map, tol, peak_meth
   ispeak = zeros (sx_map, 1);
   xy_interface = zeros (sx_map, 2);
   xy_idx = ones (sx_map, 3);
-  switch (pp.optset.data)
-    case {"M13","M13b","M13c"}
-      sf = 5e-3;
-    case {"M26"}
-      sf = 2e-3;
-    otherwise
-      error ("unknown optset");
-  endswitch
+  sf = get_sf (msh);
   switch (peak_method)
     case "max"
       kpeak = 2;
@@ -37,14 +30,14 @@ function [xy_interface, xy_idx, ispeak] = interface_xy (msh, map, tol, peak_meth
   switch (search_method)
     case "xsurf"
       ## starting location estimate
-      y0_idx = mean (find (abs(0 - msh{2}(:,1)) < 2*sf));
+      y0_idx = mean (find (abs(0 - msh{2}(:,1)) < 2*sf(2)));
       ## manual selection
       if isempty (pp.y0_if_c.data)
         y_if  = est_param (msh, map, [], "y0_if_c", pp, "man");
       else
         y_if = pp.y0_if_c.data;
       endif
-      h_idx = y0_idx + int32 (y_if / sf);
+      h_idx = y0_idx + int32 (y_if / sf(2));
       ## try to find beginnig of interface
       xy_idx_0 = h_idx;
       h0_idx = [];
