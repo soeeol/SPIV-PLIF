@@ -39,6 +39,10 @@ function [mf, nref, rho, eta, c_sat, D_AB] = get_fp_lm (pdir, id_f, T_get)
       S = load ("-v7", [pdir.analyzed "a_2d_diff/DIFF_M13_A15_T25_WG141_M_G002_X_Z/D.v7"]);
       D_AB.PLIF1 = S.D_fit_1(1); # this studies result first lin. trend ("a_diff_main.m")
       D_AB.PLIF2 = S.D_fit_2(1); # this studies result 2nd lin. trend ("a_diff_main.m")
+      ## temperature correction
+      eta_meas = get_fp_tab (pdir, fname="glycerol-water", pname="eta", T_meas=273.15+25.12, mf, ext=[]);
+      D_AB.PLIF1 = corr_D_T_eta (eta_meas, T_meas, D_AB.PLIF1, eta, T_get);
+      D_AB.PLIF2 = corr_D_T_eta (eta_meas, T_meas, D_AB.PLIF2, eta, T_get);
     case "WG139"
       w = 0.44; # TODO
       nref = get_ri_matching_tab (pdir, fname="glycerol-water", pname="ri", T_get, mf=w, ext=[]);
@@ -54,6 +58,10 @@ function [mf, nref, rho, eta, c_sat, D_AB] = get_fp_lm (pdir, id_f, T_get)
       S = load ("-v7", [pdir.analyzed "a_2d_diff/DIFF_M26_A15_T25_WP141_M_G002_X_Z/D.v7"]);
       D_AB.PLIF1 = S.D_fit_1(1); # this studies result first lin. trend ("a_diff_main.m")
       D_AB.PLIF2 = S.D_fit_2(1); # this studies result 2nd lin. trend ("a_diff_main.m")
+      ## temperature correction
+      eta_meas = get_fp_tab (pdir, fname="propylene glycol-water", pname="eta", T_meas=273.15+24.98, mf, ext=[]);
+      D_AB.PLIF1 = corr_D_T_eta (eta_meas, T_meas, D_AB.PLIF1, eta, T_get);
+      D_AB.PLIF2 = corr_D_T_eta (eta_meas, T_meas, D_AB.PLIF2, eta, T_get);
     otherwise
       error ("liquid parameters unknown");
   endswitch
