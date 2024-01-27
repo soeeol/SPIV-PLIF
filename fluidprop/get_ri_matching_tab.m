@@ -1,7 +1,6 @@
 ##  SPDX-License-Identifier: BSD-3-Clause
 ##  Copyright (c) 2023, Sören Jakob Gerke
 
-## load data table for fluid and property combination
 ## get data interpolated at T_get, mf_get from the refractive index calibration experiment
 ##
 ## Author: Sören J. Gerke

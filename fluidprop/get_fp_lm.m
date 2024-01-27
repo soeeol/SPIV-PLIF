@@ -9,8 +9,8 @@
 ## T_get  .. temperature in K
 ##
 ## output:
-## mf     .. mass fraction alcohol
-## nref   .. refractive index
+## w      .. mass fraction alcohol
+## n      .. refractive index
 ## rho    .. density in kg / m^3
 ## eta    .. dynamic viscisity in Pa s
 ## c_sat  .. oxygen saturation concentration in mg / l
@@ -19,47 +19,46 @@
 ## Author: Sören J. Gerke
 ##
 
-function [mf, nref, rho, eta, c_sat, D_AB] = get_fp_lm (pdir, id_f, T_get)
-  mf = nref = rho = eta = csat = D_AB = [];
+function [w, n, rho, eta, c_sat, D_AB] = get_fp_lm (pdir, id_f, T_get)
+  w = n = rho = eta = c_sat = D_AB = [];
+  calib_w = load ([pdir.analyzed "a_ri-matching/ri_matching_calibration.txt"]);
   switch (id_f)
     case "WG141"
-      fname = "glycerol-water"; ext=[];
-##      mf_PT_match = 5.8162e-01; # see ("ri_matching_regression.m")  mean of the 3 temperatures
-##      mf_PT_match = 5.8131e-01; # see ("ri_matching_regression.m") 25°C
-      ri_PDMS = ri_match_PDMS_ri_T (T_get);
-      mf = ri_match_PT_mf_from_ri (ri_PDMS, T_get);
-##      nref = get_ri_matching_tab (pdir, fname="glycerol-water", pname="ri", T_get, mf=mf_PT_match, ext=[]); # interpolated from experimental data
-      nref = ri_match_PT_ri_from_mf (mf, T_get); # from exp. fit function
-      rho = get_fp_tab (pdir, fname, pname="rho", T_get, mf, ext);
-      eta = get_fp_tab (pdir, fname, pname="eta", T_get, mf, ext);
-      c_sat = 3.6493e+00; # see "a_oxygen_diffusivity_solubility.m"
-## TODO f(T, mf)      D_AB = get_fp_tab (pdir, fname, pname="D", T_get, mf, ext);
-## TODO f(T, mf)      c_sat = get_fp_tab (pdir, fname, pname="c_sat", T_get, mf, ext);
+      fname = "glycerol-water"; ext = [];
+      n = n_PDMS = ri_PDMS_T (T_get, calib_w.fit_n_PDMS.c); # see a_ri_matching.m
+      w = ri_matching_mf (n_PDMS, T_get, calib_w.fit_n_PT.c);
+      rho = get_fp_tab (pdir, fname, pname="rho", T_get, w, ext);
+      eta = get_fp_tab (pdir, fname, pname="eta", T_get, w, ext);
+      c_sat = 3.6399; # see "a_oxygen_diffusivity_solubility.m"
+## TODO f(T, w)      D_AB = get_fp_tab (pdir, fname, pname="D", T_get, w, ext);
+## TODO f(T, w)      c_sat = get_fp_tab (pdir, fname, pname="c_sat", T_get, w, ext);
 ##      D_AB.corr ... # see "a_oxygen_diffusivity_solubility.m"
       S = load ("-v7", [pdir.analyzed "a_2d_diff/DIFF_M13_A15_T25_WG141_M_G002_X_Z/D.v7"]);
       D_AB.PLIF1 = S.D_fit_1(1); # this studies result first lin. trend ("a_diff_main.m")
       D_AB.PLIF2 = S.D_fit_2(1); # this studies result 2nd lin. trend ("a_diff_main.m")
-      ## temperature correction
-      eta_meas = get_fp_tab (pdir, fname="glycerol-water", pname="eta", T_meas=273.15+25.12, mf, ext=[]);
+      ## diffusivity temperature correction
+      eta_meas = get_fp_tab (pdir, fname="glycerol-water", pname="eta", T_meas=273.15+25.12, w, ext=[]);
       D_AB.PLIF1 = corr_D_T_eta (eta_meas, T_meas, D_AB.PLIF1, eta, T_get);
       D_AB.PLIF2 = corr_D_T_eta (eta_meas, T_meas, D_AB.PLIF2, eta, T_get);
     case "WG139"
       w = 0.44; # TODO
-      nref = get_ri_matching_tab (pdir, fname="glycerol-water", pname="ri", T_get, mf=w, ext=[]);
-      rho = get_fp_tab (pdir, fname, pname="rho", T_get, mf, ext);
-      eta = get_fp_tab (pdir, fname, pname="eta", T_get, mf, ext);
+##      n = get_ri_matching_tab (pdir, fname="glycerol-water", pname="ri", T_get, w=w, ext=[]);
+      n = ri_matching_ri (w, T_get, fit_n_PT.c);
+      rho = get_fp_tab (pdir, fname, pname="rho", T_get, w, ext);
+      eta = get_fp_tab (pdir, fname, pname="eta", T_get, w, ext);
       c_sat = 4.75; # see "a_oxygen_diffusivity_solubility.m"
     case "WP141"
-      mf_PD_match = 7.2519e-01; # see ("ri_matching_regression.m")
-      nref = get_ri_matching_tab (pdir, fname="propylene glycol-water", pname="ri", T_get, mf=mf_PD_match, ext=[]);
-      rho = get_fp_tab (pdir, fname, pname="rho", T_get, mf, ext);
-      eta = get_fp_tab (pdir, fname, pname="eta", T_get, mf, ext);
-      c_sat = 7.1437e+00; # see "a_oxygen_diffusivity_solubility.m"
+      fname = "propylene glycol-water"; ext = [];
+      n = n_PDMS = ri_PDMS_T (T_get, calib_w.fit_n_PDMS.c); # see a_ri_matching.m
+      w = ri_matching_mf (n_PDMS, T_get, calib_w.fit_n_PD.c);
+      rho = get_fp_tab (pdir, fname, pname="rho", T_get, w, ext);
+      eta = get_fp_tab (pdir, fname, pname="eta", T_get, w, ext);
+      c_sat = 7.1437; # see "a_oxygen_diffusivity_solubility.m"
       S = load ("-v7", [pdir.analyzed "a_2d_diff/DIFF_M26_A15_T25_WP141_M_G002_X_Z/D.v7"]);
       D_AB.PLIF1 = S.D_fit_1(1); # this studies result first lin. trend ("a_diff_main.m")
       D_AB.PLIF2 = S.D_fit_2(1); # this studies result 2nd lin. trend ("a_diff_main.m")
-      ## temperature correction
-      eta_meas = get_fp_tab (pdir, fname="propylene glycol-water", pname="eta", T_meas=273.15+24.98, mf, ext=[]);
+      ## diffusivity temperature correction
+      eta_meas = get_fp_tab (pdir, fname, pname="eta", T_meas=273.15+24.98, w, ext=[]);
       D_AB.PLIF1 = corr_D_T_eta (eta_meas, T_meas, D_AB.PLIF1, eta, T_get);
       D_AB.PLIF2 = corr_D_T_eta (eta_meas, T_meas, D_AB.PLIF2, eta, T_get);
     otherwise

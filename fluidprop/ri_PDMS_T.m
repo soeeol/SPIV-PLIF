@@ -6,7 +6,6 @@
 ## Author: Sören J. Gerke
 ##
 
-function ri = ri_match_PDMS_ri_T (T_get)
-  p_RI_PDMS_T_fit = [-3.2367e-04 1.5061e+00];
-  ri = polyval (p_RI_PDMS_T_fit, T_get);
+function ri = ri_PDMS_T (T, p)
+  ri = polyval (p, T);
 endfunction
