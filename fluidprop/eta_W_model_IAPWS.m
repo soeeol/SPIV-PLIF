@@ -11,7 +11,7 @@
 ## - T_K  .. temperature in K
 ##
 ## output:
-## - eta  .. viscosity of water in Pa s
+## - eta  .. dynamic viscosity of water in Pa s
 ##
 ## Author: Sören J. Gerke
 ##

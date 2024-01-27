@@ -37,6 +37,9 @@ T_vec = vec (T .* ones(3));
 n_vec = [n_PDMS_T20 n_PDMS_T25 n_PDMS_T30];
 c_n_PDMS = polyfit (T_vec, n_vec, 1);
 n_PDMS_T_fit = ri_PDMS_T (T, c_n_PDMS)
+## coefficient of determination linear regression
+[Rxy, ~] = corrcoef (T_vec, n_vec);
+RSQ = Rxy(1,2) * Rxy(1,2)
 ##
 fit_n_PDMS = [];
 fit_n_PDMS.descption = {"linear regression for n (T), fitting the measured refractive index n of PDMS"};
@@ -44,6 +47,7 @@ fit_n_PDMS.valid = {"273.15 <= T / K <= 293.15"};
 fit_n_PDMS.material = {"PDMS, Momentive RTV615 1:10"};
 fit_n_PDMS.fun = {"polyfit ()"};
 fit_n_PDMS.c = c_n_PDMS;
+fit_n_PDMS.RSQ = RSQ;
 
 ##
 ## 1,2,3-Propantriol calibration measurements "PT"
@@ -88,7 +92,7 @@ write_series_csv ([save_dir "meas_PD_eta"], meas_PD_eta, {"mass fraction","eta i
 ##
 ## literature data refractive index
 ##
-ds = get_fp_dataset (fp, fname={"glycerol-water"}, pname={"refractive-index"}, {"HoytLF1933"});
+ds = get_fp_dataset (fp, fname={"glycerol-water"}, pname={"refractive-index"}, {"GP1963etal"});
 w_PT_LIT = ds.data{1,2};
 n_PT_LIT = ds.data{1,3};
 ds = get_fp_dataset (fp, fname={"propylene glycol-water"}, pname={"refractive-index"}, {"MacBethG1951"});
@@ -464,4 +468,7 @@ plot3 (w_match_PD*[1 1], T(1)*[1 1], [0 eta_PD_match_T(1)], "b--")
 plot3 (w_match_PD*[1 1], T(2)*[1 1], [0 eta_PD_match_T(2)], "b--")
 plot3 (w_match_PD*[1 1], T(3)*[1 1], [0 eta_PD_match_T(3)], "b--")
 print (fh, "-dpng", "-color", [save_dir "eta_PD_matching"]);
+
+## result table
+write_series_csv ([save_dir "results_ri-matching"], [[T' n_PDMS_T_fit' w_match_T_PT' w_match_T_PD'];], {"T","n PDMS","w PT","w PD"}, "%01.06f")
 

@@ -5,7 +5,7 @@
 ## "fluidprop.v7" database.
 ## Original data points of own measurements and of available literature.
 ## Credit to the original authors is given in the field "source" of each
-## dataset "ds"
+## dataset "ds".
 ##
 ## Author: Sören J. Gerke
 ##
@@ -14,10 +14,6 @@
 ## datasets
 ##
 
-##
-tables_dir = pdir.fptab;
-
-##
 fp = init_fp ();
 
 ##
@@ -32,7 +28,7 @@ ds.data{1} = 1e-3 * 18.0153;
 ##
 ds = init_fp ();
 ds.fluid = {"water", "W", "H2O"};
-ds.prop{1} = {"refractive-index", "RI"};
+ds.prop{1} = {"refractive-index", "n"};
 ds.source{1} = {"GerkeSJexp"};
 ds.unit(1) = {"T in K"};
 ds.data(1) = {[20 25 30] + 273.15};
@@ -44,7 +40,7 @@ ds.desc = {"3 temperatures for destilled water, measured with Abbe refractometer
 ds = init_fp ();
 ds.fluid = {"water", "W", "H2O"};
 ds.prop{1} = {"density", "rho"};
-ds.source{1} = {"IAPWS 2008 (https://wiki.anton-paar.com/us-en/water/)"};
+ds.source{1} = {"IAPWS 2008"}; # (https://wiki.anton-paar.com/us-en/water/)
 ds.unit(1) = {"T in K"};
 ds.data(1) = {273.15 + [2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 45 50 55 60 65 70 75 80]};
 ds.unit(2) = {"density in kg/m^3"};
@@ -53,8 +49,8 @@ ds.data(2) = {1e3 * [0.9999 1.0 1.0 1.0 0.9999 0.9999 0.9999 0.9998 0.9997 0.999
 ##
 ds = init_fp ();
 ds.fluid = {"water", "W", "H2O"};
-ds.prop{1} = {"dynamic viscosity", "eta"};
-ds.source{1} = {"IAPWS 2008 (https://wiki.anton-paar.com/us-en/water/)"};
+ds.prop{1} = {"dynamic-viscosity", "eta"};
+ds.source{1} = {"IAPWS 2008"}; # (https://wiki.anton-paar.com/us-en/water/)
 ds.unit(1) = {"T in K"};
 ds.data(1) = {273.15 + [2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 45 50 55 60 65 70 75 80]};
 ds.unit(2) = {"dynamic viscosity in Pa s"};
@@ -66,20 +62,36 @@ ds.data(2) = {1e-3 * [1.6735 1.6190 1.5673 1.5182 1.4715 1.4271 1.3847 1.3444 1.
 ##
 ds = init_fp ();
 ds.fluid =  {"glycerol", "PT", "1,2,3-Propantriol"};
-ds.prop{1} = {"molar mass", "mm"};
+ds.prop{1} = {"molar-mass", "mm"};
 ds.unit(1) = {"kg / mol"};
 ds.data{1} = 1e-3 * 92.094;
 [fp, idx] = add_fp_dataset (fp, ds);
 ##
 ds = init_fp ();
 ds.fluid = {"glycerol", "PT", "1,2,3-Propantriol"};
-ds.prop{1} = {"refractive-index", "RI"};
+ds.prop{1} = {"refractive-index", "n"};
 ds.source{1} = {"GerkeSJexp"};
 ds.unit(1) = {"T in K"};
 ds.data(1) = {[20 25 30] + 273.15};
 ds.unit(2) = {"RI in -"};
 ds.data(2) = {[1.47428 1.47313 1.47193]};
 ds.desc = {"3 temperatures for glycerol (99.5%), measured with Abbe refractometer, mean of 3 repetitions"};
+[fp, idx] = add_fp_dataset (fp, ds);
+
+##
+## PDMS Momentive RTV615 1:10
+##
+ds = init_fp ();
+ds.fluid = {"PDMS"};
+ds.prop{1} = {"refractive-index", "n"};
+ds.source{1} = {"GerkeSJexp"};
+ds.unit(1) = {"T in K"};
+ds.data(1) = {[20 25 30] + 273.15};
+ds.unit(2) = {"RI in -"};
+ds.data(2) = {[[1.41103 1.41118 1.41137];
+               [1.40935 1.40969 1.40955];
+               [1.40807 1.40798 1.40812]]};
+ds.desc = {"measured with Abbe refractometer, 3 repetitions per temperature"};
 [fp, idx] = add_fp_dataset (fp, ds);
 
 ##
@@ -94,7 +106,7 @@ ds.data{1} = 1e-3 * 76.095;
 ##
 ds = init_fp ();
 ds.fluid = {"propylene glycol", "PD", "1,2-Propandiol"};
-ds.prop{1} = {"refractive-index", "RI"};
+ds.prop{1} = {"refractive-index", "n"};
 ds.source{1} = {"GerkeSJexp"};
 ds.unit(1) = {"T in K"};
 ds.data(1) = {[20 25 30] + 273.15};
@@ -106,11 +118,21 @@ ds.desc = {"3 temperatures for glycerol (99.5%), measured with Abbe refractomete
 ds = init_fp ();
 ds.fluid = {"propylene glycol", "PD"};
 ds.prop{1} = {"dynamic-viscosity", "eta"};
-ds.source{1} = {"SunT2004et"};
+ds.source{1} = {"SunT2004", "doi: 10.1021/je049960h"};
 ds.unit(1) = {"T in K"};
 ds.data(1) = {[297.25 302.55 317.10 332.30]};
 ds.unit(2) = {"dynamic viscosity in Pa s"};
-ds.data(2) = {1e-3 *[46.4 34.0 16.4 8.75]};
+ds.data(2) = {1e-3 * [46.4 34.0 16.4 8.75]};
+[fp, idx] = add_fp_dataset (fp, ds);
+##
+ds = init_fp ();
+ds.fluid = {"propylene glycol", "PD"};
+ds.prop{1} = {"density", "rho"};
+ds.source{1} = {"SunT2004", "doi: 10.1021/je049960h"};
+ds.unit(1) = {"T in K"};
+ds.data(1) = {[298.85 318.05 339.00 359.40]};
+ds.unit(2) = {"density in kg / m^3"};
+ds.data(2) = {[1033 1018 1003 986.1]};
 [fp, idx] = add_fp_dataset (fp, ds);
 
 ##
@@ -118,7 +140,7 @@ ds.data(2) = {1e-3 *[46.4 34.0 16.4 8.75]};
 ##
 ds = init_fp ();
 ds.fluid = {"glycerol-water", "PT_W"};
-ds.prop{1} = {"refractive-index", "RI"};
+ds.prop{1} = {"refractive-index", "n"};
 ds.source{1} = {"GerkeSJexp"};
 ds.unit(1) = {"T in K"};
 ds.data(1) = {[20 25 30]' + 273.15};
@@ -148,36 +170,38 @@ ds.desc = {"glycerol (99.5%) - water(dest.), measured with rotational cylinder v
 ds = init_fp ();
 ds.fluid = {"glycerol-water", "PT_W"};
 ds.prop{1} = {"density", "rho"};
-ds.source{1} = {"BosartLW1927et", "BOSART,L. W., and SNODDY,A. O., Ind. Eng. Chem., 19, 506-510 (1927)"};
+ds.source{1} = {"BosartL1927", "doi: 10.1021/ie50228a032"};
 ds.unit(1) = {"T in K"};
 ds.data(1) = {[20 25 30]' + 273.15};
 ds.unit(2) = {"mass fraction glycerol in g / g"};
 ds.data(2) = {1:-0.1:0};
 ds.unit(3) = {"density in kg / m^3"};
-ds.data(3) = {1e-3 * [[1.26108 1.23510 1.20850 1.18125 1.15380 1.12630 1.09930 1.07270 1.04690 1.02210 0.99823];
-                      [1.25802 1.23200 1.20545 1.17840 1.15105 1.12375 1.09710 1.07070 1.04525 1.02070 0.99708];
-                      [1.25495 1.22890 1.20240 1.17565 1.14830 1.12110 1.09475 1.06855 1.04350 1.01905 0.99568];]};
+ds.data(3) = {1e3 * [[1.26108 1.23510 1.20850 1.18125 1.15380 1.12630 1.09930 1.07270 1.04690 1.02210 0.99823];
+                     [1.25802 1.23200 1.20545 1.17840 1.15105 1.12375 1.09710 1.07070 1.04525 1.02070 0.99708];
+                     [1.25495 1.22890 1.20240 1.17565 1.14830 1.12110 1.09475 1.06855 1.04350 1.01905 0.99568];]};
 ds.desc = {"literature"};
 [fp, idx] = add_fp_dataset (fp, ds);
 ##
 ds = init_fp ();
 ds.fluid = {"glycerol-water", "PT_W"};
-ds.prop{1} = {"viscosity", "eta"};
-ds.source{1} = {"Segur1951et", "SEGUR.J. B.. and O ~ ~ R S T AHELEN. R. Ind. & Enn. Chem.,~.43. 2117-2120 (1951)"};
+ds.prop{1} = {"dynamic-viscosity", "eta"};
+ds.source{1} = {"SegurJ1951", "doi: 10.1021/ie50501a040"};
 ds.unit(1) = {"T in K"};
-ds.data(1) = {[20 30]' + 273.15};
+ds.data(1) = {[10 20 30 40]' + 273.15};
 ds.unit(2) = {"mass fraction glycerol in g / g"};
 ds.data(2) = {[0:0.1:0.6 0.65:0.05:1]};
 ds.unit(3) = {"dynamic viscosity in Pa s"};
-ds.data(3) = {1e-3 * [[1.005 1.31 1.76 2.50 3.72 6.00 10.8 15.2 22.5 35.5 60.1 109 219 523 1410];
-                      [.8007 1.03 1.35 1.87 2.72 4.21 7.19 9.85 14.1 21.2 33.9 58 109 237 612];]};
+ds.data(3) = {1e-3 * [[1.308 1.74 2.41 3.49 5.37 9.01 17.4 25.3 38.8 65.2 116. 223. 498. 1270 3900];
+                      [1.005 1.31 1.76 2.50 3.72 6.00 10.8 15.2 22.5 35.5 60.1 109. 219. 523. 1410];
+                      [.8007 1.03 1.35 1.87 2.72 4.21 7.19 9.85 14.1 21.2 33.9 58.0 109. 237. 612.];
+                      [.6560 .826 1.07 1.46 2.07 3.10 5.08 7.73 9.40 13.6 20.8 33.5 60.0 121. 284.]]};
 ds.desc = {"literature"};
 [fp, idx] = add_fp_dataset (fp, ds);
 ##
 ds = init_fp ();
 ds.fluid = {"glycerol-water", "PT_W"};
-ds.prop{1} = {"refractive-index", "RI"};
-ds.source{1} = {"HoytLF1933", "HOYT,L. F., Oil & Soap, 10, 43-47 (1933); Ind. Eng. Chem., 26.329-332 (1934)"};
+ds.prop{1} = {"refractive-index", "n"};
+ds.source{1} = {"GP1963etal", "G. P. Association and others, Physical properties of glycerine and its solutions. Glycerine Producers’ Association, 1963. (data origins frmo Hoyt,L. F., Oil & Soap, 10, 43-47 (1933); Ind. Eng. Chem., 26.329-332 (1934))"};
 ds.unit(1) = {"T in K"};
 ds.data(1) = {[20]' + 273.15};
 ds.unit(2) = {"mass fraction glycerol in g / g"};
@@ -190,7 +214,7 @@ ds.desc = {"literature, polyfit(mf,RI, 3) works well"};
 ds = init_fp ();
 ds.fluid = {"glycerol-water", "PT_W"};
 ds.prop{1} = {"density", "rho"};
-ds.source{1} = {"VolkA2018et"};
+ds.source{1} = {"VolkA2018", "doi: 10.1007/s00348-018-2527-y"};
 ds.unit(1) = {"T in K"};
 ds.data(1) = {[0 100]' + 273.15};
 ds.unit(2) = {"mass fraction glycerol in g / g"};
@@ -203,7 +227,7 @@ ds.desc = {"model, open literature"};
 ds = init_fp ();
 ds.fluid = {"glycerol-water", "PT_W"};
 ds.prop{1} = {"oxygen diffusivity", "D_AB"};
-ds.source{1} = {"NogamiH1962et"};
+ds.source{1} = {"NogamiH1962"};
 ds.unit(1) = {"T in K"};
 ds.data(1) = {[22.5]' + 273.15};
 ds.unit(2) = {"volume fraction glycerol in l / l"};
@@ -215,7 +239,7 @@ ds.desc = {"literature; polarographic measurements"};
 ds = init_fp ();
 ds.fluid = {"glycerol-water", "PT_W"};
 ds.prop{1} = {"oxygen solubility", "c_sat"};
-ds.source{1} = {"NogamiH1962et"};
+ds.source{1} = {"NogamiH1962"};
 ds.unit(1) = {"T in K"};
 ds.data(1) = {[22.5]' + 273.15};
 ds.unit(2) = {"volume fraction glycerol in l / l"};
@@ -224,13 +248,54 @@ ds.unit(3) = {"dissolved oxygen in mmol / l"};
 ds.data(3) = {1e-3 * 1e-2 * [28 26 16 12 7]};
 ds.desc = {"literature"};
 [fp, idx] = add_fp_dataset (fp, ds);
+##
+ds = init_fp ();
+ds.fluid = {"glycerol-water", "PT_W"};
+ds.prop{1} = {"oxygen solubility", "c_sat"};
+ds.source{1} = {"JordanJ1956", "doi: 10.1021/ja01594a015"};
+ds.unit(1) = {"T in K"};
+ds.data(1) = {25 + 273.15};
+ds.unit(2) = {"mass fraction glycerol in g / g"};
+ds.data(2) = {[0 0.124 0.2 0.349 0.526 0.68 0.8 0.843 0.875 0.925]};
+ds.unit(3) = {"dissolved oxygen in mmol / l"};
+ds.data(3) = {[1.18 0.889 0.735 0.649 0.478 0.378 0.302 0.28 0.264 0.238]}; # mmol/l @ 1atm O2  ## by Winkler method +/- 1 %};
+ds.desc = {"literature"};
+[fp, idx] = add_fp_dataset (fp, ds);
+ds = init_fp ();
+ds.fluid = {"glycerol-water", "PT_W"};
+ds.prop{1} = {"oxygen diffusivity", "D_AB"};
+ds.source{1} = {"JordanJ1956", "doi: 10.1021/ja01594a015"};
+ds.unit(1) = {"T in K"};
+ds.data(1) = {25 + 273.15};
+ds.unit(2) = {"mass fraction glycerol in g / g"};
+ds.data(2) = {[0 0.124 0.2 0.349 0.526 0.68 0.8 0.843 0.875 0.925]};
+ds.unit(3) = {"diffusivity in m^2 / s"};
+ds.data(3) = {1e-4 * 1e-5 * [2.12 3.31 2.99 1.21 1.15 0.87 0.51 0.48	0.43 0.24]}; # Fick diffusivity
+ds.unit(4) = {"\"association\" diffusivity in m^2 / s for the first 7 mass fractions"};
+ds.data(4) = {1e-4 * 1e-5 * [1.80 1.60 1.00 0.30 0.2 0.1 0.05]}; #  "association" diffusivity
+ds.desc = {"literature; polarographic measurements"};
+[fp, idx] = add_fp_dataset (fp, ds);
+ds = init_fp ();
+ds.fluid = {"glycerol-water", "PT_W"};
+ds.prop{1} = {"dynamic-viscosity", "eta"};
+ds.source{1} = {"JordanJ1956", "doi: 10.1021/ja01594a015"};
+ds.unit(1) = {"T in K"};
+ds.data(1) = {25 + 273.15};
+ds.unit(2) = {"mass fraction glycerol in g / g"};
+ds.data(2) = {[0 0.124 0.2 0.349 0.526 0.68 0.8 0.843 0.875 0.925]};
+ds.unit(3) = {"dynamic viscosity in Pa s"};
+ds.data(3) = {1e-3 * [0.89 1.27 1.75 2.24 4.85 10.8 29 45.9 56.9 106]}; # liquid mixture with with electrolyte and maximum suppressor
+ds.desc = {"literature"};
+[fp, idx] = add_fp_dataset (fp, ds);
+## density given in publication [1006 1032 1058 1077 1126 1163 1197 1209 1215 1228]; # kg/m^3
+
 
 ##
 ## Propylene Glycol - Water
 ##
 ds = init_fp ();
 ds.fluid = {"propylene glycol-water", "PD_W"};
-ds.prop{1} = {"refractive-index", "RI"};
+ds.prop{1} = {"refractive-index", "n"};
 ds.source{1} = {"GerkeSJexp"};
 ds.unit(1) = {"T in K"};
 ds.data(1) = {[20 25 30]' + 273.15};
@@ -259,10 +324,10 @@ ds.data(3) = {1e-3 *[[41 32.9 25.5 20.8 13.8 9.7 6.65];
 ds = init_fp ();
 ds.fluid = {"propylene glycol-water", "PD_W"};
 ds.prop{1} = {"dynamic-viscosity", "eta"};
-ds.source{1} = {"SunT2004et"};
+ds.source{1} = {"SunT2004", "doi: 10.1021/je049960h"};
 ds.unit(1) = {"T in K"};
-ds.data(1) = {[[297];
-               [313];]};
+ds.data(1) = {[[296.65 297.05 296.80];
+               [313.05 313.05 313.05];]};
 ds.unit(2) = {"mole fraction propylene glycol in mol / mol"};
 ds.data(2) = [0.25 0.5 0.75];
 ds.unit(3) = {"dynamic viscosity in Pa s"};
@@ -273,7 +338,7 @@ ds.data(3) = {1e-3 *[[7.39 17.5 32.4];
 ds = init_fp ();
 ds.fluid = {"propylene glycol-water", "PD_W"};
 ds.prop{1} = {"dynamic-viscosity", "eta"};
-ds.source{1} = {"KhattabIS2017etal"};
+ds.source{1} = {"KhattabIS2017", "doi: 10.1016/j.arabjc.2012.07.012"};
 ds.unit(1) = {"T in K"};
 ds.data(1) = {[20 25 30]' + 273};
 ds.unit(2) = {"mole fraction propylene glycol in mol / mol"};
@@ -288,7 +353,7 @@ ds.desc = {"literature"};
 ds = init_fp ();
 ds.fluid = {"propylene glycol-water", "PD_W"};
 ds.prop{1} = {"density", "rho"};
-ds.source{1} = {"KhattabIS2017etal"};
+ds.source{1} = {"KhattabIS2017", "doi: 10.1016/j.arabjc.2012.07.012"};
 ds.unit(1) = {"T in K"};
 ds.data(1) = {[20 25 30]' + 273};
 ds.unit(2) = {"mole fraction propylene glycol in mol / mol"};
@@ -303,7 +368,7 @@ ds.desc = {"literature"};
 ds = init_fp ();
 ds.fluid = {"propylene glycol-water", "PD_W"};
 ds.prop{1} = {"density", "rho"};
-ds.source{1} = {"NakanishiK1967etal", "Koichiro Nakanishi, Nobuyuki Kato, Masato Maruyama: J. physic. Chem. 71(1967) 814/B"};
+ds.source{1} = {"NakanishiK1967", "doi: 10.1021/je0340755"};
 ds.unit(1) = {"T in K"};
 ds.data(1) = {[25]' + 273.15};
 ds.unit(2) = {"mass fraction propylene glycol in g / g"};
@@ -315,8 +380,22 @@ ds.desc = {"literature; pycnometer measurements"};
 ##
 ds = init_fp ();
 ds.fluid = {"propylene glycol-water", "PD_W"};
+ds.prop{1} = {"density", "rho"};
+ds.source{1} = {"SunT2004", "doi: 10.1021/je049960h"};
+ds.unit(1) = {"T in K"};
+ds.data(1) = {[[296.65 297.05 296.80];
+               [313.05 313.05 313.05];]};
+ds.unit(2) = {"mole fraction propylene glycol in mol / mol"};
+ds.data(2) = [0.25 0.5 0.75];
+ds.unit(3) = {"density in kg / m^3"};
+ds.data(3) = {[[1040 1042 1038];
+               [1028 1029 1026];]};
+[fp, idx] = add_fp_dataset (fp, ds);
+##
+ds = init_fp ();
+ds.fluid = {"propylene glycol-water", "PD_W"};
 ds.prop{1} = {"dynamic-viscosity", "eta"};
-ds.source{1} = {"TanakaY1988etal"};
+ds.source{1} = {"TanakaY1988", "doi: 10.1007/BF00503150"};
 ds.unit(1) = {"T in K"};
 ds.data(1) = {[25]' + 273.15};
 ds.unit(2) = {"mass fraction propylene glycol in g / g"};
@@ -329,7 +408,7 @@ ds.desc = {"literature; falling cylinder measurements"};
 ds = init_fp ();
 ds.fluid = {"propylene glycol-water", "PD_W"};
 ds.prop{1} = {"dynamic-viscosity", "eta"};
-ds.source{1} = {"GeorgeJ2003et"};
+ds.source{1} = {"GeorgeJ2003", "doi: 10.1021/je0340755"};
 ds.unit(1) = {"T in K"};
 ds.data(1) = {[25 35]' + 273.15};
 ds.unit(2) = {"mole fraction propylene glycol in mol / mol"};
@@ -343,7 +422,7 @@ ds.desc = {"literature; Ubbelohde viscometer measurements"};
 ds = init_fp ();
 ds.fluid = {"propylene glycol-water", "PD_W"};
 ds.prop{1} = {"density", "rho"};
-ds.source{1} = {"GeorgeJ2003et"};
+ds.source{1} = {"GeorgeJ2003", "doi: 10.1021/je0340755"};
 ds.unit(1) = {"T in K"};
 ds.data(1) = {[25 35]' + 273.15};
 ds.unit(2) = {"mole fraction propylene glycol in mol / mol"};
@@ -357,7 +436,7 @@ ds.desc = {"literature; vibrating tube digital densimeter measurements"};
 ds = init_fp ();
 ds.fluid = {"propylene glycol-water", "PD_W"};
 ds.prop{1} = {"density", "rho"};
-ds.source{1} = {"MacBethG1951et", "MacBeth, G., Thompson, A.R., 1951. Densities and refractive indexes for propylene glycol–water solutions. Anal. Chem. 23, 618–619"};
+ds.source{1} = {"MacBethG1951", "doi: 10.1021/ac60052a019"};
 ds.unit(1) = {"T in K"};
 ds.data(1) = {[35]' + 273.15};
 ds.unit(2) = {"mass fraction propylene glycol in g / g"};
@@ -368,21 +447,21 @@ ds.data(3) = {1e3 * [0.99406 1.00089 1.00852 1.01615 1.02295 1.02818 1.03154 1.0
 ##
 ds = init_fp ();
 ds.fluid = {"propylene glycol-water", "PD_W"};
-ds.prop{1} = {"refractive-index", "RI"};
-ds.source{1} = {"MacBethG1951et", "MacBeth, G., Thompson, A.R., 1951. Densities and refractive indexes for propylene glycol–water solutions. Anal. Chem. 23, 618–619"};
+ds.prop{1} = {"refractive-index", "n"};
+ds.source{1} = {"MacBethG1951", "doi: 10.1021/ac60052a019"};
 ds.unit(1) = {"T in K"};
 ds.data(1) = {[25]' + 273.15};
 ds.unit(2) = {"mass fraction propylene glycol in g / g"};
 ds.data(2) = {0:.1:1};
 ds.unit(3) = {"RI in -"};
 ds.data(3) = {[1.3325 1.3432 1.3544 1.3658 1.3770 1.3878 1.3980 1.4075 1.4162 1.4241 1.4316]};
-ds.desc = {"literature, polyfit(mf,RI, 3) works well"};
+ds.desc = {"literature"};
 [fp, idx] = add_fp_dataset (fp, ds);
 ##
 ds = init_fp ();
 ds.fluid = {"propylene glycol-water", "PD_W"};
 ds.prop{1} = {"oxygen diffusivity", "D_AB"};
-ds.source{1} = {"NogamiH1962et"};
+ds.source{1} = {"NogamiH1962"};
 ds.unit(1) = {"T in K"};
 ds.data(1) = {[22.5]' + 273.15};
 ds.unit(2) = {"volume fraction propylene glycol in l / l"};
@@ -395,7 +474,7 @@ ds.desc = {"literature; polarographic measurements"};
 ds = init_fp ();
 ds.fluid = {"propylene glycol-water", "PD_W"};
 ds.prop{1} = {"oxygen solubility", "c_sat"};
-ds.source{1} = {"NogamiH1962et"};
+ds.source{1} = {"NogamiH1962"};
 ds.unit(1) = {"T in K"};
 ds.data(1) = {[22.5]' + 273.15};
 ds.unit(2) = {"volume fraction propylene glycol in l / l"};
@@ -419,7 +498,5 @@ ds.desc = {"literature"};
 [fp, idx] = add_fp_dataset (fp, ds);
 
 ##
-##
-##
-save ("-v7", [tables_dir "fluidprop.v7"], "fp");
+save ("-v7", [pdir.fptab "fluidprop.v7"], "fp");
 

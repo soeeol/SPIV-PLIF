@@ -25,8 +25,8 @@ p_total = 101325; # Pa  = 1 atm
 ## composition synthetic air
 n_N2 = 80e-2; # mol %
 n_O2 = 20e-2; # mol %
-mf_N2 = n_N2 * mm_N2; # wt-%
-mf_O2 = n_O2 * mm_O2 / mm_air; # wt-%
+w_N2 = n_N2 * mm_N2; # wt-%
+w_O2 = n_O2 * mm_O2 / mm_air; # wt-%
 ## partial pressures
 p_N2 = n_N2 * p_total;
 p_O2 = n_O2 * p_total;
@@ -134,8 +134,10 @@ mv_W = fp_mv_bp_TC (mv_crit_W);
 mv_PD = fp_mv_bp_TC (mv_crit_PD);
 mv_PT = fp_mv_bp_TC (mv_crit_PT);
 
-
+##
 ## latent heat of vaporization in kJ / kg
+##
+
 L_PD = 914;
 L_PT = 974;
 L_W = 2256;

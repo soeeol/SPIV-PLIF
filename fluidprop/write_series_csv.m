@@ -6,7 +6,7 @@
 ## Author: Sören J. Gerke
 ##
 
-function write_series_csv (fn, data, header, precision)
+function write_series_csv (filename, data, header, precision)
   head = cell(2);
   head(1,1) = mfilename;
   head(1,2) = date;
@@ -17,8 +17,8 @@ function write_series_csv (fn, data, header, precision)
   endif
 
   if isempty(precision)
-    precision = "%.6e"
+    precision = "%.6e";
   endif
-  cell2csv ([fn "_h.csv"], head);
-  csvwrite ([fn "_d.csv"], data, "append", "off", "precision", precision)
+  cell2csv ([filename "_h.csv"], head);
+  csvwrite ([filename "_d.csv"], data, "append", "off", "precision", precision);
 endfunction
