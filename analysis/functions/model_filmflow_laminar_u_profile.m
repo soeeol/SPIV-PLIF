@@ -4,10 +4,10 @@
 ## u (y) - velocity profile of Nusselt's solution
 ##
 ## input:
-## y    .. y in m
-## u_s  .. u at y = h in m / s
-## h    .. h in m
-## (get h and u_s from model_filmflow_laminar_u_profile_p.m)
+## y        .. profile coordinate in m
+## u_s      .. velocity at y = delta_u in m / s
+## delta_u  .. delta_u in m
+## (get delta_u and u_s from model_filmflow_laminar_u_profile_p.m)
 ##
 ## output:
 ## u  .. velocity profile in m / s
@@ -15,6 +15,8 @@
 ## Author: Sören J. Gerke
 ##
 
-function u = model_filmflow_laminar_u_profile (y, u_s, h)
-  u = u_s .* ( (2 .* y ./ h) - (y ./ h) .^2 );
+function u = model_filmflow_laminar_u_profile (y, u_s, delta_u)
+
+  u = u_s .* ((2 .* y ./ delta_u) - (y ./ delta_u) .^ 2); # \label{eq:filmflow_u_profile}
+
 endfunction

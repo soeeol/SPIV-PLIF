@@ -10,6 +10,8 @@
 ## Author: Sören J. Gerke
 ##
 
-function cout = fitfn_cn_diff (p, sn, p_sc)
-   cout = p(2) * erfc (sn / (p(1) * p_sc));
+function cn_fit = fitfn_cn_diff (p, sn, p_sc)
+
+  cn_fit = p(2) * erfc (sn / (p(1) * p_sc));
+
 endfunction

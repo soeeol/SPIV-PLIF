@@ -7,9 +7,12 @@
 ##
 
 function p_dat = load_all_2d (pdir, aid, it_A, it_C, it_M, it_X)
+
   id_Z = 0;
-  id_T = 25; id_G = 2;
+  id_T = 25;
+  id_G = 2;
   i_L = i_O = 1;
+
   for i_A = it_A
     for i_C = it_C
       for i_M = it_M
@@ -23,6 +26,7 @@ function p_dat = load_all_2d (pdir, aid, it_A, it_C, it_M, it_X)
       endfor
     endfor
   endfor
+
   p_dat.c_msh = c_msh;
   p_dat.c_dat = c_dat;
   p_dat.c_masks = c_masks;
@@ -32,4 +36,5 @@ function p_dat = load_all_2d (pdir, aid, it_A, it_C, it_M, it_X)
   p_dat.u_masks = u_masks;
   p_dat.u_h = u_h;
   p_dat.pp = pp;
+
 endfunction

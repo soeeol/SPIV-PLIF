@@ -6,6 +6,10 @@
 ##
 
 function [cn] = norm_conc (c, conc_sat, conc_bulk)
+
   cn = (c - conc_bulk) ./ (conc_sat - conc_bulk);
+
+  cn (isnan(cn)) = 0.0;
+
 endfunction
 

@@ -17,10 +17,12 @@
 ##
 
 function rho = rho_PT_W_model (mf, T_K)
+
   T = T_K - 273.15; # T for model is in °C
   c = 1.78e-6*T.^2 - 1.82e-4*T + 1.41e-2;
-  kappa = 1 + (c .* sin(mf.^1.31 .* pi).^0.81);
-  rho_H2O = 1000 * (1 - abs((T - 3.98) ./ 615).^1.71);
-  rho_PT_1 = 1273 - T .* 0.612;
+  kappa = 1 + (c .* sin(mf.^1.31 .* pi) .^ 0.81);
+  rho_H2O = 1000 * (1 - abs ((T - 3.98) ./ 615) .^ 1.71);
+  rho_PT_1 = 1273 - T.*0.612;
   rho = kappa .* (rho_H2O + (rho_PT_1 - rho_H2O) ./ (1 + rho_PT_1 ./ rho_H2O .* (1 ./ mf - 1)));
+
 endfunction

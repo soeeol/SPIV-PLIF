@@ -10,8 +10,8 @@ function idx = get_fp_src_idx (db, src)
 
   isin = false (1, numel (db));
 
-  for i = 1:numel(db)
-    if iscell (db(i).source)
+  for i = 1 : numel (db)
+    if (iscell (db(i).source))
       isin(i) = ismember (src, db(i).source{1});
     endif
   endfor

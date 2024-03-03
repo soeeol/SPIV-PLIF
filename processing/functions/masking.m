@@ -7,7 +7,9 @@
 ##
 
 function mask = masking (field, domain, sm, ymin, hi, sf, offset, outside)
+
   mask = ones (sm); # inside
+
   switch domain
     case "gas"
       switch field
@@ -16,9 +18,10 @@ function mask = masking (field, domain, sm, ymin, hi, sf, offset, outside)
         case "c"
           idx = 1 + int32 (ceil (abs (ymin - hi) / sf(2)));
       endswitch
-      for i = 1:length(idx)
-        mask(idx(i)+offset:end,i) = outside;
+      for i = 1 : length (idx)
+        mask(idx(i)+offset:end, i) = outside;
       endfor
+
     case "wall"
       switch field
         case "u"
@@ -26,10 +29,12 @@ function mask = masking (field, domain, sm, ymin, hi, sf, offset, outside)
         case "c"
           idx = 1 + int32 (floor (abs (ymin - hi) / sf(2)));
       endswitch
-      for i = 1:length (idx)
-        mask(1:idx(i)-offset,i) = outside;
+      for i = 1 : length (idx)
+        mask(1:idx(i)-offset, i) = outside;
       endfor
+
     otherwise
-      error (["no masking for " domain]);
+      error (["masking: no masking for domain" domain]);
   endswitch
+
 endfunction

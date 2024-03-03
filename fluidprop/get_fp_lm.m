@@ -6,7 +6,7 @@
 ## input:
 ## pdir   .. projects base directory
 ## id_f   .. identifier of liquid mixture
-## T  .. temperature in K
+## T      .. temperature in K
 ##
 ## output:
 ## w      .. mass fraction alcohol
@@ -20,8 +20,11 @@
 ##
 
 function [w, n, rho, eta, c_sat, D_AB] = get_fp_lm (pdir, id_f, T)
+
   w = n = rho = eta = c_sat = D_AB = [];
+
   calib_w = load ([pdir.analyzed "a_ri-matching/ri_matching_calibration.txt"]);
+
   switch (id_f)
     case "WG141"
       fname = "glycerol-water"; ext = [];

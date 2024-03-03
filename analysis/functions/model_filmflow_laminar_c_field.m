@@ -26,8 +26,11 @@
 ##
 
 function [c_xy dcdy_xy_0] = model_filmflow_laminar_c_field (x, y, c_i, c_b, u_s, D)
+
   ## c(x,y)
   c_xy = c_b + (c_i - c_b) * erfc (y' ./ sqrt (4 .* D .* x ./ u_s));
+
   ## dc(x,y)/dy @ y = 0
   dcdy_xy_0 = - (c_i - c_b) * sqrt (u_s ./ (pi .* D .* x));
+
 endfunction

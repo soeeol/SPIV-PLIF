@@ -7,11 +7,22 @@
 ##
 
 function [] = csv_param_update (idx_measid, linktable, linktablepath, param, header_filter)
-  for [val, key] = param
-    col = get_col(header_filter, val.id(:));
-    if ! isempty (col)
-      linktable(idx_measid,:){col} = val.data;
-    endif
-  endfor
-  cell2csv (linktablepath, linktable);
+
+  if (exist (linktable) == 1)
+    for [val, key] = param
+      col = get_col (header_filter, val.id(:));
+      if (! isempty (col))
+        linktable(idx_measid,:){col} = val.data;
+      endif
+    endfor
+  else
+    error ("csv_param_update: linktable is not a variable");
+  endif
+
+  if (exist (linktablepath, "file") == 2)
+    cell2csv (linktablepath, linktable);
+  else
+    error ("csv_param_update: linktablepath is not a file");
+  endif
+
 endfunction

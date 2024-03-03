@@ -7,6 +7,7 @@
 ##
 
 function domain = get_domain (pp)
+
   switch (pp.optset.data)
     case {"M13", "M13b", "M13c"}
       domain.border = 0.5;
@@ -17,6 +18,7 @@ function domain = get_domain (pp)
       domain.xmax = 2;
       domain.xmin = -2;
     otherwise
-      error ("no matching optical setup identifier");
+      error ("get_domain: no matching optical setup identifier");
   endswitch
+
 endfunction

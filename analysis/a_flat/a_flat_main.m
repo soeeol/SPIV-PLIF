@@ -31,7 +31,7 @@ if 1
   id_T = 25
   id_Z = 0;
   ##
-  a_type = "a_flat_x_stitch";
+  a_type = "a_flat";
   c_method = "linear"; # "linear" "nonlin"
   c_if_method = "calib"; # "calib" "calib-if"
   ## iterators
@@ -64,18 +64,19 @@ if 1
   nref_test = 1.41065;
   rho_test = 1147.7;
   ## mass fraction from test
-  mf_exp = ri_match_PT_mf_from_ri (nref_test, T_test)
+  n_PDMS = ri_PDMS_T (T_test, calib_w.fit_n_PDMS.c);
+  w_exp = ri_matching_mf (nref_test, T_test, calib_w.fit_n_PT.c);
   ## compare to tabulated fp
-  rho_exp = get_fp_tab (pdir, fname="glycerol-water", pname="rho", T_test, mf_exp, ext=[])
-  eta_exp = get_fp_tab (pdir, fname, pname="eta", T_test, mf_exp, ext)
+  rho_exp = get_fp_tab (pdir, fname="glycerol-water", pname="rho", T_test, w_exp, ext=[]);
+  eta_exp = get_fp_tab (pdir, fname, pname="eta", T_test, w_exp, ext);
 endif
 
 ## (1) assemble
-if 0
+if 1
   for i_M = it_M
     save_dir_m = save_dirs{i_M};
     run "a_flat_x_stitch.m"
-    run "save_gl_2d.m"
+##    run "save_gl_2d.m"
     close all
   endfor
 endif
@@ -98,6 +99,8 @@ endif
 if 1
   for i_M = it_M
     save_dir_m = save_dirs{i_M}
+
+    ## load measured, aligned and assembled fields
     run "load_gl_2d.m"
 ##    x_M{i_M} = x; # same for all i_M
 ##    x_abs_M{i_M} = x_abs; # same for all i_M
@@ -115,7 +118,8 @@ if 1
     mask_g_M{i_M} = mask_g;
 ##    mask_w_M{i_M} = mask_w; same for all i_M
     cn_M{i_M} = cn;
-    ##
+
+    ## load interface normal extracted and fitted data from standard avg img method
     run "load_profile_data.m"
     snp_M{i_M} = snp;
     msh_n_M{i_M} = msh_n;# {msh_n_x, msh_n_y, zeros(size(msh_n_x))};
@@ -124,6 +128,7 @@ if 1
     curvR_M(:,i_M) = curvR;
     up_s_M(:,i_M) = up_s;
     up_n_M{i_M} = up_n;
+
     cp_M{i_M} = cp;
     cp_n_M{i_M} = cp_n;
     cp_nn_M{i_M} = cp_nn;
@@ -146,7 +151,7 @@ if 1
 endif
 
 ## (4) reference inflow and velocity profile, related inlet Reynolds number
-if 0
+if 1
   yoff = [];
   y_Nu_nd_plt = [0:0.01:1];
   u_Nu_nd_plt = model_filmflow_laminar_u_profile (y_Nu_nd_plt, 1, 1);
@@ -220,6 +225,7 @@ if 0
 endif
 cd (save_dir)
 load -text "inlet_local_Re.txt"
+
 ## (5) fluid dynamics
 if 0
   ## output wall and interface
@@ -718,7 +724,7 @@ if 0
   plot (sqrt (1 ./ u_s_meas), median (delta_c_x_eq_Dfit, 2), "b*-")
   plot (sqrt (1 ./ u_s_meas), median (delta_c_x_M, 2), "r*-")
 
-  ## dimensionless normalized profile every 1 mm downstrean
+  ## dimensionless normalized profile every 1 mm downstream
   fh = figure (); hold on;
   plot ([0 1], [1 0], "k")
   styles = {"k*", "r*", "g*", "b*"};

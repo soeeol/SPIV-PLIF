@@ -7,11 +7,13 @@
 ##
 
 function IM_rm = rm_blkr (pdir, IM)
+
 ## read black response of PLIF camera chip
 ##  black_response = read_recc ([pdir.data id_path("20220301-M1-1")...
 ##                                                    "PLIF.*.000000.tif"]){:};
 ##  black_response = imsmooth (black_response, "Gaussian", 32);
 ##  save -v7 "black_response.v7" black_response
+
 	load (pdir.blkr)
 
 ##  figure (); title ("black response of PLIF camera");
@@ -21,7 +23,7 @@ function IM_rm = rm_blkr (pdir, IM)
 
 	## remove black response
 	if (iscell (IM))
-		for i = 1:numel(IM)
+		for i = 1 : numel (IM)
 		  sizes = [size(IM{i}); size(black_response)];
 		  deltas = 1 + (sizes(2,:) - sizes(1,:)) / 2;
 		  ROI = int32 ([ deltas(1) sizes(1,1)+deltas(1)-1 ; ...
@@ -35,4 +37,5 @@ function IM_rm = rm_blkr (pdir, IM)
 		                 deltas(2) sizes(1,2)+deltas(2)-1 ]);
 		  IM_rm = IM - black_response(ROI(1,1):ROI(1,2),ROI(2,1):ROI(2,2));
 	endif
+
 endfunction

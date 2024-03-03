@@ -7,10 +7,14 @@
 ##
 
 function [sf] = get_sf (msh)
+
   sf = [];
-  if !(isempty(msh))
+
+  if (! isempty (msh))
     sf = [abs(msh{1}(1,1) - msh{1}(1,2));
           abs(msh{2}(1,1) - msh{2}(2,1))];
-    sf = 1e-4 * round (1e4 * sf); # rounding for nice mm/px value
+    ## rounding for nice mm/px value
+    sf = 1e-4 * round (1e4 * sf);
   endif
+
 endfunction

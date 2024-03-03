@@ -7,12 +7,14 @@
 ##
 
 function [xoff] = est_xcenter (npoints, msh, scmap, wg, method)
+
   switch (method)
     case "man"
       msg = ["select two points symmetric to x center of micro structure"];
       [points] = select_npoints (npoints, msh, scmap, wg, [], "vert", msg);
       xoff = - sum (points(:,1)) / 2;
     otherwise
-      error ("method unknown");
+      error ("est_xcenter: method unknown");
   endswitch
+
 endfunction

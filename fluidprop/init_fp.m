@@ -7,9 +7,11 @@
 ##
 
 function fprop = init_fp ()
-  fields = {"fluid"; "prop"; "unit"; "data"; "desc"; "source"};
-  for i = 1:numel (fields)
-    fprop.(fields {i}) = [];
-  endfor
-endfunction
 
+  fields = {"fluid"; "prop"; "unit"; "data"; "desc"; "source"};
+
+  for i = 1 : numel (fields)
+    fprop.(fields{i}) = [];
+  endfor
+
+endfunction

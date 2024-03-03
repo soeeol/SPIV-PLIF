@@ -7,5 +7,7 @@
 ##
 
 function um = vec_mag (ux, uy)
-  um = reshape (norm ([ux(:) uy(:)], "rows"), rows(ux), columns(ux));
+
+  um = reshape (norm ([ux(:) uy(:)], "rows"), rows (ux), columns (ux));
+
 endfunction

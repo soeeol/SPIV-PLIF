@@ -9,15 +9,20 @@
 ## Re     .. Reynolds number (nd_re_inlet.m)
 ##
 ## output:
-## h      .. film height in m
-## u_s    .. surface velocity at y = h in m / s
-## u_avg  .. average velocity in m / s
+## delta_u  .. film height in m
+## u_s      .. surface velocity at y = delta_u in m / s
+## u_avg    .. average velocity in m / s
 ##
 ## Author: Sören J. Gerke
 
-function [h, u_s, u_avg] = model_filmflow_laminar_u_profile_p (nu, alpha, Re)
+function [delta_u, u_s, u_avg] = model_filmflow_laminar_u_profile_p (nu, alpha, Re)
+
   g = 9.81; # m / s^2
-  h = (3 * nu ^ 2 / (g * sin(alpha)) * Re) .^ (1/3);
-  u_s = g * sin(alpha) * h.^2 / (2 * nu);
+
+  delta_u = model_filmflow_laminar_deltau (nu, alpha, Re);
+
+  u_s = model_filmflow_laminar_us (nu, alpha, Re);
+
   u_avg = 2 / 3 * u_s;
+
 endfunction

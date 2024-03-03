@@ -9,15 +9,15 @@
 
 function dataset = get_fp_dataset (fprop, fname, pname, sname)
 
-  for i = 1:numel(fprop)
+  for i = 1 : numel(fprop)
     isin_f(i) = ismember (fname, fprop(i).fluid);
   endfor
 
   idx = find (isin_f);
 
-  if !isempty(pname)
-    for i = 1:numel(idx)
-      for j = 1:numel(fprop(idx(i)).prop)
+  if (! isempty (pname))
+    for i = 1 : numel (idx)
+      for j = 1 : numel (fprop(idx(i)).prop)
         isin_p(i,j) = ismember (pname, fprop(idx(i)).prop{j});
       endfor
     endfor
@@ -25,9 +25,9 @@ function dataset = get_fp_dataset (fprop, fname, pname, sname)
     idx = idx(i);
   endif
 
-  if !isempty(sname)
+  if (! isempty (sname))
     idx_i = false (1, numel(idx));
-    for i = 1:numel(idx)
+    for i = 1 : numel (idx)
       idx_i(i) = get_fp_src_idx (fprop(idx(i)), sname{1});
     endfor
     idx = idx(idx_i);

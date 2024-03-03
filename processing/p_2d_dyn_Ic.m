@@ -178,8 +178,10 @@ for i = 1:nmap_c # t
 endfor
 c_dat_mean = c_dat_mean / nmap_c;
 
-## gas-liquid interface detection
-pp.tol_if.data = tol = int32(15);
+##
+## gas-liquid interface detection based on recorded fluorescence field
+##
+pp.tol_if.data = tol = int32 (15);
 ## Ic usually passes detection due to strong signal, use result to initialzie search
 
 ## gas-liquid interface detection mean

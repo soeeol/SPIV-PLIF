@@ -1,5 +1,9 @@
-## fluid properties
-## measured and literature
+##  SPDX-License-Identifier: BSD-3-Clause
+##  Copyright (c) 2023, Sören Jakob Gerke
+
+## liquid mixtures fluid properties, compilation of own measurements and literature data
+##
+## Author: Sören J. Gerke
 
 save_dir = [pdir.analyzed "a_fluidprop/"];
 mkdir (save_dir)

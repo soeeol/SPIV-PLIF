@@ -7,12 +7,14 @@
 ##
 
 function [y_if] = est_yif (npoints, msh, scmap, wg, method, plotextra)
+
   switch (method)
     case "man"
       msg = ["select " num2str(npoints) " point(s) on the interface upstream"];
       [points, ~] = select_npoints (npoints, msh, scmap, wg, plotextra, "point", msg);
       y_if = sum (points(:,2)) / npoints;
     otherwise
-      error ("method unknown");
+      error ("est_yif: method unknown");
   endswitch
+
 endfunction

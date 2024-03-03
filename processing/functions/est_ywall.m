@@ -7,7 +7,7 @@
 ##
 
 function [y_off, sc_val] = est_ywall (npoints, msh, scmap,wg, method, plotextra)
-##
+
   switch (method)
     case "man"
       msg = ["select " num2str(npoints) " point(s) along the wall y = 0 coordinate"];
@@ -20,11 +20,12 @@ function [y_off, sc_val] = est_ywall (npoints, msh, scmap,wg, method, plotextra)
       xpoints = [-3.5, -2, 0, 2, 3.5];
       xplus = linspace (-0.1, 0.1, 5);
       fh = figure ()
-      for i = 1:numel (xpoints)
-        for j = 1:numel (xplus)
+      for i = 1 : numel (xpoints)
+        for j = 1 : numel (xplus)
           xpos = xpoints(i) + xplus(j);
           [~, idx_x1] = min (abs (msh{1}(1,:) - xpos));
-          plot (msh{2}(:,idx_x1(1)), scmap(:,idx_x1(1))); hold on
+          plot (msh{2}(:,idx_x1(1)), scmap(:,idx_x1(1)));
+          hold on;
         endfor
       endfor
       for k = 1:3
@@ -33,6 +34,7 @@ function [y_off, sc_val] = est_ywall (npoints, msh, scmap,wg, method, plotextra)
       close (fh);
       y_off = - mean (y_gpoints);
     otherwise
-      error ("method unknown");
+      error ("est_ywall: method unknown");
   endswitch
+
 endfunction

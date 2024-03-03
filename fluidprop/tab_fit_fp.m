@@ -15,10 +15,10 @@ mm_PD = mmds.data{1};
 ##
 function plot_tab (pdir, ds, ds_str, T_ds, mf_ds, fp_ds, T_ip, mf_ip, fp_ip)
 
-  if !(isempty(ds_str))
+  if (! isempty (ds_str))
     fh1 = figure ();
 ##    pause (0.2); set (fh1, "Position", [1 1 1000 600])
-    for i = 1:numel(ds.data)
+    for i = 1 : numel (ds.data)
       hax(i) = subplot (numel (ds.data), 1, i);
       plot (ds.data{i}, "-x")
       ylabel (ds.unit{i})
@@ -29,33 +29,33 @@ function plot_tab (pdir, ds, ds_str, T_ds, mf_ds, fp_ds, T_ip, mf_ip, fp_ip)
     print (fh1, "-dpng", save_fn)
     close (fh1)
 
-    if numel(ds.unit)>2
+    if (numel (ds.unit) > 2)
       fh2 = figure ();
 ##      pause (0.2); set (fh2, "Position", [1 1 1000 600])
       surf (T_ip, mf_ip, fp_ip, "facecolor", "none");
       xlabel ("T in K")
       ylabel ("mass fraction in g / g")
       zlabel (ds.unit{3})
-      if !isempty(fp_ds) & !isempty(T_ds)
+      if (! isempty (fp_ds) && ! isempty (T_ds))
         hold on
         [T_dat, mf_dat] = meshgrid (T_ds, mf_ds);
         plot3 (T_dat, mf_dat, fp_ds, "b*")
       endif
-      title ([ds_str "_fit"],"interpreter", "none")
+      title ([ds_str "_fit"], "interpreter", "none")
       legend ("fit", "data")
       save_fn = [pdir.fptab ds_str "_fit"];
       print (fh2, "-dpng", save_fn)
       close (fh2)
     endif
-
   endif
+
 endfunction
 
 ##
 fnames = {"glycerol-water", "propylene glycol-water", "water"};
 pnames = {"rho", "eta", "n"};
-for j = 1:numel(fnames)
-  for k = 1:numel(pnames)
+for j = 1 : numel (fnames)
+  for k = 1 : numel (pnames)
     ds_str = [];
     T_dat = mf_dat = T_ip = mf_ip = fp_ip = T_fit = mf_fit = fp_ds = T_ds = mf_ds = [];
     ## select datasets for fit range

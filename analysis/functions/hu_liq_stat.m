@@ -14,8 +14,8 @@ function HU = hu_liq_stat (id_cell, alpha)
       HU = 0.5 * wls * hms; # mm^2
 ##    case {"2d-t10"}
 ##      type = "t10";
-##    case {"2d-s10"}
-##      type = "s10";
+##    case {"2d-c10"}
+##      type = "c10";
     case {"flat"}
       HU = 0.0;
   endswitch

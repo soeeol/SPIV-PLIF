@@ -7,30 +7,33 @@
 ##
 
 function msh = mesh_uc (idxx, idxy, xmin, ymin, pp, method, sf)
-  if (!isempty(pp))
+
+  ## parameters for optical setup
+  if (!isempty (pp))
     switch (pp.optset.data)
       case {"M13", "M13b", "M13c"}
         sf_c = 5 * 1e-3; # mm / px
         sf_u = 40 * 1e-3;
-        if isempty (xmin)
+        if (isempty (xmin))
           xmin = - 4.5; # mm
         endif
-        if isempty (ymin)
+        if (isempty (ymin))
           ymin = - 0.5; # initial guess
         endif
       case "M26"
         sf_c = 2 * 1e-3; # mm / px
         sf_u = 16 * 1e-3;
-        if isempty (xmin)
+        if (isempty (xmin))
           xmin = - 2; # mm
         endif
-        if isempty (ymin)
+        if (isempty (ymin))
           ymin = - 0.25; # initial guess
         endif
       otherwise
-        error ("no matching optical setup identifier");
+        error ("mesh_uc: no matching optical setup identifier");
     endswitch
   endif
+
   ## selet scaling factor
   if isempty (sf)
     switch (method)
@@ -39,10 +42,14 @@ function msh = mesh_uc (idxx, idxy, xmin, ymin, pp, method, sf)
       case  "u"
         sf = [sf_u; sf_u];
       otherwise
-        error (["no scaling for " method]);
+        error (["mesh_uc: no scaling for " method]);
     endswitch
   endif
-  lims_x = sf(1).*[idxx(1), idxx(2)] + xmin;
-  lims_y = sf(2).*[idxy(1), idxy(2)] + ymin;
+
+  ## x and y extent
+  lims_x = sf(1) .* [idxx(1), idxx(2)] + xmin;
+  lims_y = sf(2) .* [idxy(1), idxy(2)] + ymin;
+
   msh = reg_mesh (lims_x, lims_y, sf);
+
 endfunction

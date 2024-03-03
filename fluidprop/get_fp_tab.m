@@ -4,10 +4,10 @@
 ## get fluid property of aqueous solution at (T, w)
 ##
 ## input:
-## - fname  .. fluid name {water, glycerol-water, propylene glycol-water}
-## - pname  .. property name {rho, eta}
+## - fname .. fluid name {water, glycerol-water, propylene glycol-water}
+## - pname .. property name {rho, eta}
 ##
-## - T  .. temperature in K
+## - T .. temperature in K
 ## - w .. mass fraction alcohol
 ##
 ## output:
@@ -17,7 +17,8 @@
 ##
 
 function out_ip = get_fp_tab (pdir, fname, pname, T, w, ext)
-  if isempty(ext)
+
+  if (isempty (ext))
     switch ([fname "_" pname])
       case {"water_rho"}
         out_ip = rho_PT_W_model (0, T);
@@ -46,4 +47,5 @@ function out_ip = get_fp_tab (pdir, fname, pname, T, w, ext)
         error ("get_fp_tab: unknown / not implemented")
     endswitch
   endif
+
 endfunction

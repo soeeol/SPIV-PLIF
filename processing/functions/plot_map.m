@@ -6,9 +6,11 @@
 ##
 
 function fh = plot_map (map)
-  fh = figure ()
-  surf (map)
-  view([0 0 1])
-  shading flat
-  colormap viridis
+
+  fh = figure ();
+  surf (map);
+  view ([0 0 1]);
+  shading flat;
+  colormap viridis;
+
 endfunction
