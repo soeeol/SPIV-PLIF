@@ -8,7 +8,7 @@
 
 function [] = csv_param_update (idx_measid, linktable, linktablepath, param, header_filter)
 
-  if (exist (linktable) == 1)
+  if (exist ("linktable", "var") == 1)
     for [val, key] = param
       col = get_col (header_filter, val.id(:));
       if (! isempty (col))

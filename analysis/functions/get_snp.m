@@ -11,7 +11,9 @@ function [snp sf_p] = get_snp (profile_depth, sf, sn_idx_off)
 
   sf_p = 0.5 * min (sf); # resolution along profile
 
-  sn_idx_off = 4; # number of indices offset outwards the estimated interface
+  if (isempty (sn_idx_off))
+    sn_idx_off = 4; # number of indices offset outwards the estimated interface
+  endif
 
   snp = sf_p * (- sn_idx_off : 1 : numel (linspace (0, profile_depth, round (profile_depth / sf_p + 1))) - 1);
 

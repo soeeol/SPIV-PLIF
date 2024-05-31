@@ -6,22 +6,22 @@
 ## Author: Sören J. Gerke
 ##
 
-function S = collect_sec_var (fn_sec, fn_dat, var_names)
+function S = collect_sec_var (load_fn, vars)
 
-  n_s = numel (fn_sec) # number of sections
-  n_v = numel (var_names) # number of variables
+  n_s = numel (load_fn) # number of sections
+  n_v = numel (vars) # number of variables
 
   ## prepare struct
   S = [];
   for i_v = 1:n_v
-    S.(var_names{i_v}) = cell (1, n_s);
+    S.(vars{i_v}) = cell (1, n_s);
   endfor
 
   ## collect variables
   for i_v = 1:n_v
     for i_s = 1:n_s
-      AA = load ([fn_sec{i_s} "/" fn_dat], var_names{i_v});
-      S.(var_names{i_v}){i_s} = AA.(var_names{i_v});
+      AA = load (load_fn{i_s}, vars{i_v});
+      S.(vars{i_v}){i_s} = AA.(vars{i_v});
     endfor
   endfor
 

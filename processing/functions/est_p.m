@@ -28,7 +28,7 @@ function par = est_p (msh, scmap, wg, id, pp, method, param, xe)
       else
         [par] = est_xcenter (npoints, msh, scmap, wg, method);
       endif
-    case "yoff_c_ini" # y wall inital hint
+    case "yoff_c_ini" # y wall initial hint
       npoints = 1;
       if (! isempty (param))
         plotextra{1} = [xe(1), -param; xe(2), -param];

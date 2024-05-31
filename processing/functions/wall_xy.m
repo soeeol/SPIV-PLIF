@@ -7,10 +7,13 @@
 ##
 
 function [xy_wall, xy_idx, thrs] = wall_xy (msh, map, tol, ini, method)
+
   ## search max in y-profiles of map along x-dir
   xy_wall = xy_idx = [];
   sc = size (map);
+
   switch (method)
+
     case "threshold"
       thrs = [];
       switch (numel (ini))
@@ -36,6 +39,7 @@ function [xy_wall, xy_idx, thrs] = wall_xy (msh, map, tol, ini, method)
           xy_wall(i,2) = msh{2}(xy_idx(i,2),xy_idx(i,1));
         endif
       endfor
+
     case "peak"
       for i = 1:numel (ini(:,2))
         idx_yoff = ini(i,2);
@@ -62,11 +66,15 @@ function [xy_wall, xy_idx, thrs] = wall_xy (msh, map, tol, ini, method)
           xy_wall(i,2) = msh{2}(xy_idx(i,2),xy_idx(i,1));
         endif
       endfor
+
     otherwise
       error (["method " '"' method '"' " not implemented"]);
   endswitch
+
   xy_idx((xy_idx(:,2)==0),2) = median (xy_idx(:,2));
+
   ## remove far outliers
   xy_idx(:,2) = round (outlier_rm (xy_idx(:,2), movmedian (xy_idx(:,2), 41)));
   xy_wall(:,2) = outlier_rm (xy_wall(:,2), movmedian (xy_wall(:,2), 41));
+
 endfunction

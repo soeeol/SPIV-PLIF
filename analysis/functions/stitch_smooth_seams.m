@@ -2,6 +2,7 @@
 ##  Copyright (c) 2024, Sören Jakob Gerke
 
 ## smooth stitching seams
+## .. not useful if replacement section borders introduce jumps
 ##
 ## Author: Sören J. Gerke
 ##

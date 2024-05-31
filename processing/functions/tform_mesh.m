@@ -7,10 +7,13 @@
 ##
 
 function [mesh_out] = tform_mesh (mesh_in, pp, id, param)
+
   if isempty (param)
     param = getfield (pp, id).data;
   endif
+
   mesh_out = mesh_in;
+
   if abs (param) > 0
     switch (id)
       case {"rot_c", "rot_u"}
@@ -27,4 +30,5 @@ function [mesh_out] = tform_mesh (mesh_in, pp, id, param)
   else
     error (["false param: " num2str(param)]);
   endif
+
 endfunction

@@ -1,13 +1,13 @@
 ##  SPDX-License-Identifier: BSD-3-Clause
 ##  Copyright (c) 2023, Sören Jakob Gerke
 
-## offset correction between two recordings (phi) by minimazation of squared
-## differences around the interface (h_g) in the central area of the recordings
+## offset correction between two recordings phi and phi_off by minimazation of squared
+## differences around the interface (delta_u) in the central area of the recordings
 ##
 ## Author: Sören J. Gerke
 ##
 
-function phi_sat_shifted = corr_xy_offset_min_dphi (phi, phi_off, y, h_g, a_type)
+function phi_sat_shifted = corr_xy_offset_min_dphi (phi, phi_off, y, delta_u, a_type)
 
   testplots = false;
 
@@ -17,18 +17,20 @@ function phi_sat_shifted = corr_xy_offset_min_dphi (phi, phi_off, y, h_g, a_type
   opt_val = [];
   xoffs = - max_off : 1 : max_off;
   switch a_type
-    case {"a_flat_x_stitch", "a_flat_dyn"}
-      [~, idx_y_max] = min (abs (y - mean (h_g, "omitnan")));
+    case {"a_flat_x_stitch", "a_flat_dyn", "a_2DR10_dyn"}
+      [~, idx_y_max] = min (abs (y - mean (delta_u, "omitnan")));
       idxx = round (size (phi, 2) / 2) + [-250:1:250];
     case {"a_2DR10_x_stitch"}
-      [PKS, LOC, ~] = findpeaks (imsmooth (h_g(250:end-250), 32));
+      [PKS, LOC, ~] = findpeaks (imsmooth (delta_u(250:end-250), 32));
       [~, PKS_idx] = max (PKS);
       [~, idx_y_max] = min (abs (y - PKS(PKS_idx)));
       idxx = round (250-1+LOC(PKS_idx) + [-200:1:200]);
   endswitch
-  opt1 = phi([round(idx_y_max-50):round(idx_y_max+50)],idxx);
+  idx_y_l = max (round (idx_y_max-50), 1);
+  idx_y_u = min (round (idx_y_max+50), size(phi, 1));
+  opt1 = phi([idx_y_l:idx_y_u],idxx);
   for i = 1 : numel (xoffs)
-    opt2 = phi_off([round(idx_y_max-50):round(idx_y_max+50)],idxx+xoffs(i));
+    opt2 = phi_off([idx_y_l:idx_y_u],idxx+xoffs(i));
     opt_val(i) = sum (sum ((opt1 - opt2).^2));
   endfor
   opt_val = imsmooth (opt_val, 3);
@@ -54,9 +56,11 @@ function phi_sat_shifted = corr_xy_offset_min_dphi (phi, phi_off, y, h_g, a_type
   ## y
   opt_val = [];
   yoffs = - max_off : 1 : max_off;
-  opt1 = phi([round(idx_y_max-25):round(idx_y_max+25)],idxx);
+  idx_y_l = max (round (idx_y_max-25), abs (min (yoffs)) + 1);
+  idx_y_u = min (round (idx_y_max+25), size(phi, 1) - max (yoffs));
+  opt1 = phi([idx_y_l:idx_y_u],idxx);
   for i = 1 : numel (yoffs)
-    opt2 = phi_off([round(idx_y_max-25):round(idx_y_max+25)]+yoffs(i),idxx);
+    opt2 = phi_off([idx_y_l:idx_y_u]+yoffs(i),idxx);
     opt_val(i) = sum (sum ((opt1 - opt2) .^ 2));
   endfor
   opt_val = imsmooth (opt_val, 3);
@@ -74,6 +78,7 @@ function phi_sat_shifted = corr_xy_offset_min_dphi (phi, phi_off, y, h_g, a_type
   printf (["corr_xy_offset_min_dphi: y offset = " num2str(yoffset) " px\n"]);
 
   ## only shift phi_off
+  phi_off(isnan (phi_off)) = 0.0;
   phi_sat_shifted = imtranslate (phi_off, round (xoffset), round (yoffset), "crop");
 
 endfunction

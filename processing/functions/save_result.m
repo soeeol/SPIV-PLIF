@@ -11,7 +11,8 @@ function status = save_result (fullpath, workdir, c_msh, c_dat, c_masks, c_h, u_
 
   ##
   files = glob ([fullpath "/*.v7"]);
-  if (isempty(files))
+
+  if (isempty (files))
     try
       save -v7 "c.v7" c_msh c_dat c_masks c_h
       save -v7 "u.v7" u_msh u_dat u_masks u_h
@@ -24,5 +25,7 @@ function status = save_result (fullpath, workdir, c_msh, c_dat, c_masks, c_h, u_
     status = false;
     error (["found v7 files in " fullpath]);
   endif
+
   cd (workdir);
+
 endfunction

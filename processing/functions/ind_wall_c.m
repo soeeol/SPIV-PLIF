@@ -7,5 +7,7 @@
 ##
 
 function map_out = ind_wall_c (map_in)
+
   map_out = map_in / max (max (map_in));
+
 endfunction

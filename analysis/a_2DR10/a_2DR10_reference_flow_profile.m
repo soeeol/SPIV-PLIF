@@ -12,7 +12,7 @@ if 1
   aid.proc_type = "2d_avg_uIc1";
   aid.ids_L = {"WG141"};
   aid.ids_O = {"M13"};
-  aid.ids_C = {"flat"};
+  aid.ids_C = {"2d-r10"};
   aid.ids_A = [60];
   aid.ids_M = [8 16 32 64];
   aid.ids_X = [-8 0 8 16];
@@ -20,7 +20,7 @@ if 1
   id_T = 25
   id_Z = 0;
   ##
-  a_type = "a_flat_reference_flow_profile";
+  a_type = "a_2DR10_reference_flow_profile";
   c_method = "linear"; # "linear" "nonlin"
   c_if_method = "calib"; # "calib" "calib-if"
   ## iterators
@@ -35,7 +35,7 @@ if 1
   ##  i_M = 1;
   ##  i_X = 1;
 
-  pos_ref_profile = "upstream"; # microstructure, full, upstream
+  pos_ref_profile = "upstream"; # microstructure, full, upstream, downstream
 
   ## prepare directories
   result_dir = [pdir.analyzed a_type "/"]
@@ -47,7 +47,7 @@ endif
 if 1
 
   ## fluid properties from exp log
-  fp = get_fp_log (pdir, "flat_WG141");
+  fp = get_fp_log (pdir, "2DR10_WG141");
   nu = fp.eta / fp.rho
 
   ## refractive index matching liquid mixure properties
@@ -74,7 +74,7 @@ if 1
   ## load measured, aligned and assembled fields
   for i_M = it_M
     measid = get_measid (aid.ids_C{i_C}, aid.ids_O{i_O}, aid.ids_A(i_A), id_T, aid.ids_L{i_L}, aid.ids_M(i_M), id_G, [], id_Z);
-    load_dir = [pdir.analyzed "a_flat_x_stitch/" "c-" c_method "_" c_if_method "_" measid "/"]
+    load_dir = [pdir.analyzed "a_2DR10_x_stitch/" "c-" c_method "_" c_if_method "_" measid "/"]
 
     gl_pp = load ("-v7", [load_dir "gl_pp.v7"], "pp_stitch");
     gl_msh = load ("-v7", [load_dir "gl_msh.v7"], "msh", "x", "y", "ymin", "sf", "h_g", "h_w", "mask_g", "curvR");
@@ -97,9 +97,10 @@ if 1
     uz_M{i_M} = gl_u.uz;
     um_M{i_M} = gl_u.um;
 
-    ## get delta_c and normalized (to extrapolated interface concentration) concentration proiles from "a_flat_dyn.m" analysis
+##    ## get delta_c and normalized (to extrapolated interface concentration) concentration proiles from "a_flat_dyn.m" analysis
+##    ## "p_msh_o" "cp_nn" "delta_c" "h_g_mean"
     dyncase = get_measid (aid.ids_C{i_C}, aid.ids_O{i_O}, aid.ids_A(i_A), id_T, aid.ids_L{i_L}, aid.ids_M(i_M), id_G, aid.ids_X, id_Z);
-    fn_M = glob ([pdir.analyzed "a_flat_dyn/" dyncase "/*_" "x-stitch_"  "cp-avg-" c_if_method "-" "cn-" c_method]);
+    fn_M = glob ([pdir.analyzed "a_2DR10_dyn/" dyncase "/*_" "x-stitch_"  "cp-avg-" c_if_method "-" "cn-" c_method]);
     fn_M = fn_M{end}; # use latest result
 
     load ([fn_M "/" "x-stitch_msh_dat___" "dyn_cn_cp_avg-cn.v7"], "msh_gl");
@@ -108,14 +109,16 @@ if 1
     msh_avg_M{i_M} = msh_gl;
     msh_avg_M{i_M}{2} = msh_avg_M{i_M}{2} + yshift;
 
-    ## "p_msh_o" "cp_nn" "delta_c" "h_g_mean"
     load ([fn_M "/" "x-stitch_msh_dat___" "dyn_cn_cp_avg_fit.v7"], "msh_gl");
     load ([fn_M "/" "x-stitch_msh_dat___" "dyn_cn_cp_avg_fit.v7"], "dat_gl");
+    h_g_avg_M(:,i_M) = dat_gl.h_g_mean + yshift;
+    h_g_avg_MM(:,i_M) = median (h_g_avg_M(:,i_M));
     msh_p_M{i_M} = msh_gl;
     sn_p_M{i_M} = msh_gl{2}(:,1);
     cp_nn_fit_M{i_M} = dat_gl.cp_nn;
     delta_c_M{i_M} = dat_gl.delta_c;
     a_fit_M{i_M} = dat_gl.a_fit;
+    ##
     for i_p = 1:numel(a_fit_M{i_M}(:,2))
       cp_nn_M{i_M}(:,i_p) = dat_gl.cp_n_o_avg(:,i_p) ./ a_fit_M{i_M}(i_p,2)';
     endfor
@@ -129,6 +132,11 @@ if 1
   x_p = msh_gl{1}(1,:);
   sf_p = get_sf (msh_p_M{1});
 
+  # common x
+  x_min = max ( [ min(x) min(x_p)] )
+  x_max = min ( [ max(x) max(x_p)] )
+  is_in_x = ( (x_p >= x_min ) & (x_p <= x_max) );
+
   ## rebuild wall mask and est. surface velocity
   for i_M = it_M
     mask_w_M{i_M} = masking ("c", "wall", size (ux_M{i_M}), ymin, h_w, sf, 16, 0.0);
@@ -139,7 +147,7 @@ if 1
   endfor
 
   ## fluid properties logged during experiment
-  fp = get_fp_log (pdir, "flat_WG141");
+  fp = get_fp_log (pdir, "2DR10_WG141");
 
   ## check for wall and gas interface position in cn field
   ## TODO: keep track of the wall cooridinate offset for the other measurements as well!
@@ -147,11 +155,13 @@ if 1
   ## with that correction, h_g matches well with max. velocity position
   fh = figure ()
   hold on
-  for i_M = it_M
-    for i_p = 1:2000:numel(cn_M{i_M}(1,:))
-      plot (y_M{i_M}, cn_M{i_M}(:,i_p))
+  for i_M = 1#it_M
+    for i_p = 5000#1:2000:numel(cn_M{i_M}(1,:))
+      plot (y_M{i_M}, cn_M{i_M}(:,i_p), "k")
+      plot (msh_avg_M{i_M}{2}(:,1), cn_avg_M{i_M}(:,i_p), "r")
     endfor
-    plot ([1 1]*h_g_MM(i_M), [0 1], "--k")
+    plot ([1 1]*h_g_M(i_p, i_M), [0 1], "--k")
+    plot ([1 1]*h_g_avg_M(i_p, i_M), [0 1], "--r")
     plot ([0 0], [0 1], "--k")
   endfor
   xlabel ("y in mm")
@@ -181,6 +191,9 @@ if 1
     case {"upstream"} # upstream profile
       x_l = -12;
       x_u = -10;
+    case {"downstream"} # upstream profile
+      x_l = 18;
+      x_u = 20;
   endswitch
   idx_sec = (x >= x_l) & (x <= x_u);
   idx_p_sec = (x_p >= x_l) & (x_p <= x_u);
@@ -203,7 +216,7 @@ if 1
   cn_mean = cp_nn_mean = ux_mean = ux_std = p_uy_fit = {};
   yoff = u_m_max = h_u_max_i = delta_c_mean = [];
   for i_M = it_M
-    ux_mean{i_M} = mean (ux_M{i_M}(:,idx_sec), 2);
+    ux_mean{i_M} = median (ux_M{i_M}(:,idx_sec), 2);
     uy_mean{i_M} = mean (uy_M{i_M}(:,idx_sec), 2);
     uz_mean{i_M} = mean (uz_M{i_M}(:,idx_sec), 2);
     ux_std{i_M} = std (ux_M{i_M}(:,idx_sec), [], 2);
@@ -225,17 +238,17 @@ if 1
     y_rel{i_M} = y_M{i_M} / y_M{i_M}(h_u_max_i(i_M));
     switch (i_M)
       case 4
-        h_lim_l = 0.33;
-        h_lim_h = 1.05;
-      case 3
-        h_lim_l = 0.33;
-        h_lim_h = 1.05;
-      case 2
-        h_lim_l = 0.33;
-        h_lim_h = 1.05;
-      case 1
         h_lim_l = 0.2;
-        h_lim_h = 1.05;
+        h_lim_h = 1.04;
+      case 3
+        h_lim_l = 0.2;
+        h_lim_h = 1.0;
+      case 2
+        h_lim_l = 0.2;
+        h_lim_h = 1.04;
+      case 1
+        h_lim_l = 0.05;
+        h_lim_h = 1.04;
     endswitch
     idx_p{i_M} = (y_rel{i_M} >= h_lim_l) & (y_rel{i_M} <= h_lim_h);
     p_uy_fit{i_M} = polyfit (y_M{i_M}(idx_p{i_M}), ux_mean{i_M}(idx_p{i_M}), 2);
@@ -260,14 +273,18 @@ if 1
 
   ## delta_u estimate
   delta_u = []
+  hoff = sf(2) * ones(1,4)
   for i_M = it_M
     switch (pos_ref_profile)
     case {"microstructure"}
       hoff = sf(2) * [2 1.5 0.75 0.1]
+      hoff = sf(2) * ones(1,4)
     case {"full"}
       hoff = sf(2) * [2 1.5 0.75 0.1]
+      hoff = sf(2) * ones(1,4)
     case {"upstream"}
       hoff = sf(2) * [1.25 1.5 0.75 0.1]
+      hoff = sf(2) * ones(1,4)
     endswitch
   endfor
   delta_u = h_g_MM - 1 * hoff;
@@ -342,7 +359,7 @@ if 1
   fh = figure ();
   hold on;
   for i_M = it_M
-    plot (sn_p_rel{i_M}, cp_nn_fit_mean{i_M}, ["-x;measured +  fit M" num2str(i_M) ";"]);
+    plot (sn_p_rel{i_M}, cp_nn_fit_mean{i_M}, ["-x;measured + fit M" num2str(i_M) " delta_c = " num2str(delta_c_mean(i_M)) ";"]);
     plot (sn_p_rel{i_M}, cp_nn_mean{i_M}, ["-o;measured M" num2str(i_M) ";"]);
   endfor
   plot (sn_p_rel_eq, cp_nd_eq, ["b-;eq;"], "linewidth", 2);
@@ -437,11 +454,12 @@ if 1
   delta_u_max = max (h_g_M, [], 1);
   write_series_csv ([result_dir "h_g_max"], [vec(it_M) vec(delta_u_max)], {"M", "delta_u_max"}, []);
 
-  ##          ux        uy              uz              um        cn
-  clims{1} = {[0 0.1],  [-0.01 0.01],   [-0.01 0.01],   [0 0.1],  [0 0.6]};
-  clims{2} = {[0 0.18], [-0.01 0.01],   [-0.01 0.01],   [0 0.18], [0 0.5]};
-  clims{3} = {[0 0.3],  [-0.015 0.015], [-0.015 0.015], [0 0.3],  [0 0.4]};
-  clims{4} = {[0 0.5],  [-0.02 0.02],   [-0.02 0.02],   [0 0.5],  [0 0.3]};
+  ##          ux        uy            uz            um        cn
+  clims{1} = {[0 0.12], [-0.12 0.12], [-0.05 0.05], [0 0.16], [0 0.65]};
+  clims{2} = {[0 0.25], [-0.18 0.18], [-0.05 0.05], [0 0.3],  [0 0.5]};
+  clims{3} = {[0 0.35], [-0.28 0.28], [-0.05 0.05], [0 0.4],  [0 0.4]};
+  clims{4} = {[0 0.5],  [-0.26 0.26], [-0.05 0.05], [0 0.5],  [0 0.35]};
+
   write_series_csv ([result_dir "clims_ux_uy_uz_um_cn"], cell2mat (reshape (cell2mat (clims), 5, 4)), [], []);
 
   ## prints
@@ -449,31 +467,31 @@ if 1
   for i_M = it_M
     for i_c = 1 : numel (clims{i_M})
       lim_c = clims{i_M}{i_c};
+      nanmask = mask_g_M{i_M};
+      nanmask(nanmask==0) = NaN;
       switch (i_c)
         case 1
           id_c = "ux_M";
-          cprint = ux_M{i_M};
-          mshprint = msh_M{i_M};
+          cprint = nanmask .* ux_M{i_M};
+          whitenan = true;
         case 2
           id_c = "uy_M";
-          cprint = uy_M{i_M};
-          mshprint = msh_M{i_M};
+          cprint = nanmask .* uy_M{i_M};
+          whitenan = true;
         case 3
           id_c = "uz_M";
-          cprint = uz_M{i_M};
-          mshprint = msh_M{i_M};
+          cprint = nanmask .* uz_M{i_M};
+          whitenan = true;
         case 4
           id_c = "um_M";
-          cprint = um_M{i_M};
-          mshprint = msh_M{i_M};
+          cprint = nanmask .* um_M{i_M};
+          whitenan = true;
         case 5
           id_c = ["c-" c_method "_" c_if_method "_" "cn_M"];
-##          cprint = cn_M{i_M};
-##          mshprint = msh_M{i_M};
-          cprint = cn_avg_M{i_M}; # dyn filtered avg result
-          mshprint = msh_avg_M{i_M};
-          idx = msh_avg_M{i_M}{2} > 1.25 * delta_u_max(i_M);
+          cprint = cn_M{i_M};
+          idx = msh_M{i_M}{2} > 1.25 * delta_u_max(i_M);
           cprint(idx) = 0.0;
+          whitenan = false;
       endswitch
       if (i_c == 5)
         lim_y = [ymin ymax]; # in mm
@@ -483,7 +501,7 @@ if 1
         dy_u_c = + yoff(i_M); # hoff is much smaller, omitting
       endif
       fn_cprint = [result_dir id_c num2str(i_M)]
-      print_contour (fn_cprint, mshprint{1}, mshprint{2} + dy_u_c, cprint, lim_x, lim_y, sf, lim_c);
+      print_contour (fn_cprint, msh_M{i_M}{1}, msh_M{i_M}{2} + dy_u_c, cprint, lim_x, lim_y, sf, lim_c, whitenan);
     endfor
   endfor
 

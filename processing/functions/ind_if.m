@@ -7,6 +7,9 @@
 ##
 
 function map_out = ind_if (map_in)
+
   maxc = max (max (imsmooth (map_in, "Gaussian", 8)));
+
   map_out = (abs (map_in - maxc) / maxc);
+
 endfunction

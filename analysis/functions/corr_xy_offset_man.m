@@ -22,7 +22,8 @@ function phi_sat_shifted = corr_xy_offset_man (phi_off, moff)
     yoffset = moff(2);
   endif
 
-  ## only shift phi_off
+  ## works without nan values only
+  phi_off(isnan (phi_off)) = 0.0;
   phi_sat_shifted = imtranslate (phi_off, round (xoffset), round (yoffset), "crop");
 
 endfunction

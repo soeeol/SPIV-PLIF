@@ -19,7 +19,7 @@ function mask = masking (field, domain, sm, ymin, hi, sf, offset, outside)
           idx = 1 + int32 (ceil (abs (ymin - hi) / sf(2)));
       endswitch
       for i = 1 : length (idx)
-        mask(idx(i)+offset:end, i) = outside;
+        mask(max([idx(i)+offset 1]):end,i) = outside;
       endfor
 
     case "wall"
@@ -30,7 +30,7 @@ function mask = masking (field, domain, sm, ymin, hi, sf, offset, outside)
           idx = 1 + int32 (floor (abs (ymin - hi) / sf(2)));
       endswitch
       for i = 1 : length (idx)
-        mask(1:idx(i)-offset, i) = outside;
+        mask(1:idx(i)-offset,i) = outside;
       endfor
 
     otherwise

@@ -10,7 +10,6 @@ function [points, fh] = select_npoints (npoints, msh, scmap, wg, plotextra, styl
 
   fh = figure ();
   surfplot1 (msh, scmap, []);
-  figure (fh, "position", get (0, "screensize"));
   title (msg);
   if (! isempty (plotextra))
     hold on

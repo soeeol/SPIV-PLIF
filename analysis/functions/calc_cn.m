@@ -15,22 +15,23 @@ function [cn ext] = calc_cn (phi_dat, cref, method, sig, testplots)
   c_des_ref = cref(1);
   cscale = c_sat_ref - c_des_ref;
 
+
   ## quenching measurement Ic: desorbed liquid in contact with air
   phi = (phi_dat{1}); #
-  phi(isnan (phi)) = 0;
-##  phi(phi <= 0) = 1e-6;
 
   ## minimal quenching reference Ic0: desorbed liquid in equilibrium with nitrogen
   phi_des = (phi_dat{2}); #
-  phi_des(isnan (phi_des)) = 0;
-##  phi_des(phi_des <= 0) = 1e-6;
 
   ## maximum quenching reference Ic1: saturated liquid in equilibrium with air
   phi_sat = (phi_dat{3}); #
-  phi_sat(isnan (phi_sat)) = 0;
-##  phi_sat(phi_sat <=0 ) = 1e-6;
 
-  if (! isempty (sig))
+  ## set outside or NaN values so that resulting cn = 0
+  phi_out = phi_des_out = min (min (phi)); phi_sat_out = phi_des_out / 2;
+  phi(isnan (phi)) = phi_out;
+  phi_des(isnan (phi_des)) = phi_des_out;
+  phi_sat(isnan (phi_sat)) = phi_sat_out;
+
+  if (sig > 0)
     ## smoothing of calibration reference points
     phi_des = imsmooth (phi_des, sig);
     phi_sat = imsmooth (phi_sat, sig);
@@ -66,12 +67,13 @@ function [cn ext] = calc_cn (phi_dat, cref, method, sig, testplots)
     case "SV1" ## weak excitation Stern-Volmer formulation
 
       KSV = 1 ./ cscale .* (phi_des ./ phi_sat - 1); ## pixel wise scale factor from ref data
-      conc = 1 ./ KSV .* (phi_des ./ phi - 1) + cref(1);
+      conc = 1 ./ KSV .* (phi_des ./ phi - 1) + c_des_ref;
+
+      ext.KSV = KSV;
 
     case "SV_const" ## weak excitation Stern-Volmer formulation with given KSV
 
       KSV = cref(3);
-      phi_zero = 1.02 * phi_des; # TODO: find zero quenching level from KSV and valid reference
       phi_zero = phi_sat * (KSV * c_sat_ref + 1);
       conc = 1. / KSV .* (phi_zero ./ phi - 1);
       ext.phi_zero = phi_zero;

@@ -7,7 +7,7 @@
 
 function fh = plot_cp_norm (p_msh, cp_n)
 
-  fh = plot_map_msh (p_msh, cp_n);
+  fh = plot_map_msh (p_msh, cp_n, []);
 
   caxis ([0 1]);
   colorbar;

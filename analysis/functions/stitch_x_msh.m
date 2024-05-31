@@ -16,74 +16,76 @@
 
 function [msh_xs msh_gl msh_gl_sec lims_x sf] = stitch_x_msh (msh, aid, ncoords)
 
-  it_X =  1 : numel (aid.ids_X);
+  it_X = 1 : numel (aid.ids_X);
 
   pp.optset.data = aid.ids_O{1}; # same optical setup for all sections per flow rate for now
 
   msh_xs = msh;
 
-  ## x shift msh to x scan center positions relative to microstructure
-
+  ## x shift msh to x scan center positions relative to microstructure plus section xpos offset
+  xoff = yoff = zeros (size (it_X));
+  if (isfield (aid, "xoff"))
+    xoff = aid.xoff;
+  endif
+##  if (isfield (aid, "yoff"))
+##    yoff = aid.yoff;
+##  endif
   for i_X = it_X
-
-    msh_xs{i_X}{1} = msh{i_X}{1} + aid.ids_X(i_X);
-
+    msh_xs{i_X}{1} = msh{i_X}{1} + aid.ids_X(i_X) + xoff(i_X);
+##    msh_xs{i_X}{2} = msh{i_X}{2} + yoff(i_X);
   endfor
 
   ## estimate scaling factors for new global mesh
-
   for i_X = it_X
-
-    sfs(i_X,:) = get_sf (msh_xs{i_X});
-
+    sfs(i_X,:) = get_sf (msh{i_X});
   endfor
 
   sf = min (sfs);
 
   ## stitching limits
-
-  for i_X = it_X
-
+   for i_X = it_X
+    ## x
+    lims_x_min(i_X) = min (min (msh_xs{i_X}{1}));
+    lims_x_max(i_X) = max (max (msh_xs{i_X}{1}));
+    ## y
     lims_y_min(i_X) = min (min (msh_xs{i_X}{2}));
-
     lims_y_max(i_X) = max (max (msh_xs{i_X}{2}));
-
   endfor
 
-  ## limits for common grid
-
+  ## to strictly use the designed x section area
+  ## .. not good in combination with manual xoff, since manual xpos stage had too much play
   domain = get_domain (pp);
+##  lims_y = [min(lims_y_min) max(lims_y_max)];
+##  lims_x_dom = [domain.xmin + 0*sf(1), domain.xmax - 1*sf(1)];
+##  x_end_plus = 0;
+##  for i_X = it_X
+##    if (i_X == it_X(end))
+##      x_end_plus = sf(1);
+##    endif
+##    lims_x{i_X} = lims_x_dom + aid.ids_X(i_X) + x_end_plus;
+##  endfor
+##  lims_x{1}(1) = lims_x{1}(1,1) - domain.border;
+##  lims_x{end}(end) = lims_x{end}(end) + domain.border;
 
+  ## .. rater use center of section overlap
+  ## x
+  lims_x{1} = [lims_x_min(1) mean([lims_x_max(1) lims_x_min(2)]) - sf(1)];
+  for i_X = it_X(2:end-1)
+    lims_x{i_X} = [mean([lims_x_max(i_X-1) lims_x_min(i_X)]) mean([lims_x_max(i_X) lims_x_min(i_X+1)]) - sf(1)];
+  endfor
+  lims_x{it_X(end)} = [mean([lims_x_max(it_X(end)-1) lims_x_min(it_X(end))]) lims_x_max(it_X(end))];
+  ## ensure same extent of x for all aid.ids_M cases
+  lims_x{1}(1) = domain.xmin + aid.ids_X(1) - domain.border;
+  lims_x{it_X(end)}(2) = domain.xmax + aid.ids_X(it_X(end)) + domain.border;
+  ## y
   lims_y = [min(lims_y_min) max(lims_y_max)];
 
-  lims_x_dom = [domain.xmin + 0*sf(1), domain.xmax - 1*sf(1)];
-
-  x_end_plus = 0;
-
-  for i_X = it_X
-
-    if (i_X == it_X(end))
-
-      x_end_plus = sf(1);
-
-    endif
-
-    lims_x{i_X} = lims_x_dom + aid.ids_X(i_X) + x_end_plus;
-
-  endfor
-
-  lims_x{1}(1) = lims_x{1}(1,1) - domain.border;
-
-  lims_x{end}(end) = lims_x{end}(end) + domain.border;
-
   ## stitching mesh
-
   for i_X = it_X
-
     msh_gl_sec{i_X} = reg_mesh (lims_x{i_X}, lims_y, sf);
-
   endfor
 
+  ## combined mesh
   msh_gl = stitch_x_cat (ncoords, it_X, msh_gl_sec);
 
 endfunction

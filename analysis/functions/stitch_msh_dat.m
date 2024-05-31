@@ -1,80 +1,123 @@
 ##  SPDX-License-Identifier: BSD-3-Clause
 ##  Copyright (c) 2024, Sören Jakob Gerke
 
-## assembly
+## assembly of per section data assuming variables defined in sd are temporal avg
 ##
-## var_list ..  variables to be loaded and assembled. first one has to be the name of mesh variable
-##
+## sd .. stitching descriptor
+## ap .. analysis parameters
 ##
 ## Author: Sören J. Gerke
 ##
-##
 
-function [msh_gl dat_gl] = stitch_msh_dat (fn_data, fn_sec, var_list, avg_method, aid)
+function [msh_gl dat_gl] = stitch_msh_dat (sd, ap)
 
-    ## number of sections
-    n_s = numel (fn_sec)
+  n_f = numel (sd.dat_fn);
+  n_X = numel (ap.ids_X);
+  it_X = 1:n_X;
 
-    ## load section meshes
-    M = collect_sec_var (fn_sec, fn_data, var_list(1));
+  ## per section measurement ids
+  for i_X = it_X
+    ap.i_X = i_X;
+    id_meas{i_X} = get_measid_ap (ap);
+  endfor
 
-    ## build global mesh
-    [msh_xs msh_gl msh_gl_sec ~] = stitch_x_msh (M.(var_list{1}), aid, 3);
+  ##
+  ## build combined mesh
+  ##
 
-    ## load section data
-    dat = collect_sec_var (fn_sec, fn_data, var_list(2:end));
-    var_names = fieldnames (dat);
+  ## find mesh files
+  msh_var = sd.msh_var;
+  msh_file_x = {}
+  for i_X = it_X
+    msh_files = glob ([sd.a_dir id_meas{i_X} "/" "*_" sd.a_id_sec "/" sd.msh_fn]);
+    msh_file_x{i_X} = msh_files{end}; # use latest result
+  endfor
 
-    ## number of data variables
-    n_v = numel (var_names)
+  ## load section meshes
+  M = collect_sec_var (msh_file_x, {msh_var});
 
-    ## averaging method
-    avgm = cell (n_v, 1);
-    if (isempty (avg_method))
-      avgm(:) = "median";
-    elseif (abs (numel (avg_method) - n_v) > 0)
-      avgm(:) = avg_method{1};
-    else
-      avgm = avg_method;
-    endif
+  ## correct inter section mesh offsets
+  switch (msh_var)
+    case {"c_msh"}
+      if (isfield (ap, "yoff_X"))
+        yoff = ap.yoff;
+        for i_X = it_X
+          M.(msh_var){i_X}{2} = M.(msh_var){i_X}{2} + ap.yoff_X(i_X);
+        endfor
+      endif
+    otherwise
+      ;
+  endswitch
 
-    ## stitching for sequential measurements only makes sense for avg values
-    ## thus before stitching take average if time series is found in dat
+  ## build meshes
+  [msh_xs msh_gl msh_gl_sec ~] = stitch_x_msh (M.(msh_var), ap, 3);
 
-    ## init avg data struct
-    dat_avg = [];
-    for i_v = 1:n_v
-      dat_avg.(var_names{i_v}) = cell (n_s, 1);
+  ##
+  ## combine data
+  ##
+
+  ## find relevant data files
+  for i_f = 1:n_f
+    for i_X = it_X
+      dat_files = glob ([sd.a_dir id_meas{i_X} "/" "*_" sd.a_id_sec "/" sd.dat_fn{i_f}]);
+      dat_file_X{i_f,i_X} = dat_files{end}; # use latest result
     endfor
+  endfor
 
-    ## avg mean or median per section if more than one time step is avail per variable and per section
+  ## prepare struct
+  S = [];
+  for i_f = 1:n_f
+    vars{i_f} = sd.dat_var{i_f}
+    n_v = numel (vars{i_f}) # number of variables
     for i_v = 1:n_v
-      for i_s = 1:n_s
-        sec_var = dat.(var_names{i_v}){i_s};
-        sec_avg_var = [];
-        if (iscell (sec_var) && (numel (sec_var) > 1))
-          if (isvector (sec_var{2}) || iscolumn (sec_var{2}))
-            sec_avg_var = calc_vec_avg_cells (sec_var, avgm{i_v});
-          else
-            sec_avg_var = calc_im_avg_cells (sec_var, avgm{i_v});
-          endif
-          dat_avg.(var_names{i_v}){i_s} = sec_avg_var;
-        else
-          dat_avg.(var_names{i_v}){i_s} = sec_var;
-        endif
+      var = vars{i_f}{i_v}
+      S.(var) = cell (1, n_X);
+    endfor
+  endfor
+
+  ##  load all
+  for i_f = 1:n_f
+    vars = sd.dat_var{i_f}
+    n_v = numel (vars) # number of variables
+    for i_v = 1:n_v
+      for i_X = 1:n_X
+        AA = load (dat_file_X{i_f,i_X}, vars{i_v});
+        S.(vars{i_v}){i_X} = AA.(vars{i_v});
       endfor
     endfor
+  endfor
 
-    ## init global (assembled) struct
-    dat_gl = [];
-    for i_v = 1:n_v
-      dat_gl.(var_names{i_v}) = [];
+  ## init global struct for assembled data
+  dat_gl = [];
+  for i_f = 1 : numel (sd.dat_fn)
+    vars = sd.dat_var{i_f}
+    for i_v = 1 : numel (vars)
+      for i_X = 1:n_X
+        dat_gl.(vars{i_v}){i_X} = [];
+      endfor
     endfor
+  endfor
 
-    ## x - stitch each variable
-    it_X = 1 : numel (aid.ids_X);
+  ## ensure that yoffset is translated to y-dependent data variables
+  if (isfield (ap, "yoff"))
+    yoff = ap.yoff;
     for i_v = 1:n_v
-      dat_gl.(var_names{i_v}) = stitch_x_dim (msh_xs, dat_avg.(var_names{i_v}), msh_gl_sec, it_X);
+      switch (data_vars{i_v})
+        case {"delta_u_fit_avg"}
+          for i_X = 1:n_X
+            sec_avg_var = dat_avg.(data_vars{i_v}){i_X};
+            dat_avg.(data_vars{i_v}){i_X} = sec_avg_var + yoff(i_X);
+          endfor
+      otherwise
+      ;
+      endswitch
     endfor
+  endif
+
+  ## x - sd each variable
+  data_vars = fieldnames (S)
+  for i_v = 1 : numel (data_vars)
+    dat_gl.(data_vars{i_v}) = stitch_x_dim (msh_xs, S.(data_vars{i_v}), msh_gl_sec, it_X);
+  endfor
 
 endfunction

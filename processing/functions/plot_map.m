@@ -5,9 +5,11 @@
 ## Author: Sören J. Gerke
 ##
 
-function fh = plot_map (map)
+function fh = plot_map (map, fh)
 
-  fh = figure ();
+  if (isempty (fh))
+    fh = figure ();
+  endif
   surf (map);
   view ([0 0 1]);
   shading flat;

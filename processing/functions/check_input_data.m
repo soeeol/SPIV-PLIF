@@ -6,64 +6,49 @@
 ## Author: Sören J. Gerke
 ##
 
-function valid = check_input_data (measid, cdata, udata)
-  valid = [];
+function [is_valid, fh] = check_input_data (measid, cdata, udata)
+
+  is_valid = [];
   cb_max = max (max (cdata{1}));
-  ## check raw data before processing
-  fha = figure ();
-  ## subimage to solve same colormap problem?
-  subplot (2, 2, 1)
-  surf (cdata{1})
-  shading flat
-  view ([0 0 1])
-  axis image
-  title ("Ic", "interpreter", "none");
-  xlabel ("pixel"); ylabel ("pixel");
-  caxis ([0 cb_max])
-  ##
-  subplot (2, 2, 3)
-  surf (cdata{2})
-  shading flat
-  view ([0 0 1])
-  axis image
-  title ("Ic0", "interpreter", "none");
-  xlabel ("pixel"); ylabel ("pixel");
-  caxis ([0 cb_max])
-  ##
-  subplot (2, 2, 2)
-  if (numel(cdata)>2)
-    surf (cdata{3})
-    shading flat
-    view ([0 0 1])
-    axis image
-    caxis ([0 cb_max])
-    xlabel ("pixel"); ylabel ("pixel");
-  else
-    axis off;
+
+  titles = {"phi in a.u.", "phi des in a.u.", "phi sat in a.u.", "u mag in m/s"};
+
+  n_c_maps = n_maps = numel (cdata);
+  if (! isempty (udata))
+    n_maps = n_c_maps + 1;
   endif
-  title ("Ic1", "interpreter", "none");
-  ##
-  if !(isempty(udata))
-    subplot (2, 2, 4)
-    surf (udata{4})
-    shading flat
-    view ([0 0 1])
-    axis image
-    title ("u_mag","interpreter", "none");
-    xlabel ("IA"); ylabel ("IA");
+
+  fh = figure ();
+  for i = 1:n_c_maps
+    subplot (n_maps, 1, i);
+    plot_map (cdata{i}, fh);
+    axis tight;
+    caxis ([0 max(max(cdata{1}))]);
+    grid off;
+    xlabel ("x in px");
+    ylabel ("y in px");
+    hax = colorbar ("location", "EastOutside");
+    title (hax, titles{i})
+  endfor
+  if (! isempty (udata))
+    subplot (n_maps, 1, n_maps);
+    plot_map (cdata{n_maps}, fh);
+    axis tight;
+    colormap viridis;
+    grid off;
+    xlabel ("x in IA");
+    ylabel ("y in IA");
+    hax = colorbar ("location", "EastOutside");
+    title (hax, titles{i})
   endif
-  axes ("visible", "off");
-  title (measid, "interpreter", "none");
+
   ##
-  set (fha, 'Position', get(0, 'Screensize'));
-  hold off
-  pause (2)
-  choice = questdlg ("raw input fit measid?", "", "Yes", "No");
+  choice = questdlg ("does raw input fit measid?", "", "Yes", "No");
   if strcmp (choice, "Yes")
-    valid = 1;
-    close (fha)
+    is_valid = 1;
   else
-    valid = 0;
-    error ("check MeadID.csv to define correct combination of records");
+    is_valid = 0;
+    error ("check MeasID.csv to define correct combination of records");
   endif
+
 endfunction

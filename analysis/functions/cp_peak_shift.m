@@ -22,10 +22,15 @@ function [snp_o, msh_p_o, cp_o] = cp_peak_shift (snp, sn_idx_off, msh_p, cp)
   n_p = numel (cp{1}) / numel (snp);
   sf_p = abs (snp(2) - snp(1));
 
-  cp_o = cp;
+  cp_o = cell (1, n_t);
   for i_t = 1:n_t
+    printf ([">>> cp_peak_shift: " num2str(i_t) " of " num2str(n_t) " fields\n"]);
+    cp_o{i_t} = zeros (size (cp{i_t}));
+    cp_mm = movmean (cp{i_t}(1:round(numel(snp)/3),:), 5, 1);
     for i_p = 1:n_p
-      [~, sn_max] = max (cp{i_t}(1:20,i_p));
+##      [~, sn_max] = max (cp{i_t}(1:20,i_p));
+##      [~, sn_max] = max (movmean (cp{i_t}(1:20,i_p), 5));
+      [~, sn_max] = max (cp_mm(:,i_p));
       cp_o{i_t}(1:end-sn_max,i_p) = cp{i_t}(sn_max:end-1,i_p);
     endfor
   endfor

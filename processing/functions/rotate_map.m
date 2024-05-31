@@ -6,9 +6,13 @@
 ##
 ## Author: Sören J. Gerke
 ##
+
 function [scmap, xdata, ydata] = rotate_map (scmap, theta)
+
+  fillvalue = min (min (scmap));
+
   T = maketform ("affine", [cos(theta) -sin(theta); sin(theta) cos(theta); 0 0]);
-  fillvalue = mean (scmap(1,:));
-  [scmap, xdata, ydata] = imtransform (scmap, T, "bicubic",
-                                        "fillvalues", fillvalue);
+
+  [scmap, xdata, ydata] = imtransform (scmap, T, "bicubic", "fillvalues", fillvalue);
+
 endfunction

@@ -3,13 +3,13 @@
 
 ## analytical calculation of boundary layer thickness delta_c for
 ##
-## cn_fit (cn) = a(2) * erfc (sn / a(1))
+## cn_fit (sn) = a(2) * erfc (sn / a(1))
 ##
 ## Author: Sören J. Gerke
 ##
 
 function delta_c = cn_fit_delta_c (a)
 
-  delta_c = a(1) * sqrt (pi) / 2;
+  delta_c = a(:,1) * sqrt (pi) / 2;
 
 endfunction

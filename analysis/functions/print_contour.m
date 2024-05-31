@@ -6,7 +6,7 @@
 ## Author: Sören J. Gerke
 ##
 
-function print_contour (fn, XX, YY, SC, lim_x, lim_y, sf, lim_c)
+function print_contour (fn, XX, YY, SC, lim_x, lim_y, sf, lim_c, whitenan)
 
   ## printed img px per field px
   imsc = 1;
@@ -32,6 +32,16 @@ function print_contour (fn, XX, YY, SC, lim_x, lim_y, sf, lim_c)
   ## image will be flipped when written, so flip it before
   cprint = flipud (cprint);
 
-  imwrite (ind2rgb (gray2ind (cprint), colormap ("viridis")), [fn ".png"]);
+  im_out = ind2rgb (gray2ind (cprint), colormap ("viridis"));
+
+  if (whitenan)
+    for i = 1:3
+      buffer = im_out(:,:,i);
+      buffer(isnan(cprint)) = 1;
+      im_out(:,:,i) = buffer;
+    endfor
+  endif
+
+  imwrite (im_out, [fn ".png"]);
 
 endfunction

@@ -15,6 +15,7 @@ function [dat_ol_rm, is_ol, scmad] = outlier_rm (dat, dat_mm)
 
   scmad = 1.4826 * median (dev_vec);
 
+  is_ol = false (numel (dat_vec), 1);
   is_ol = (dev_vec > 3 * scmad);
 
   dat_ol_rm = dat_vec .* (! is_ol) + dat_vec_mm .* is_ol;
