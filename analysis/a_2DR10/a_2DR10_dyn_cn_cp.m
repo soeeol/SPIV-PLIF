@@ -46,8 +46,8 @@ if 1
   i_T = 1; ap.i_T = i_T;
   i_Z = 1; ap.i_Z = i_Z;
   ## overrides
-  i_M = it_M = 2
-##  i_X = it_X = 1
+  i_M = it_M = 1
+  i_X = it_X = [1]
 
   ap.dyn_cn_if_scmad_dev_max = 0.25; # used for threshold estimation for valid median interface deviation
   ap.dyn_cn_nt_max = 20; # limit number of valid single frame used for the analysis (valid: small deviation to median interface)
@@ -69,7 +69,7 @@ if 1
 endif
 
 ## [10] normalized concentration field per x-section
-if 0
+if 1
 
   ## analysis identifier
   ap.sec_a_id = ["cn-" ap.c_method "_" ap.c_if_method]
@@ -89,19 +89,26 @@ if 0
       ap.save_dir_id = [ap.result_dir ap.id_meas "/" ap.date_str "_" ap.sec_a_id "/"];
       mkdir (ap.save_dir_id);
 
-      c_calib_sig_X = []
+      c_calib_sig_X = [];
+      ap.cp_if_sfit_sps = 9;
       switch (i_M)
         case 1
-          c_calib_sig_X = [0 0 0 0] # for i_M=1&i_X=1 saturation recorded film was slightly thinner and thus of lower fluorescence
+          c_calib_sig_X = [4 0 0 3] # for i_M=1&i_X=1 saturation recorded film was slightly thinner and thus of lower fluorescence
         case 2
           c_calib_sig_X = [0 0 0 0] # TODO: first check for intra section offset
         case 3
+          if (i_X==2)
+            ap.cp_if_sfit_sps = 18;
+          endif
           c_calib_sig_X = [0 0 0 0] # TODO: first check for intra section offset
         case 4
+          if (i_X==2)
+            ap.cp_if_sfit_sps = 18;
+          endif
           c_calib_sig_X = [0 0 0 0] # TODO: first check for intra section offset
       endswitch
       if (! isempty (c_calib_sig_X))
-        ap.c_calib_sig_X = c_calib_sig_X(i_M);
+        ap.c_calib_sig_X = c_calib_sig_X(i_X);
       endif
 
       [~] = a_dyn_cn_avg_calib (pdir, ap);

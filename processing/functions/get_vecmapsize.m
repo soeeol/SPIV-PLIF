@@ -7,8 +7,11 @@
 ##
 
 function  [sx, sy] = get_vecmapsize (textdata)
+
   infostr = textdata{4};
+
   idx = strchr (infostr, "=,}");
+
   switch length (idx)
     case 4
       sx = str2num (infostr(idx(1)+1:idx(2)-1));
@@ -16,4 +19,5 @@ function  [sx, sy] = get_vecmapsize (textdata)
     otherwise
       error ("get_vecmapsize: textdata header format changed?");
   endswitch
+
 endfunction

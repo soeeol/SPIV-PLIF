@@ -7,16 +7,22 @@
 ## Author: Sören J. Gerke
 ##
 
-function [x_off, y_off] = calc_offsets (xy_wall, pp)
-##  xy_wall(:,2) = movmean (xy_wall(:,2), 5);
-##  plot (xy_wall(:,1), xy_wall(:,2), "kx")
+function [x_off, y_off] = calc_offsets (xy_wall_in, pp)
+
+  xmin = min (xy_wall_in(:,1));
+  xmax = max (xy_wall_in(:,1));
+
+  ## generate more points to improve detection of rectangular jump
+  xy_wall(:,1) = linspace (xmin, xmax, numel (xy_wall_in(:,1)) * 4);
+  xy_wall(:,2) = interp1 (xy_wall_in(:,1), xy_wall_in(:,2), xy_wall(:,1));
+
   xcenter_ms = 0; # relative center of microstructure x pos in section
   switch pp.cell.data
     case {"flat", "diff"}
       x_off = 0;
       y_off = calc_yoff ();
     case {"2d-r10"}
-      xpos = [-1 1] * 1.0 + xcenter_ms;# mm
+      xpos = [-1 1] * 1.0 + xcenter_ms; # mm
       xtol = 0.6;
       ypos = 0.5;
       ytol = 0.3;
@@ -86,15 +92,14 @@ function [x_off, y_off] = calc_offsets (xy_wall, pp)
   endfunction
 ##
   function xoff = calc_xoff (xpos, xtol, ypos, ytol)
-  x_off = zeros (1, numel(xpos));
-    for i = 1:numel(xpos)
+  x_off = zeros (1, numel (xpos));
+    for i = 1 : numel (xpos)
       idx = (xy_wall(:,1) > xpos(i)-xtol) & (xy_wall(:,1) < xpos(i)+xtol);
       idx = idx & (xy_wall(:,2) > ypos-ytol) & (xy_wall(:,2) < ypos+ytol);
       if ( sum (idx) >= 1 )
         x_off(i) = median (xy_wall(idx,1));
       else
-        error (["not enough points in search range around xoff = " ...
-                   num2str(xpos(i)) " mm"]);
+        error (["not enough points in search range around xoff = " num2str(xpos(i)) " mm"]);
       endif
     endfor
     xoff = - mean (x_off);
@@ -108,7 +113,8 @@ function [x_off, y_off] = calc_offsets (xy_wall, pp)
     ##idx = abs (xy_wall(:,2) - median (xy_wall(:,2))) < tol;
     ##yoff =  - median (xy_wall(idx,2));
     tol = 100e-3;
-    idx = abs (xy_wall(:,2) - median(xy_wall(:,2))) < tol;
+    idx = abs (xy_wall(:,2) - median (xy_wall(:,2))) < tol;
     yoff = - median (xy_wall(idx,2));
   endfunction
+
 endfunction

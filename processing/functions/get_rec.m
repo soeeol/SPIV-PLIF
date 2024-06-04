@@ -7,5 +7,7 @@
 ##
 
 function [rec] = get_rec (recs, recids, id)
+
   rec = recs{find(ismember(recids,id)==1)}{1};
+
 endfunction

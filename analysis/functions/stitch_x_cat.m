@@ -29,10 +29,22 @@ function dat_cat = stitch_x_cat (nmaps, it_X, dat, xlen)
       dat_cat{i} = dummy_cat;
     endfor
 
-  elseif ((nmaps > 1) && (size (dat, 1) > 1))
+  elseif ((nmaps > 1) && (columns (dat{1}) > 1) && (rows (dat{1}) > 1))
 
     ## cat fields
     ax = 2;
+    for i = 1 : nmaps
+      dummy_cat = [];
+      for i_X = it_X
+        dummy_cat = cat (ax, dummy_cat, dat{i_X,i});
+      endfor
+      dat_cat{i} = dummy_cat;
+    endfor
+
+  elseif (nmaps > 1)
+
+    ## cat vectors
+    ax = 1;
     for i = 1 : nmaps
       dummy_cat = [];
       for i_X = it_X

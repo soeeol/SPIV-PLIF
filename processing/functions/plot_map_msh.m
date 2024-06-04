@@ -13,7 +13,7 @@ function fh = plot_map_msh (msh, map, fh)
 
   sf = get_sf (msh);
 
-  surf (msh{1}-sf(1)/2, msh{2}-sf(2)/2, msh{3}, map);
+  surf (msh{1} - sf(1)/2, msh{2} - sf(2)/2, msh{3}, map);
   view ([0 0 1]);
   shading flat;
   colormap viridis;

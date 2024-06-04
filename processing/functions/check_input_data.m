@@ -32,7 +32,7 @@ function [is_valid, fh] = check_input_data (measid, cdata, udata)
   endfor
   if (! isempty (udata))
     subplot (n_maps, 1, n_maps);
-    plot_map (cdata{n_maps}, fh);
+    plot_map (udata{1}, fh);
     axis tight;
     colormap viridis;
     grid off;

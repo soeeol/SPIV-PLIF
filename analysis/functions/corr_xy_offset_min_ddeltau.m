@@ -7,7 +7,7 @@
 ## Author: Sören J. Gerke
 ##
 
-function phi_sat_shifted = corr_xy_offset_min_ddeltau (c_msh, phi, phi_sat, delta_u, shift_lim, testplots)
+function [phi_sat_shifted, dx_mm, dy_mm] = corr_xy_offset_min_ddeltau (c_msh, phi, phi_sat, delta_u, shift_lim, testplots)
 
   x = c_msh{1}(1,:);
   y_min = min (c_msh{2}(:,1));
@@ -59,10 +59,15 @@ function phi_sat_shifted = corr_xy_offset_min_ddeltau (c_msh, phi, phi_sat, delt
   [idx_min_x, min_idx]= min (idx_min_x);
   idx_min_y = idx_min_y(min_idx);
 
-  printf (["corr_xy_offset_min_ddeltau: optimal x shift (+/- = left/right): " num2str(sf(1) * shift_x_idx(idx_min_x)) " mm\n"]);
-  printf (["corr_xy_offset_min_ddeltau: optimal y shift:(+/- = up/down) " num2str(sf(2) * shift_y_idx(idx_min_y)) " mm\n"]);
+  dx_px = shift_x_idx(idx_min_x);
+  dy_px = shift_y_idx(idx_min_y);
+  dx_mm = sf(1) * dx_px;
+  dy_mm = sf(2) * dy_px;
 
-  phi_sat_shifted = imtranslate (phi_sat, -shift_x_idx(idx_min_x), -shift_y_idx(idx_min_y), "crop");
+  printf (["corr_xy_offset_min_ddeltau: optimal x shift (+/- = left/right): " num2str(dx_mm) " mm\n"]);
+  printf (["corr_xy_offset_min_ddeltau: optimal y shift:(+/- = up/down) " num2str(dy_mm) " mm\n"]);
+
+  phi_sat_shifted = imtranslate (phi_sat, -dx_px, -dy_px, "crop");
 
   if testplots
 

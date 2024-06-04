@@ -19,8 +19,8 @@ pp.cell.data = "2d-r10"; # "flat" "2d-c10" "2d-t10" "2d-r10" "2d-r10-60" "2d-r10
 pp.optset.data = "M13"; # set M13 (including M13 M13b M13c) or M26
 pp.alpha.data = 60; # ° 15 60
 pp.liquid.data = "WG141"; # WG141
-pp.M.data = 8; # kg/h 8 16 32 64
-pp.X.data = 0; # mm 8 0 -8 -16
+pp.M.data = 64; # kg/h 8 16 32 64
+pp.X.data = -16; # mm 8 0 -8 -16
 pp.Z.data = 0; # mm
 pp.G.data = 2; # Nl/min
 pp.T.data = 25; # °C
@@ -96,7 +96,7 @@ endif
 [pp.yoff_c_ini.data] = est_param (c_msh{1}, ind_wall_c(c_dat{1}), [], "yoff_c_ini", pp, "man");
 
 ## shift mesh with inital y offset
-for i = 1 : nmap_cmsh
+for i = 1:nmap_cmsh
   [c_msh{i}] = tform_mesh (c_msh{i}, pp, "yoff_c_ini", []);
 endfor
 
@@ -112,14 +112,13 @@ xy_wall = update_wall_xy (c_msh, c_dat(1:3,1), pp, thrs);
 ## visual check
 fh1 = plot_map_msh (c_msh{1}, c_dat{1}, []);
 hold on
-grid off
 styles = {"-c.", "-m.", "-g."};
 for i = 1:nmap_cmsh
   plot3 (xy_wall{i}(:,1), xy_wall{i}(:,2), ones(numel(xy_wall{i}(:,1)),1), styles{i} ,"MarkerSize", 8);
 endfor
 xlabel ("x in mm"); ylabel ("y in mm"); title ("estimated wall coordinates");
 legend ("Ic map", "wall Ic", "wall Ic0", "wall Ic1");
-if ( strcmp (questdlg ("did the wall estimation work ok?", "processing", "Yes", "No", "Yes"), "Yes" ) )
+if (strcmp (questdlg ("did the wall estimation work ok?", "processing", "Yes", "No", "Yes"), "Yes"))
   close (fh1)
   csv_param_update (idx_measid, ltab, pdir.ltab, pp, head);
 else
@@ -138,8 +137,8 @@ for i = 1:nmap_cmsh
   else
     [c_dat{i,1}, idxx, idxy] = rotate_map (c_dat{i,1}, pp.rot_c.data);
   endif
-  xmin = min(min(c_msh{i}{1}));
-  ymin = min(min(c_msh{i}{2}));
+  xmin = min (min (c_msh{i}{1}));
+  ymin = min (min (c_msh{i}{2}));
   [c_msh{i}] = mesh_uc (idxx, idxy, xmin, ymin, pp, "c", sf_c);
 endfor
 
@@ -222,7 +221,7 @@ val_mask = NaN; # 0
 c_masks.gas = masking ("c", "gas", size (c_msh{1}), lims_y(1), c_h.gas{1}, sf_c, 0, val_mask);
 c_masks.wall = masking ("c", "wall", size (c_msh{1}), lims_y(1), c_h.wall, sf_c, 0, val_mask);
 if testplots
-  plot_map_msh (c_msh, c_masks.gas .* c_masks.wall);
+  plot_map_msh (c_msh, c_masks.gas .* c_masks.wall, []);
   colormap flag;
 endif
 

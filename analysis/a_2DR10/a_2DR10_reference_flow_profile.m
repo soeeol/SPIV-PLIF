@@ -32,7 +32,7 @@ if 1
   i_L = i_O = 1; # liquid, optical setup
   i_A = 1;
   i_C = 1;
-  ##  i_M = 1;
+    i_M = 4;
   ##  i_X = 1;
 
   pos_ref_profile = "upstream"; # microstructure, full, upstream, downstream

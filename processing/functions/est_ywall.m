@@ -6,7 +6,7 @@
 ## Author: Sören J. Gerke
 ##
 
-function [y_off, sc_val] = est_ywall (npoints, msh, scmap,wg, method, plotextra)
+function [y_off, sc_val] = est_ywall (npoints, msh, scmap, wg, method, plotextra)
 
   switch (method)
     case "man"
