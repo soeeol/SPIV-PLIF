@@ -8,7 +8,8 @@
 
 function fh = fig_overview_m (pp, pdir, c_msh, c_dat, c_h, c_masks, u_msh, u_dat, u_h, u_masks, massflow, HU)
 
-  [Lmax, ~] = max (u_dat{4} .* u_masks.gas .* u_masks.wall, [], 1); # TODO: this is generally not surface velocity
+  u_s = get_surface_val (u_msh, u_dat{4}, u_h.gas, "min_y_dist");
+
   mf_avg = median (massflow(!(massflow==0)));
 
   ## nusselt_film
@@ -18,7 +19,7 @@ function fh = fig_overview_m (pp, pdir, c_msh, c_dat, c_h, c_masks, u_msh, u_dat
   alpha = deg2rad (pp.alpha.data);
   re_l = nd_re_inlet (mfr, 50*1e-3, eta);
 
-  [~, umax_N] = model_filmflow_laminar_u_profile_p (nu, alpha, re_l);
+  [~, u_s_N] = model_filmflow_laminar_u_profile_p (nu, alpha, re_l);
 
   skip = 2*6; # vectors
 
@@ -26,7 +27,7 @@ function fh = fig_overview_m (pp, pdir, c_msh, c_dat, c_h, c_masks, u_msh, u_dat
 
   subplot (2, 1, 1);
   hold on;
-  title ([pp.measid.data " \n" "Mavg = " num2str(mf_avg) "kg/h --- setpoint: M = " num2str(pp.M.data) " kg/h \n liquid in domain: " num2str(HU) " mm^2"]);
+  title ([pp.measid.data " \n" "Mavg = " num2str(mf_avg) "kg/h | setpoint: M = " num2str(pp.M.data) " kg/h \n liquid in domain: " num2str(HU) " mm^2"], "interpreter", "none");
 
   plot (c_msh{1}(1,:), c_h.gas, "r-");
   plot (c_msh{1}(1,:), c_h.wall, "k-");
@@ -46,7 +47,7 @@ function fh = fig_overview_m (pp, pdir, c_msh, c_dat, c_h, c_masks, u_msh, u_dat
 
   subplot (2, 1, 2);
   hold on;
-  [ax, h1, h2] = plotyy (u_msh{1}(1,:), massflow / pp.M.data, u_msh{1}(1,:), Lmax/umax_N);
+  [ax, h1, h2] = plotyy (u_msh{1}(1,:), massflow / pp.M.data, u_msh{1}(1,:), u_s / u_s_N);
   grid on;
   xlabel ("x in mm");
   ylabel (ax(1), "norm. mass flow rate");

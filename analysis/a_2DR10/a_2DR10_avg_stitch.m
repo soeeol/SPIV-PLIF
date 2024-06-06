@@ -43,7 +43,7 @@ if 1
   i_T = 1; ap.i_T = i_T;
   i_Z = 1; ap.i_Z = i_Z;
   ## overrides
-  i_M = it_M = 3
+  i_M = it_M = 4
 ##  i_M = it_M = 1:4
 
   ## prepare directories
@@ -61,7 +61,7 @@ endif
 ## [10] x-sd dyn avg data and store
 ## - first sd cn map together with interface to estimate best intersection offset
 
-if 1
+##if 1
 
   ## stitching descriptors
 
@@ -117,7 +117,7 @@ if 1
   ## prepare inter section offset correction
   ##
 
-  ## using gas-liquid interface for înter section offset indicator
+  ## using gas-liquid interface as inter section offset indicator
   for i_M = it_M
     for i_X = it_X
 
@@ -142,13 +142,14 @@ if 1
 
   xoff = zeros (numel(ap.ids_M), numel(ap.ids_X));
   xoff(:,1) = +0.005;
-  xoff(:,3:4) = +0.1;
-  xoff(4,3) = +0.3; xoff(4,4) = +0.3; # recorded on another day
+##  xoff(:,3:4) = +0.1;
+  xoff(4,3) = +0.3;
+##  xoff(4,4) = +0.3; # recorded on another day
 
   yoff = zeros (numel(ap.ids_M), numel(ap.ids_X));
   yoff(2,2) = +0.005;
   yoff(4,1) = -0.005;
-  yoff(4,3:4) = +0.005;
+  yoff(4,3:4) = +0.01;
 
   ## before inter section offset correction
   figure (); hold on;
@@ -230,7 +231,7 @@ if 1
   dat_u = {};
 
   for i_sd = [1,2,3,4]#:2# : numel (sd)
-    for i_M = 3#it_M
+    for i_M = it_M
 
       ## inter section offset settings
       ap.sd.xoff_X = xoff(i_M,:);
@@ -274,6 +275,19 @@ if 1
     endfor
   endfor
 
+  ## check continuity of delta_u, y_wall and surface velocity estimate of stitching result
+  u_M_ip = interp2 (msh_u{i_M}{1}, msh_u{i_M}{2}, dat_u{i_M}{4}, msh_cn{i_M}{1}, msh_cn{i_M}{2}, "pchip", 0.0); #
+  u_s = get_surface_val (msh_cn{i_M}, u_M_ip, delta_u{i_M}, "min_y_dist");
+
+  fh = figure ();
+  hold on;
+  plot (x{i_M}, u_s/max(u_s), "b;u_s norm;");
+  plot (x{i_M}, delta_u{i_M}/max(delta_u{i_M}), "k;delta_u;");
+  plot (x{i_M}, y_wall{i_M}/max(y_wall{i_M}), "r;y wall;");
+  plot ((x_sec-0.06)*1e3, [0 0 0 0 0; [1 1 1 1 1]], "--k;x section border;")
+  xlabel ("x* in mm");
+  ylabel ("");
+
   fh = figure ();
   hold on;
   for i_M = it_M
@@ -297,24 +311,34 @@ if 1
   hold on;
   plot (x{i_M}, delta_c{i_M}/median(delta_c{i_M}), "r");
   plot (x{i_M}, delta_u{i_M}/median(delta_u{i_M}), "b");
+
+  plot (msh_gl{1}(1,:), dat_gl.delta_u/median(dat_gl.delta_u), "r");
+  plot (msh_gl{1}(1,:), dat_gl.y_wall/max(dat_gl.y_wall), "k");
+
+  plot (x{i_M}, y_wall{i_M}/max(y_wall{i_M}), "m");
+
   ## u_s
+  u_M_ip = interp2 (msh_u{i_M}{1}, msh_u{i_M}{2}, dat_u{i_M}{4}, msh_cn{i_M}{1}, msh_cn{i_M}{2}, "pchip", 0.0); #
+  u_s = get_surface_val (msh_cn{i_M}, u_M_ip, delta_u{i_M}, "min_y_dist");
+  plot (x{i_M}, u_s/max(u_s), "g");
+
   xlabel ("x* in mm");
   ylabel ("y in mm");
 
-  fh = figure ();
-  plot_map_msh (msh_cn{i_M}, phi_sat{i_M}, fh)
-  hold on;
-  draw_cell (ap.ids_C{ap.i_C}, 0, 1);
-  plot (x{i_M}, y_wall{i_M}, "r");
-  plot (x{i_M}, delta_u{i_M}, "r");
-  xlabel ("x* in mm");
-  ylabel ("y in mm");
-  axis image;
-  ylim ([-0.1 2.5])
+##  fh = figure ();
+##  plot_map_msh (msh_cn{i_M}, phi_sat{i_M}, fh)
+##  hold on;
+##  draw_cell (ap.ids_C{ap.i_C}, 0, 1);
+##  plot (x{i_M}, y_wall{i_M}, "r");
+##  plot (x{i_M}, delta_u{i_M}, "r");
+##  xlabel ("x* in mm");
+##  ylabel ("y in mm");
+##  axis image;
+##  ylim ([-0.1 2.5])
 
 
   fh = figure ();
-  plot_map_msh (msh_gl, dat_gl.c_dat{3}, fh)
+  plot_map_msh (msh_gl, dat_gl.c_dat{1}, fh)
   hold on;
 ##  draw_cell (ap.ids_C{ap.i_C}, 0, 1);
   plot (msh_gl{1}(1,:), dat_gl.y_wall, "r");
@@ -332,18 +356,18 @@ if 1
 
 
 
-      fh = figure ();
-##      plot_map_msh (msh_cn{i_M}, phi_avg{i_M}, fh)
-##      plot_map_msh (msh_cn{i_M}, phi_des{i_M}, fh)
-      plot_map_msh (msh_cn{i_M}, phi_sat{i_M}, fh)
-      hold on;
-      draw_cell (ap.ids_C{ap.i_C}, 0, 1);
-      plot (x{i_M}, y_wall{i_M}, "r");
-      plot (x{i_M}, delta_u{i_M}, "r");
-      xlabel ("x* in mm");
-      ylabel ("y in mm");
-      axis image;
-      ylim ([-0.1 2.5]);
+##      fh = figure ();
+####      plot_map_msh (msh_cn{i_M}, phi_avg{i_M}, fh)
+####      plot_map_msh (msh_cn{i_M}, phi_des{i_M}, fh)
+##      plot_map_msh (msh_cn{i_M}, phi_sat{i_M}, fh)
+##      hold on;
+####      draw_cell (ap.ids_C{ap.i_C}, 0, 1);
+##      plot (x{i_M}, y_wall{i_M}, "r");
+##      plot (x{i_M}, delta_u{i_M}, "r");
+##      xlabel ("x* in mm");
+##      ylabel ("y in mm");
+##      axis image;
+##      ylim ([-0.1 2.5]);
 
 
       fh = figure ();
@@ -441,7 +465,7 @@ if 1
 ##    endif
 ##  endfor
 
-endif
+##endif
 
 ## procedure:
 ## 1. stitch cn, y_wall and delta_u {best case: dyn result is available}

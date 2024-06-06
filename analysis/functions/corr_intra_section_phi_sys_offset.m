@@ -6,7 +6,7 @@
 ## Author: Sören J. Gerke
 ##
 
-function phi_sat_corr = corr_intra_section_phi_sys_offset (phi_sat, id_C, id_M, id_X)
+function [phi_sat_corr, xoff, yoff] = corr_intra_section_phi_sys_offset (phi_sat, id_C, id_M, id_X)
 
   xoff = 0; # px idx .. - is left
   yoff = 0; # px idx .. - is up
@@ -22,6 +22,15 @@ function phi_sat_corr = corr_intra_section_phi_sys_offset (phi_sat, id_C, id_M, 
               xoff = - 50; # systematic offset!
           endswitch
       endswitch
+
+    case {"2d-r10"}
+##      switch (id_M)
+##        case {32}
+##          switch (id_X)
+##            case {-8}
+##              xoff = - 35;
+##          endswitch
+##      endswitch
 
   endswitch
 

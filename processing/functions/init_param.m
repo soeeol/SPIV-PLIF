@@ -7,6 +7,7 @@
 ##
 
 function [param] = init_param ()
+
   fields = {
     "rot_c"; "rot_u";
     "xoff_c"; "xoff_c0"; "xoff_c1"; "xoff_u";
@@ -18,8 +19,10 @@ function [param] = init_param ()
     "optset"; "cell"; "liquid";
     "M"; "G"; "T";
     "X"; "Z"; "alpha";
-    "type"; "savedate"
+    "type"; "savedate";
+    "isec_rcurv_lim"; "sfit_order"; "sfit_sps"; "isec_shift_lim"
   };
+
   ids = {
     "dtheta_c in rad"; "dtheta_u in rad";
     "xoff_c in mm"; "xoff_c0 in mm"; "xoff_c1 in mm"; "xoff_u in mm";
@@ -31,10 +34,13 @@ function [param] = init_param ()
     "Optical Setup"; "Cell"; "Liquid Mixture";
     "M in kg/h"; "G in Nl/min"; "T in °C";
     "X* in mm"; "Z* in mm"; "Inclination in °";
-    "type of processing"; "last save"
+    "type of processing"; "last save";
+    "threshold for flat interface curvature radius in mm"; "spline order"; "spline devisions per section"; "max x and x intra section shift based on interface";
   };
-  for i = 1:numel (fields)
+
+  for i = 1 : numel (fields)
     param.(fields{i}).id = ids(i,:);
     param.(fields{i}).data = [];
   endfor
+
 endfunction

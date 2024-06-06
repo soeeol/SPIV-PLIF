@@ -28,4 +28,6 @@ function [phi_avg_s, phi_des_s, phi_sat_s] = phi_surface (phi_avg, phi_des, phi_
 ##  phi_sat_s = min (reshape (phi_sat_if(!isnan(phi_sat_if)), n_p, n_x), [], dim);
   phi_sat_s = median (reshape (phi_sat_if(!isnan(phi_sat_if)), n_p, n_x), dim);
 
+  ## TODO: use get_surface_val (msh, map, delta_u, method)
+
 endfunction

@@ -6,35 +6,24 @@
 ## Author: Sören J. Gerke
 ##
 
-function mask = masking (field, domain, sm, ymin, hi, sf, offset, outside)
+function mask = masking (field, domain, size_map, y_min, y_if, sf, idx_off, out_val)
 
-  mask = ones (sm); # inside
+  mask = ones (size_map); # inside value
 
   switch domain
+
     case "gas"
-      switch field
-        case "u"
-          idx = 1 + int32 (ceil (abs (ymin - hi) / sf(2)));
-        case "c"
-          idx = 1 + int32 (ceil (abs (ymin - hi) / sf(2)));
-      endswitch
+      idx = 1 + int32 (ceil (abs (y_min - y_if) / sf(2)));
       for i = 1 : length (idx)
-        mask(max([idx(i)+offset 1]):end,i) = outside;
+        mask(max([idx(i)+idx_off 1]):end,i) = out_val;
       endfor
 
     case "wall"
-      switch field
-        case "u"
-          idx = 1 + int32 (floor (abs (ymin - hi) / sf(2)));
-        case "c"
-          idx = 1 + int32 (floor (abs (ymin - hi) / sf(2)));
-      endswitch
+      idx = 1 + int32 (floor (abs (y_min - y_if) / sf(2)));
       for i = 1 : length (idx)
-        mask(1:idx(i)-offset,i) = outside;
+        mask(1:idx(i)-idx_off,i) = out_val;
       endfor
 
-    otherwise
-      error (["masking: no masking for domain" domain]);
   endswitch
 
 endfunction

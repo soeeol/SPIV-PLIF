@@ -35,16 +35,19 @@ pp.cell.data = "2d-r10"; # "flat" "2d-c10" "2d-t10" "2d-r10" "2d-r10-60" "2d-r10
 pp.optset.data = "M13"; # set M13 (including M13 M13b M13c) or M26
 pp.alpha.data = 60; # ° 15 60
 pp.liquid.data = "WG141";
-pp.M.data = 32; # kg/h 8 16 32 64
-pp.X.data = -0; # mm 8 0 -8 -16
+pp.M.data = 64; # kg/h 8 16 32 64
+pp.X.data = -16; # mm 8 0 -8 -16
 pp.Z.data = 0; # mm
 pp.G.data = 2; # Nl/min
 pp.T.data = 25; # °C
 
-testplots = false;
+## gas liquid interface spline fit parameter for curvature estimate
+pp.isec_rcurv_lim.data = 100; # [mm] threshold for "flat" interface curvature radius
+pp.sfit_order.data = 3; # spline order
+pp.sfit_sps.data = 12; # spline devisions per section
+pp.isec_shift_lim.data = [0.25 0.05]; # mm
 
-## mixture properties
-[~, ~, rho, eta, ~, ~] = get_fp_lm (pdir, pp.liquid.data, pp.T.data+273.15);
+testplots = false;
 
 ## read parameters from linking table if available
 [pp, idx_measid, head] = get_pp_ltab (ltab, pp);
@@ -259,18 +262,43 @@ wg_if = {[msh_c{1}{1}(1,:)' wall_y], xy_if{1}};
 ## improve intra section alignment (gas-liquid interface of phi/phi_des vs. phi_sat)
 ##   rec_c{3} will loose wall alignment
 ##
-rec_c_sat_ip = interp2 (msh_c{3}{1}, msh_c{3}{2}, rec_c{3}, msh_c{1}{1}, msh_c{1}{2}, "pchip", 0); # ensure same domain for method input
-[~, dx_mm, dy_mm] = corr_xy_offset_min_ddeltau (msh_c{1}, rec_c{1}, rec_c_sat_ip, xy_if{1}(:,2), [0.25 0.05], false);
-## shift maps and related data
-##rec_c{3} = imtranslate (rec_c{3}, round (0/sf_c(1)), round (-0.05/sf_c(2)), "crop");
-##xy_wall = update_wall_xy (msh_c, rec_c, pp, thrs);
-##[xy_if{3}, xy_idx{3}, ispeak{3}] = interface_xy (msh_c{3}, ind_if (rec_c{3}), tol, "min", pp, []);
-####
-##for i_u = 1:nmap_u
-##  rec_u{i_u} = imtranslate (rec_u{i_u}, round (-dx_mm/sf_u(1)), round (-dy_mm/sf_u(2)), "crop");
-##endfor
-## .. or update mesh
-msh_c{3} = tform_mesh (msh_c{3}, pp, "xoff_c", -dx_mm);
+
+## smooth spline fit representation of detected interface for curvature check
+x_fit = double (msh_c{1}{1}(1,:));
+y_fit = xy_if{1}(:,2);
+spf = splinefit (x_fit, y_fit, pp.sfit_sps.data, "order", pp.sfit_order.data, "beta", 0.75);
+if testplots
+  figure ();
+  hold on;
+  plot (y_fit, "k;meas;")
+  plot (ppval (spf, x_fit), "b;fit;")
+endif
+
+##
+[~, r_curvature] = calc_curvature_xy (x_fit, ppval (spf, x_fit));
+r_curvature_abs = median (abs (r_curvature));
+printf (["median radius of abs curvature: " num2str(r_curvature_abs) " mm \n"])
+
+## correct for systematic offset (used here for flat sections)
+[phi_sat_tmp, x_idx_soff, y_idx_soff] = corr_intra_section_phi_sys_offset (rec_c{3}, pp.cell.data, pp.M.data, pp.X.data);
+
+##
+if (r_curvature_abs > pp.isec_rcurv_lim.data) # basically flat film, only use y offset correction
+  printf (["basically flat interface, might do x offset correction manually\n"]);
+  pp.isec_shift_lim.data(1) = 0.025 # mm
+  rec_c_sat_ip = interp2 (msh_c{3}{1}, msh_c{3}{2}, phi_sat_tmp, msh_c{1}{1}, msh_c{1}{2}, "pchip", 0); # ensure same domain for method input
+else
+  rec_c_sat_ip = interp2 (msh_c{3}{1}, msh_c{3}{2}, rec_c{3}, msh_c{1}{1}, msh_c{1}{2}, "pchip", 0); # ensure same domain for method input
+endif
+
+## estimate best offset
+[~, dx_mm_min, dy_mm_min] = corr_xy_offset_min_ddeltau (msh_c{1}, rec_c{1}, rec_c_sat_ip, xy_if{1}(:,2), pp.isec_shift_lim.data, false);
+
+dx_mm = - sf_c(1) * x_idx_soff + dx_mm_min # positive will move Ic1 left
+dy_mm = - sf_c(2) * y_idx_soff + dy_mm_min
+
+## shift mesh and related data
+msh_c{3} = tform_mesh (msh_c{3}, pp, "xoff_c", -dx_mm); # - is left
 msh_c{3} = tform_mesh (msh_c{3}, pp, "yoff_c", +dy_mm);
 xy_wall{3}(:,1) = xy_wall{3}(:,1) - dx_mm;
 xy_wall{3}(:,2) = xy_wall{3}(:,2) + dy_mm;
@@ -279,21 +307,34 @@ xy_if{3}(:,2) = xy_if{3}(:,2) + dy_mm;
 msh_u = tform_mesh (msh_u, pp, "xoff_u", -dx_mm);
 msh_u = tform_mesh (msh_u, pp, "yoff_u", +dy_mm);
 
-fh = plot_map_msh (msh_c{3}, rec_c{3}, []);
-hold on;
+fh = figure ();
 for i = 1:nmap_msh_c
-  plot3 (xy_wall{i}(:,1), xy_wall{i}(:,2), ones (numel (xy_wall{i}(:,1)), 1), ".-", "markersize", 12);
-  plot3 (xy_if{i}(:,1), xy_if{i}(:,2), ones (numel (xy_if{i}(:,1)), 1), ".-", "markersize", 12);
+  clf (fh);
+  plot_map_msh (msh_c{i}, rec_c{i}, fh);
+  hold on;
+  plot (wg_if{1}(:,1), wg_if{1}(:,2), "k");
+  plot (wg_if{2}(:,1), wg_if{2}(:,2), "k");
+  plot (xy_if{i}(:,1), xy_if{i}(:,2), "r");
+  xlim ([domain.xmin domain.xmax]);
+  ylim ([-0.1 0.1+max(wg_if{2}(:,2))]);
+  xlabel ("x in mm");
+  ylabel ("y in mm");
+  pause (0.1);
+  hold off;
+  print (fh, "-djpeg", "-color", "-r500", [save_dir "test_phi_offset_" num2str(i) ".jpg"]);
 endfor
-xlabel ("x in mm");
-ylabel ("y in mm");
-title ("wall alignment");
-legend ("Ic1", "wall Ic", "gas Ic", "wall Ic0", "gas Ic0", "wall Ic1", "gas Ic1");
-hold off;
+close (fh);
+
+msh_u_org = msh_u;
+rec_u_org = rec_u;
+
+
 
 ##
 ## final corrections of rec_u positioning relative to rec_c
 ##
+msh_u = msh_u_org; ## repeat from here to re-adjust rec_u
+rec_u = rec_u_org;
 
 ## manual rot_u adjustment
 if strcmp (method_piv, "APIV")
@@ -354,7 +395,9 @@ idx = min (find (max (xy_if{1}(:,2)) < ymaxes));
 lims_x = [ -domain.border + domain.xmin, domain.xmax + domain.border];
 lims_y = [ -domain.border + 0          , ymaxes(idx) + domain.border];
 c_msh = reg_mesh (lims_x, lims_y, sf_c);
+x_c = c_msh{1}(1,:);
 u_msh = reg_mesh (lims_x, lims_y, sf_u);
+x_u = u_msh{1}(1,:);
 
 ## fluorescence values for out of domain, chosen to result in zero concentration
 phi_des_out = min (min (rec_c{1})); phi_sat_out = phi_des_out / 2;
@@ -367,28 +410,27 @@ for i = 1:nmap_u
   u_dat{i} = interp2 (msh_u{1}, msh_u{2}, rec_u{i}, u_msh{1}, u_msh{2}, "pchip", 0);
 endfor
 
-## interplolate wall and interface contours
+## interpolate wall and interface contours
 ##   keep wall- and gas-liquid interface contours of all phi maps for comparison; u_dat was usually recorded with phi_sat (i=3)
 for i = 1:nmap_msh_c
-  y_if_gas{i} = vec (interp1 (xy_if{i}(:,1), xy_if{i}(:,2), c_msh{1}(1,:), "pchip", "extrap")); # vectors in cell for later automatic stitching
-  y_if_wall{i} = vec (interp1 (xy_wall{i}(:,1), xy_wall{i}(:,2), c_msh{1}(1,:), "pchip", "extrap"));
+  y_if_gas{i} = vec (interp1 (xy_if{i}(:,1), xy_if{i}(:,2), x_c, "pchip", "extrap")); # vectors in cell for later automatic stitching
+  y_if_wall{i} = vec (interp1 (xy_wall{i}(:,1), xy_wall{i}(:,2), x_c, "pchip", "extrap"));
 endfor
 ##
-gas_liquid_if_idx = 1; # strongest quenching signal
-c_h.gas = delta_u = y_if_gas{gas_liquid_if_idx};
-##wall_idx = 3; # in saturated there is no quenching caused by oxygen transfer from PDMS wall to liquid, thus gradient is more likely to the wall
+c_h.gas = delta_u = y_if_gas{1}; # Ic: shows strongest quenching signal
+## Ic1: in saturated there is no quenching caused by oxygen transfer from PDMS wall to liquid, thus gradient is more likely to the wall
 ## but wall of Ic1 may be slightly shifted since alignment of gas interfaces is preferred
-c_h.wall = y_wall = vec (interp1 (msh_c{1}{1}(1,:), wall_y, c_msh{1}(1,:), "pchip", "extrap")); # using the combined best wall estimate
+c_h.wall = y_wall = vec (interp1 (msh_c{1}{1}(1,:), wall_y, x_c, "pchip", "extrap")); # using the combined best wall estimate
 ##
-u_h.gas = interp1 (c_msh{1}(1,:), c_h.gas, u_msh{1}(1,:), "pchip", "extrap");
-u_h.wall = interp1 (c_msh{1}(1,:), c_h.wall, u_msh{1}(1,:), "pchip", "extrap");
+u_h.gas = interp1 (x_c, c_h.gas, x_u, "pchip", "extrap");
+u_h.wall = interp1 (x_c, c_h.wall, x_u, "pchip", "extrap");
 
 ##
 fh_if = figure ();
 hold on;
 for i = 1:nmap_msh_c
-  plot (c_msh{1}(1,:), y_if_wall{i}, [";wall phi idx = " num2str(i) ";"]);
-  plot (c_msh{1}(1,:), y_if_gas{i}, [";gas phi idx = " num2str(i) ";"]);
+  plot (x_c, y_if_wall{i}, [";wall phi idx = " num2str(i) ";"]);
+  plot (x_c, y_if_gas{i}, [";gas phi idx = " num2str(i) ";"]);
 endfor
 xlabel ("x in mm");
 ylabel ("y in mm");
@@ -409,51 +451,41 @@ if testplots
 endif
 
 ## mass flow along x
-massflow = zeros (1, numel (u_dat{1}(1,:)));
-for i = 1 : numel (u_dat{1}(1,:))
-  uprofi = u_dat{1}(:,i) .* u_masks.gas(:,i) .* u_masks.wall(:,i);
-  uprofi(isnan(uprofi)) = 0.0;
-  massflow(i) = sum (uprofi) * sf_u(2) / 1000 * cell_width / 1000 * 3600 * rho;
+[~, ~, rho, ~, ~, ~] = get_fp_lm (pdir, pp.liquid.data, pp.T.data+273.15);
+massflow = size (x_u);
+for i = 1 : numel (x_u)
+  u_y = u_dat{1}(:,i) .* u_masks.gas(:,i) .* u_masks.wall(:,i);
+  u_y(isnan(u_y)) = 0.0;
+  massflow(i) = sum (u_y) * sf_u(2) / 1000 * cell_width / 1000 * 3600 * rho;
 endfor
+
 ## hold-up in domain
-idx = c_msh{1}(1,:) >= domain.xmin & c_msh{1}(1,:) <= domain.xmax ;
+idx = x_c >= domain.xmin & x_c <= domain.xmax ;
 holdup = sf_c(1) * sum (delta_u(idx) - y_wall(idx));
 
-#### minimal smoothing with kind of wall function
-## used only for processing result plot not manipulating saved u_dat
-wall_zero_map = u_masks.wall;
-wall_zero_map(isnan(wall_zero_map)) = 0;
-for i = 1:3
-  u_dat_ip{i} = conv2 (u_dat{i}.*wall_zero_map, ones(1)/1, "same");
-endfor
-u_dat_ip{4} = sqrt (u_dat_ip{1}.^2 + u_dat_ip{2}.^2 + u_dat_ip{3}.^2);
-
 ## processing overview plots
-fh_m = fig_overview_m (pp, pdir, c_msh, c_dat, c_h, c_masks, u_msh, u_dat_ip, u_h, u_masks, massflow, holdup);
-fh_p = fig_overview_p (pp, pdir, c_msh, c_dat, c_masks, u_msh, u_dat_ip, u_masks, massflow);
-fh_u = fig_overview_u (pp, u_msh, u_dat_ip, u_masks, c_msh, c_h, c_masks);
+fh_m = fig_overview_m (pp, pdir, c_msh, c_dat, c_h, c_masks, u_msh, u_dat, u_h, u_masks, massflow, holdup);
+fh_p = fig_overview_p (pp, pdir, c_msh, c_dat, c_masks, u_msh, u_dat, u_masks, massflow);
+fh_u = fig_overview_u (pp, u_msh, u_dat, u_masks, c_msh, c_h, c_masks);
 fh_Ic = fig_overview_Ic (pp, c_msh, c_dat, c_h);
 
-## result
-if (strcmp (questdlg (["store results in: \n \n " save_dir], "@processing", "Yes", "No "), "Yes"))
+## save result and figures
 
-  cd (save_dir);
-  save -v7 "c.v7" c_msh c_dat c_masks c_h delta_u y_wall
-  save -v7 "u.v7" u_msh u_dat u_masks u_h
-  save -v7 "pp.v7" pp
-  save -v7 "y_if.v7" y_if_wall y_if_gas
-  cd (pdir.work);
+cd (save_dir);
+save -v7 "c.v7" c_msh c_dat c_masks c_h delta_u y_wall
+save -v7 "u.v7" u_msh u_dat u_masks u_h
+save -v7 "pp.v7" pp
+save -v7 "y_if.v7" y_if_wall y_if_gas
+cd (pdir.work);
 
-  pp.savedate.data = date_str;
+pp.savedate.data = date_str;
 
-  ## update ltab on disk
-  csv_param_update (idx_measid, ltab, pdir.ltab, pp, head);
+## update ltab on disk
+csv_param_update (idx_measid, ltab, pdir.ltab, pp, head);
 
-  print (fh_u, "-djpeg", "-color", "-r500", [save_dir "overview_u.jpg"]);
-  print (fh_Ic, "-djpeg", "-color", "-r500", [save_dir "overview_Ic.jpg"]);
-  print (fh_p, "-djpeg", "-color", "-r500", [save_dir "overview_p.jpg"]);
-  print (fh_m, "-djpeg", "-color", "-r500", [save_dir "overview_m.jpg"]);
-  print (fh_if, "-djpeg", "-color", "-r500", [save_dir "overview_y_if.jpg"]);
-
-endif
+print (fh_u, "-djpeg", "-color", "-r500", [save_dir "overview_u.jpg"]);
+print (fh_Ic, "-djpeg", "-color", "-r500", [save_dir "overview_Ic.jpg"]);
+print (fh_p, "-djpeg", "-color", "-r500", [save_dir "overview_p.jpg"]);
+print (fh_m, "-djpeg", "-color", "-r500", [save_dir "overview_m.jpg"]);
+print (fh_if, "-djpeg", "-color", "-r500", [save_dir "overview_y_if.jpg"]);
 

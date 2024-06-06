@@ -49,7 +49,7 @@ function fh = fig_overview_p (pp, pdir, c_msh, c_dat, c_masks, u_msh, u_dat, u_m
     title ("velocity profiles");
     hold on;
     xlabel ("y in mm");
-    ylabel ("um / u_Nusselt_surf");
+    ylabel ("u_m / u_Nusselt_surf", "interpreter", "none");
 
     ## nusselt_film
     [~, ~, rho, eta, ~, ~] = get_fp_lm (pdir, pp.liquid.data, pp.T.data+273.15);

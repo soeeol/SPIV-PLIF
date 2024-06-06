@@ -39,7 +39,7 @@ function [is_valid, fh] = check_input_data (measid, cdata, udata)
     xlabel ("x in IA");
     ylabel ("y in IA");
     hax = colorbar ("location", "EastOutside");
-    title (hax, titles{i})
+    title (hax, titles{n_maps})
   endif
 
   ##
