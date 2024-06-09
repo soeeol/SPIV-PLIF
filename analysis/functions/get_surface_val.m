@@ -47,7 +47,7 @@ function [surf_val] = get_surface_val (msh, map, delta_u, method)
 
     case {"min_y_dist"}
 
-      [~, idx_min] = min (abs (delta_u - msh{2}), [], ydim);
+      [~, idx_min] = min (abs ( vec (delta_u)' - msh{2}), [], ydim);
       for i_x = 1:n_x
         surf_val(i_x) = map(idx_min(i_x),i_x);
       end

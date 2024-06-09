@@ -1,13 +1,14 @@
 ##  SPDX-License-Identifier: BSD-3-Clause
 ##  Copyright (c) 2023, Sören Jakob Gerke
 
-## "Interactive" script to process the measurements of type 2d_dyn_Ic
+## Interactive script to process the measurements of type 2d_dyn_Ic
 ##
 ## Author: Sören J. Gerke
 ##
 
 ## processing definition table linking the records
 ltab = csv2cell (pdir.ltab);
+
 ## init processing parameters struct
 pp = init_param ();
 
@@ -18,9 +19,9 @@ pp.type.data = "2d_dyn_Ic";
 pp.cell.data = "2d-r10"; # "flat" "2d-c10" "2d-t10" "2d-r10" "2d-r10-60" "2d-r10-40" "2d-r10-20"
 pp.optset.data = "M13"; # set M13 (including M13 M13b M13c) or M26
 pp.alpha.data = 60; # ° 15 60
-pp.liquid.data = "WG141"; # WG141
+pp.liquid.data = "WG141";
 pp.M.data = 64; # kg/h 8 16 32 64
-pp.X.data = -16; # mm 8 0 -8 -16
+pp.X.data = 8; # mm 8 0 -8 -16
 pp.Z.data = 0; # mm
 pp.G.data = 2; # Nl/min
 pp.T.data = 25; # °C
@@ -53,134 +54,153 @@ recids_avg = {"recid_Ic0" "recid_Ic1"};
 nmap_c = numel (recs)
 c_dat = {};
 for i = 1 : nmap_c
-  c_dat(1,i) = recs{i};
+  rec_c(1,i) = recs{i};
 endfor
 for i = 1 : numel (recs_avg)
-  c_dat(i+1,1) = recs_avg{i};
+  rec_c(i+1,1) = recs_avg{i};
 endfor
 
 ## reduce noise in single frames
 for i = 1 : nmap_c # t
-  c_dat{1,i} = imsmooth (c_dat{1,i}, "Gaussian", 0.75);
+  rec_c{1,i} = imsmooth (rec_c{1,i}, "Gaussian", 0.75);
 endfor
 
 ##
 printf ([">>> found " num2str(nmap_c) " " recids{1} " records for " pp.type.data " processing \n"])
 
 ## initalize meshes
-nmap_cmsh = 3;
-for i = 1 : nmap_cmsh
-  sm = size (c_dat{i,1});
-  c_msh{i} = mesh_uc ([1 sm(2)], [1 sm(1)], [], [], pp, "c", []);
+nmap_msh_c = 3;
+for i = 1 : nmap_msh_c
+  sm = size (rec_c{i,1});
+  msh_c{i} = mesh_uc ([1 sm(2)], [1 sm(1)], [], [], pp, "c", []);
 endfor
 
 ## scaling factors
-sf_c = get_sf (c_msh{1}) # mm / px
+sf_c = get_sf (msh_c{1}) # mm / px
 
 ## validity check for input raw data matching measurement point
-##  are Ic Ic0 Ic1 and u correctly linked in measid table?
+## - are Ic Ic0 Ic1 and u correctly linked in measid table?
 if (isempty(pp.valid.data) || ! pp.valid.data || testplots)
-  [pp.valid.data, fh] = check_input_data (pp.measid.data, c_dat(1:3), []);
+  [pp.valid.data, fh] = check_input_data (pp.measid.data, rec_c(1:3), []);
   csv_param_update (idx_measid, ltab, pdir.ltab, pp, head);
-  print (fh, "-djpeg", "-color", ["-r" num2str(500)], [save_dir "input_data_check_.jpg"]);
+  print (fh, "-djpeg", "-color", "-r500", [save_dir "input_data_check_.jpg"]);
   close (fh);
 endif
 
 ##
-## alignment of maps
+## alignment of maps based on detected wall contours
 ##
 
 ## correct initial offset in Ic maps
 
 ## manually select point on wall on the left side of map (upstream)
-[pp.yoff_c_ini.data] = est_param (c_msh{1}, ind_wall_c(c_dat{1}), [], "yoff_c_ini", pp, "man");
+[pp.yoff_c_ini.data] = est_param (msh_c{3}, ind_wall_c (rec_c{3,1}), [], "yoff_c_ini", pp, "man");
 
 ## shift mesh with inital y offset
-for i = 1:nmap_cmsh
-  [c_msh{i}] = tform_mesh (c_msh{i}, pp, "yoff_c_ini", []);
+for i = 1:nmap_msh_c
+  [msh_c{i}] = tform_mesh (msh_c{i}, pp, "yoff_c_ini", []);
 endfor
 
 ## inital wall estimate from intensity threshold
-thrs = cell (1, nmap_cmsh);
-[~, ~, pout] = wall_xy (c_msh{1}, ind_wall_c (c_dat{1}), [], [], "threshold");
+thrs = cell (1, nmap_msh_c);
+[~, ~, pout] = wall_xy (msh_c{3}, ind_wall_c (rec_c{3,1}), [], [], "threshold");
 thrs(1:3) = pout;
 
 ## update for refinement
-pp.tol_wall.data = 20;
-xy_wall = update_wall_xy (c_msh, c_dat(1:3,1), pp, thrs);
+pp.tol_wall.data = 50;
+xy_wall = update_wall_xy (msh_c, rec_c(1:3,1), pp, thrs);
 
-## visual check
-fh1 = plot_map_msh (c_msh{1}, c_dat{1}, []);
-hold on
-styles = {"-c.", "-m.", "-g."};
-for i = 1:nmap_cmsh
-  plot3 (xy_wall{i}(:,1), xy_wall{i}(:,2), ones(numel(xy_wall{i}(:,1)),1), styles{i} ,"MarkerSize", 8);
+## visual check of estimated wall coordinates
+fh = plot_map_msh (msh_c{1}, rec_c{1}, []);
+hold on;
+for i = 1:nmap_msh_c
+  plot3 (xy_wall{i}(:,1), xy_wall{i}(:,2), ones (numel (xy_wall{i}(:,1)), 1), ".-", "markersize", 12);
 endfor
-xlabel ("x in mm"); ylabel ("y in mm"); title ("estimated wall coordinates");
+xlabel ("x in mm");
+ylabel ("y in mm");
+title ("estimated wall coordinates");
 legend ("Ic map", "wall Ic", "wall Ic0", "wall Ic1");
-if (strcmp (questdlg ("did the wall estimation work ok?", "processing", "Yes", "No", "Yes"), "Yes"))
-  close (fh1)
+if (strcmp (questdlg ("did the wall estimation work?", "processing", "Yes", "No", "Yes"), "Yes"))
+  close (fh);
   csv_param_update (idx_measid, ltab, pdir.ltab, pp, head);
 else
-  error ("adjust tolerance or manual estimate");
-  close (fh1)
+  error ("adjust tolerance or use manual estimate");;
+  close (fh)
 endif
 
 ## rotate c maps and rebuild meshes
 printf ([">>> alignment of maps and meshes \n"])
-for i = 1:nmap_cmsh
+for i = 1:nmap_msh_c
   [pp.rot_c.data, ~] = calc_rot (xy_wall{i}, pp, testplots);
   if (i==1)
     for j = 1:nmap_c
-      [c_dat{1,j}, idxx, idxy] = rotate_map (c_dat{1,j}, pp.rot_c.data);
+      [rec_c{1,j}, idxx, idxy] = rotate_map (rec_c{1,j}, pp.rot_c.data);
     endfor
   else
-    [c_dat{i,1}, idxx, idxy] = rotate_map (c_dat{i,1}, pp.rot_c.data);
+    [rec_c{i,1}, idxx, idxy] = rotate_map (rec_c{i,1}, pp.rot_c.data);
   endif
-  xmin = min (min (c_msh{i}{1}));
-  ymin = min (min (c_msh{i}{2}));
-  [c_msh{i}] = mesh_uc (idxx, idxy, xmin, ymin, pp, "c", sf_c);
+  xmin = min (min (msh_c{i}{1}));
+  ymin = min (min (msh_c{i}{2}));
+  [msh_c{i}] = mesh_uc (idxx, idxy, xmin, ymin, pp, "c", sf_c);
 endfor
 
 ## calculate y and x offset from detected wall contour and translate meshes
-[c_msh, xy_wall, pp] = xy_off_trans (c_msh, c_dat(1:3,1), pp, thrs);
-## visual check
-fh2 = figure (); grid on; hold on
-for i = 1:nmap_cmsh
-  plot3 (xy_wall{i}(:,1), xy_wall{i}(:,2), ones(numel(xy_wall{i}(:,1)),1), styles{i}, "MarkerSize", 8);
+[msh_c, xy_wall, pp] = xy_off_trans (msh_c, rec_c(1:3,1), pp, thrs);
+
+## best of wall estimates combined
+walls_y = [];
+for i = 1:nmap_msh_c
+ walls_y(:,i) = vec (interp1 (xy_wall{i}(:,1), xy_wall{i}(:,2), msh_c{1}{1}(1,:), "pchip", "extrap"));
 endfor
-axis auto
-legend ("wall Ic", "wall Ic0", "wall Ic1")
+lim_y = 0.4; # mm
+wall_y_min = min (walls_y, [], 2);
+wall_y_max = max (walls_y, [], 2);
+idx_min = wall_y_max < lim_y;
+idx_max = wall_y_max >= lim_y;
+wall_y = wall_y_max .* idx_max + wall_y_min .* idx_min;
+
+## visual check of wall alignment
+fh = figure ();
+grid on;
+hold on;
+for i = 1:nmap_msh_c
+  plot (xy_wall{i}(:,1), xy_wall{i}(:,2), ".-", "markersize", 12);
+endfor
+plot (msh_c{1}{1}(1,:), wall_y, "k.-", "markersize", 12);
+xlabel ("x in mm");
+ylabel ("y in mm");
+title ("wall alignment");
+legend ("wall Ic", "wall Ic0", "wall Ic1", "best wall");
 hold off;
 if (strcmp (questdlg (["is the alignment ok?"], "@processing", "Yes", "No", "Yes"), "Yes"))
-  close (fh2)
+  close (fh)
 else
-  error ("adjust tolerance or manual estimate");
+  error ("adjust tolerance or use manual estimate");
 endif
 
 ##
-c_dat_mean = calc_im_avg_cells (c_dat(1,:), "mean");
+rec_c_mean = calc_im_avg_cells (rec_c(1,:), "mean");
 
 ##
 ## gas-liquid interface detection based on recorded fluorescence field
 ##
 pp.tol_if.data = tol = int32 (15);
-## Ic usually passes detection due to strong signal, use result to initialzie search
+## Ic usually passes detection due to strong signal, use result to initialzie search for Ic0 and Ic1
 
 ## gas-liquid interface detection mean
 printf ([">>> interface detection ... \n"])
-[xy_if_mean, xy_idx_mean, ispeak_mean] = interface_xy (c_msh{1}, ind_if (c_dat_mean), tol, "max", pp, []);
+[xy_if_mean, xy_idx_mean, ispeak_mean] = interface_xy (msh_c{1}, ind_if (rec_c_mean), tol, "max", pp, []);
 ## smoothed if as ini input for Ic0 and Ic1
 xy_idx_sm = movmean (xy_idx_mean(:,2), 32);
 i = 1;
 tol = 5;
-[xy_if{i}, xy_idx{i}, ispeak{i}] = interface_xy (c_msh{1}, ind_if (c_dat{1,i}), tol, "min", pp, xy_idx_sm);
-fh3 = check_if_plot (xy_if{i}, ispeak{i}, c_msh{1}, c_dat{1,i});
+[xy_if{i}, xy_idx{i}, ispeak{i}] = interface_xy (msh_c{1}, ind_if (rec_c{1,i}), tol, "min", pp, xy_idx_sm);
+fh = check_if_plot (xy_if{i}, ispeak{i}, msh_c{1}, rec_c{1,i}, []);
 msg = {"interface detection ok?", "adjust tol, starting point or method"};
 if strcmp (questdlg (msg{1}, "", "Yes", "No", "Yes"), "Yes")
-  close (fh3)
+  close (fh)
   for i = 2:nmap_c # initalize search with Ic result
-    [xy_if{i}, xy_idx{i}, ispeak{i}] = interface_xy (c_msh{1}, ind_if (c_dat{1,i}), tol, "max", pp, xy_idx_sm);
+    [xy_if{i}, xy_idx{i}, ispeak{i}] = interface_xy (msh_c{1}, ind_if (rec_c{1,i}), tol, "max", pp, xy_idx_sm);
   endfor
 else
   error (msg{2});
@@ -191,30 +211,29 @@ pp.y0_if_c.data = xy_if{1}(1,2);
 csv_param_update (idx_measid, ltab, pdir.ltab, pp, head);
 
 ## interpolate c_dat and u_dat on common grid
-ymax = max (c_msh{1}{2}(:,1));
+ymax = max (msh_c{1}{2}(:,1));
 ymaxes = (0:0.1:ymax+domain.border);
-##[ ~, idx] = min (abs (max (xy_if{1}(:,2)) - ymaxes));
 idx = min (find (max (xy_if{1}(:,2)) < ymaxes));
 lims_x = [ -domain.border + domain.xmin, domain.xmax + domain.border];
 lims_y = [ -0.1           + 0          , ymaxes(idx) + 0.1];
-msh_c = reg_mesh (lims_x, lims_y, sf_c);
+c_msh = reg_mesh (lims_x, lims_y, sf_c);
+x_c = c_msh{1}(1,:);
 
-phi_out = phi_des_out = min (min (c_dat{1})); phi_sat_out = phi_des_out / 2;
+phi_out = phi_des_out = min (min (rec_c{1})); phi_sat_out = phi_des_out / 2;
 for i = 1:nmap_c
-  c_dat{1,i} = interp2 (c_msh{1}{1}, c_msh{1}{2}, c_dat{1,i}, msh_c{1}, msh_c{2}, "pchip", phi_out); # phi (plus black response)
+  c_dat{1,i} = interp2 (msh_c{1}{1}, msh_c{1}{2}, rec_c{1,i}, c_msh{1}, c_msh{2}, "pchip", phi_out); # phi (plus black response)
 endfor
-c_dat_mean = interp2 (c_msh{1}{1}, c_msh{1}{2}, c_dat_mean, msh_c{1}, msh_c{2}, "pchip", phi_out); # phi
-c_dat{2,1} = interp2 (c_msh{2}{1}, c_msh{2}{2}, c_dat{2,1}, msh_c{1}, msh_c{2}, "pchip", phi_des_out); # phi_des
-c_dat{3,1} = interp2 (c_msh{3}{1}, c_msh{3}{2}, c_dat{3,1}, msh_c{1}, msh_c{2}, "pchip", phi_des_out); # phi_sat
-c_msh = msh_c;
+c_dat_mean = interp2 (msh_c{1}{1}, msh_c{1}{2}, rec_c_mean, c_msh{1}, c_msh{2}, "pchip", phi_out); # phi
+c_dat{2,1} = interp2 (msh_c{2}{1}, msh_c{2}{2}, rec_c{2,1}, c_msh{1}, c_msh{2}, "pchip", phi_des_out); # phi_des
+c_dat{3,1} = interp2 (msh_c{3}{1}, msh_c{3}{2}, rec_c{3,1}, c_msh{1}, c_msh{2}, "pchip", phi_des_out); # phi_sat
 
 ## interplolate wall and interface contours aswell
 map_wall_indicator = 3; # in saturated there is no quenching caused by oxygen transfer from PDMS wall to liquid, thus gradient is more likely the wall
 for i = 1:nmap_c
-  c_h.gas{i} = interp1 (xy_if{1}(:,1), (xy_if{i}(:,2)), c_msh{1}(1,:), "pchip", "extrap");
+  c_h.gas{i} = interp1 (xy_if{1}(:,1), (xy_if{i}(:,2)), x_c, "pchip", "extrap");
 endfor
-c_h.wall = interp1 (xy_wall{map_wall_indicator}(:,1), xy_wall{map_wall_indicator}(:,2), c_msh{1}(1,:), "pchip", "extrap");
-xy_if_mean_ip = interp1 (xy_if_mean(:,1), xy_if_mean(:,2), c_msh{1}(1,:), "pchip", "extrap");
+c_h.wall = interp1 (msh_c{1}{1}(1,:), wall_y, x_c, "pchip", "extrap");
+xy_if_mean_ip = interp1 (xy_if_mean(:,1), xy_if_mean(:,2), x_c, "pchip", "extrap");
 
 ## masks
 val_mask = NaN; # 0
@@ -227,12 +246,12 @@ endif
 
 fh = plot_avg_phi_maps (c_msh, c_dat_mean, c_dat{2,1}, c_dat{3,1});
 hold on;
-plot3 (c_msh{1}(1,:), xy_if_mean_ip, ones (numel (c_msh{1}(1,:)), 1), "r");
-plot3 (c_msh{1}(1,:), c_h.wall, ones (numel (c_msh{1}(1,:)), 1), "r");
+plot3 (x_c, xy_if_mean_ip, ones (numel (x_c), 1), "r");
+plot3 (x_c, c_h.wall, ones (numel (x_c), 1), "r");
 print (fh, "-djpeg", "-color", ["-r" num2str(500)], [save_dir "avg_phi_maps_wall-aligned.jpg"]);
 
 ## x pos for profile plots
-[~, xpos ] = min ( abs ( c_msh{1}(1,:) - 0));
+[~, xpos ] = min (abs (x_c - 0));
 
 ## h vs t
 for i = 1:nmap_c
@@ -240,14 +259,14 @@ for i = 1:nmap_c
 endfor
 fig_ift = figure ();
 hold on;
-plot (1./f_Hz .* (0:1:numel(hvst)-1),hvst, "k-o;single frames;");
-plot (1./f_Hz .*[0 1].*(numel(hvst)-1),[1 1].*xy_if_mean_ip(xpos),"b;image mean;")
-title ("interface position at x = 0 mm")
-xlabel ("t in s")
-ylabel ("y_i_f in mm")
+plot (1./f_Hz .* (0:1:numel(hvst)-1), hvst, "k-o;single frames;");
+plot (1./f_Hz .* [0 1] .* (numel(hvst)-1), [1 1] .* xy_if_mean_ip(xpos), "b;image mean;");
+title ("interface position at x = 0 mm");
+xlabel ("t in s");
+ylabel ("y_i_f in mm");
 
 for j = 1:nmap_c # t
-  [~, h_idx ] = min ( abs ( c_msh{2}(:,xpos) - c_h.gas{j}(xpos) ));
+  [~, h_idx ] = min (abs (c_msh{2}(:,xpos) - c_h.gas{j}(xpos)));
   profiles{j} = c_dat{1,j}(h_idx-20:h_idx+2,xpos);
 endfor
 ## mean profile
@@ -260,19 +279,19 @@ c_profile_mean = c_profile_mean / nmap_c;
 fig_ifp = figure ();
 hold on;
 i = 1;
-[~, h_idx ] = min ( abs ( c_msh{2}(:,xpos) - c_h.gas{j}(xpos) ));
-plot (c_msh{2}(h_idx-20:h_idx+2,xpos)-c_h.gas{j}(xpos),profiles{j},".-k; single frames (10 samples);");
-plot (c_msh{2}(h_idx-20:h_idx+2,xpos)-c_msh{2}(h_idx,xpos),c_profile_mean,"o-r; mean of single frame;")
-plot (c_msh{2}(h_idx-20:h_idx+2,xpos)-xy_if_mean_ip(xpos),c_dat_mean(h_idx-20:h_idx+2,xpos),"xb;image mean;")
+[~, h_idx ] = min (abs (c_msh{2}(:,xpos) - c_h.gas{j}(xpos)));
+plot (c_msh{2}(h_idx-20:h_idx+2,xpos)-c_h.gas{j}(xpos),profiles{j}, ".-k; single frames (10 samples);");
+plot (c_msh{2}(h_idx-20:h_idx+2,xpos)-c_msh{2}(h_idx,xpos),c_profile_mean, "o-r; mean of single frame;");
+plot (c_msh{2}(h_idx-20:h_idx+2,xpos)-xy_if_mean_ip(xpos),c_dat_mean(h_idx-20:h_idx+2,xpos), "xb;image mean;");
 lh = legend ("autoupdate", "off");
 for j = 2:10#nmap_c # t
-  [~, h_idx ] = min ( abs ( c_msh{2}(:,xpos) - c_h.gas{j}(xpos) ));
-  plot (c_msh{2}(h_idx-20:h_idx+2,xpos)-c_h.gas{j}(xpos),profiles{j},".-k");
+  [~, h_idx ] = min (abs (c_msh{2}(:,xpos) - c_h.gas{j}(xpos)));
+  plot (c_msh{2}(h_idx-20:h_idx+2,xpos)-c_h.gas{j}(xpos), profiles{j}, ".-k");
 endfor
 hold off;
-title ("intensity profiles (quenched) at x = 0 mm")
-xlabel ("y - y_i_f in mm")
-ylabel ("Ic in a.u.")
+title ("intensity profiles (quenched) at x = 0 mm");
+xlabel ("y - y_i_f in mm");
+ylabel ("Ic in a.u.");
 
 
 if_y_mean = 0;
@@ -284,27 +303,27 @@ if_y_mean = if_y_mean / nmap_c;
 fig_if = figure ();
 hold on;
 i = 1;
-plot (c_msh{1}(1,:), c_h.gas{i}, "k.;single frame;");
-plot (c_msh{1}(1,:), if_y_mean, "dr;mean single frame;");
-plot (c_msh{1}(1,:), xy_if_mean_ip, "xb;image mean;");
+plot (x_c, c_h.gas{i}, "k.;single frame;");
+plot (x_c, if_y_mean, "dr;mean single frame;");
+plot (x_c, xy_if_mean_ip, "xb;image mean;");
 lh = legend ("autoupdate", "off");
 for i = 2:nmap_c
-  plot (c_msh{1}(1,:), c_h.gas{i},"k.");
+  plot (x_c, c_h.gas{i}, "k.");
 endfor
 hold off;
-title ("estimated interface position from Ic")
-xlabel ("x in mm")
-ylabel ("y in mm")
+title ("estimated interface position from Ic");
+xlabel ("x in mm");
+ylabel ("y in mm");
 
 ## statistics
 vals = [];
-for i = 1:numel(c_h.gas{1})
+for i = 1 : numel (c_h.gas{1})
   for j = 1:nmap_c
     vals(i,j) = c_h.gas{j}(i);
   endfor
 endfor
 
-max_dev = max (abs(vals - mean (vals,  2)), [], 2);
+max_dev = max (abs (vals - mean (vals,  2)), [], 2);
 mad_dev = mad (vals, 0, 2); # 0:mean 1:median #
 std_dev = std (vals, [], 2);
 mmax_dev = median (max_dev)
@@ -313,20 +332,20 @@ mstd_dev = median (std_dev)
 
 fig_ifs = figure ();
 hold on;
-plot (c_msh{1}(1,:), max_dev,".k-;maximum absolute deviation;");
-plot (c_msh{1}(1,:), std_dev,".r-;standard deviation;");
-plot (c_msh{1}(1,:), mad_dev,".b-;mean absolute deviation;");
-lh = legend ("autoupdate","off");
-plot ([-4 4], [1 1] .* mmax_dev, "*k-");
-plot ([-4 4], [1 1] .* mmad_dev, "*b-");
-plot ([-4 4], [1 1] .* mstd_dev, "*r-");
+plot (x_c, max_dev, ".k-;maximum absolute deviation;");
+plot (x_c, std_dev, ".r-;standard deviation;");
+plot (x_c, mad_dev, ".b-;mean absolute deviation;");
+lh = legend ("autoupdate", "off");
+plot ([-domain.xmin domain.xmax], [1 1] .* mmax_dev, "*k-");
+plot ([-domain.xmin domain.xmax], [1 1] .* mmad_dev, "*b-");
+plot ([-domain.xmin domain.xmax], [1 1] .* mstd_dev, "*r-");
 hold off;
-title ("deviation from mean interface position")
-xlabel ("x in mm")
-ylabel ("dispersion measures in mm")
+title ("deviation from mean interface position");
+xlabel ("x in mm");
+ylabel ("dispersion measures in mm");
 
 ## result
-if strcmp (questdlg (["store results in \n " save_dir], "@processing", "Yes", "No "), "Yes")
+if (strcmp (questdlg (["store results in \n " save_dir], "@processing", "Yes", "No "), "Yes"))
   status = save_result (save_dir, pdir.work, c_msh, c_dat, c_masks, c_h, [], [], [], [], pp);
   ## save statistics
   cd (save_dir);
@@ -337,10 +356,10 @@ if strcmp (questdlg (["store results in \n " save_dir], "@processing", "Yes", "N
     ## update ltab on disk
     csv_param_update (idx_measid, ltab, pdir.ltab, pp, head);
     ##
-    print (fig_ift, "-djpeg", "-color", ["-r" num2str(250)], [save_dir "overview_5_ift.jpg"]);
-    print (fig_ifp, "-djpeg", "-color", ["-r" num2str(250)], [save_dir "overview_5_ifp.jpg"]);
-    print (fig_ifs, "-djpeg", "-color", ["-r" num2str(250)], [save_dir "overview_5_ifs.jpg"]);
-    print (fig_if, "-djpeg", "-color", ["-r" num2str(250)], [save_dir "overview_5_if.jpg"]);
+    print (fig_ift, "-djpeg", "-color", "-r500", [save_dir "overview_5_ift.jpg"]);
+    print (fig_ifp, "-djpeg", "-color", "-r500", [save_dir "overview_5_ifp.jpg"]);
+    print (fig_ifs, "-djpeg", "-color", "-r500", [save_dir "overview_5_ifs.jpg"]);
+    print (fig_if, "-djpeg", "-color", "-r500", [save_dir "overview_5_if.jpg"]);
   endif
 else
   error ("not ready to save");

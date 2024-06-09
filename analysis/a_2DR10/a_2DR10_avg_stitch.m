@@ -1,9 +1,9 @@
 ##  SPDX-License-Identifier: BSD-3-Clause
 ##  Copyright (c) 2024, Sören Jakob Gerke
 
-## sd section results
+## stitch section results
 ## - cn
-## TODO: - velocity field
+## - velocity field
 
 ##
 ## Author: Sören J. Gerke
@@ -43,7 +43,7 @@ if 1
   i_T = 1; ap.i_T = i_T;
   i_Z = 1; ap.i_Z = i_Z;
   ## overrides
-  i_M = it_M = 4
+  i_M = it_M = 1
 ##  i_M = it_M = 1:4
 
   ## prepare directories
@@ -58,8 +58,8 @@ if 1
 
 endif
 
-## [10] x-sd dyn avg data and store
-## - first sd cn map together with interface to estimate best intersection offset
+## [10] x-stitch dyn avg data and store
+## - first stitch cn map together with interface to estimate best intersection offset
 
 ##if 1
 
@@ -71,7 +71,7 @@ endif
   sd{1}.msh_fn = "cn_dyn.v7";
   sd{1}.msh_var = "c_msh";
   sd{1}.dat_fn{1} = "delta_u_dyn.v7";
-  sd{1}.dat_var{1} = {"delta_u_fit_avg" "y_wall"};
+  sd{1}.dat_var{1} = {"delta_u" "y_wall"};
   sd{1}.dat_fn{2} = "cn_dyn.v7";
   sd{1}.dat_var{2} = {"cn_dyn_avg"};
   sd{1}.dat_fn{3} = "phi_avg.v7";
@@ -95,21 +95,15 @@ endif
   sd{3}.dat_fn{1} = "u.v7";
   sd{3}.dat_var{1} = {"u_dat"};
 
-  sd{4}.sd_name = "c_avg";
+  sd{4}.sd_name = "cn_avg";
   sd{4}.a_dir = [pdir.processed ""];
   sd{4}.a_id_sec = ["2d_avg_uIc1"];
   sd{4}.msh_fn = "c.v7";
   sd{4}.msh_var = "c_msh";
   sd{4}.dat_fn{1} = "c.v7";
   sd{4}.dat_var{1} = {"c_dat", "y_wall", "delta_u"};
-
-  sd{5}.sd_name = "y_if";
-  sd{5}.a_dir = [pdir.processed ""];
-  sd{5}.a_id_sec = ["_2d_avg_uIc1"];
-  sd{5}.msh_fn = "c.v7";
-  sd{5}.msh_var = "c_msh";
-  sd{5}.dat_fn{1} = "y_if.v7";
-  sd{5}.dat_var{1} = {"y_if_gas" "y_if_wall"};
+  sd{4}.dat_fn{2} = "y_if.v7";
+  sd{4}.dat_var{2} = {"y_if_gas" "y_if_wall"};
 
   ## TODO: per data variable: if is time series calc temporal average before stitching
 
@@ -127,98 +121,77 @@ endif
       ## measurement identifier
       ap.id_meas = get_measid_ap (ap);
 
-      ## per section
+      ## dyn avg valid
       data_files = glob ([sd{1}.a_dir ap.id_meas "/" "*_" sd{1}.a_id_sec "/" sd{1}.dat_fn{1}]);
       data_file = data_files{end} # use latest result
-
-      load (data_file, "x", "y_wall", "delta_u_fit_avg");
+      x = y_wall = delta_u = [];
+      load (data_file, "x", "y_wall", "delta_u");
       x_MX{i_M,i_X} = x;
       y_wall_MX{i_M,i_X} = y_wall;
-      delta_u_avg_MX{i_M,i_X} = delta_u_fit_avg;
+      delta_u_dyn_avg_MX{i_M,i_X} = calc_vec_avg_cells (delta_u, "median");
+
+      ## avg all
+      data_files = glob ([sd{4}.a_dir ap.id_meas "/" "*_" sd{4}.a_id_sec "/" sd{4}.dat_fn{1}]);
+      data_file = data_files{end} # use latest result
+      c_msh = y_wall = delta_u = [];
+      load (data_file, "c_msh", "y_wall", "delta_u");
+      x_avg_MX{i_M,i_X} = c_msh{1}(1,:);
+      delta_u_avg_MX{i_M,i_X} = delta_u;
+      y_wall_avg_MX{i_M,i_X} = y_wall;
 
     endfor
   endfor
 
+  if 0
+    ## helper for systematic x offset
+    xoff_test = []
+    for i_M = it_M
+      for i_X = it_X(1:end-1)
+        x_l = x_MX{i_M,i_X};
+        x_r = x_MX{i_M,i_X+1};
+        xpos_l = ap.ids_X(i_X);
+        xpos_r = ap.ids_X(i_X+1);
+        delta_u_l = delta_u_avg_MX{i_M,i_X};
+        delta_u_r = delta_u_avg_MX{i_M,i_X+1};
+        xoff_test(i_M,i_X) = calc_xsec_if_offset_x (x_l, x_r, delta_u_l, delta_u_r, xpos_l, xpos_r);
+      endfor
+    endfor
+    xoff_test
+  endif
 
   xoff = zeros (numel(ap.ids_M), numel(ap.ids_X));
   xoff(:,1) = +0.005;
-##  xoff(:,3:4) = +0.1;
-  xoff(4,3) = +0.3;
-##  xoff(4,4) = +0.3; # recorded on another day
+  xoff(1,3:4) = +0.2;
+  xoff(2,1) = +0.025;
+  xoff(4,3:4) = +0.4; # recorded on another day
 
   yoff = zeros (numel(ap.ids_M), numel(ap.ids_X));
-  yoff(2,2) = +0.005;
-  yoff(4,1) = -0.005;
+  yoff(2,1) = -0.005;
+  yoff(3,3) = +0.005;
+  yoff(4,1) = -0.01;
   yoff(4,3:4) = +0.01;
 
-  ## before inter section offset correction
+  ## test plot offset correction
   figure (); hold on;
   for i_M = it_M
     for i_X = it_X
-      plot (x_MX{i_M,i_X} + ap.ids_X(i_X) + xoff(i_M,i_X), delta_u_avg_MX{i_M,i_X} + yoff(i_M,i_X), "k");
-      plot (x_MX{i_M,i_X} + ap.ids_X(i_X) + xoff(i_M,i_X), y_wall_MX{i_M,i_X}, "k");
+      plot (x_MX{i_M,i_X} + ap.ids_X(i_X) + xoff(i_M,i_X), delta_u_dyn_avg_MX{i_M,i_X} + yoff(i_M,i_X), "k;filtered avg;");
+      plot (x_MX{i_M,i_X} + ap.ids_X(i_X) + xoff(i_M,i_X), y_wall_MX{i_M,i_X} + yoff(i_M,i_X), "k;wall;");
+      plot (x_avg_MX{i_M,i_X} + ap.ids_X(i_X) + xoff(i_M,i_X), delta_u_avg_MX{i_M,i_X} + yoff(i_M,i_X), "b;avg;");
+      plot (x_avg_MX{i_M,i_X} + ap.ids_X(i_X) + xoff(i_M,i_X), y_wall_avg_MX{i_M,i_X} + yoff(i_M,i_X), "b;wall;");
     endfor
   endfor
+  plot ((x_sec-0.06)*1e3, [0 0 0 0 0; [1 1 1 1 1]], "--k;x section border;");
   axis image;
-  ylim ([0 max(delta_u_avg_MX{it_M(end),2})]);
-
-##  ## helper to find systematic offset
-##  xoff_test = []
-##  for i_M = it_M
-##    for i_X = it_X(1:end-1)
-##      x_l = x_MX{i_M,i_X};
-##      x_r = x_MX{i_M,i_X+1};
-##      xpos_l = ap.ids_X(i_X);
-##      xpos_r = ap.ids_X(i_X+1);
-##      delta_u_l = delta_u_avg_MX{i_M,i_X};
-##      delta_u_r = delta_u_avg_MX{i_M,i_X+1};
-##      xoff(i_M,i_X) = calc_xsec_if_offset_x (x_l, x_r, delta_u_l, delta_u_r, xpos_l, xpos_r);
-##    endfor
-##  endfor
-##  xoff_test
+  ylim ([0 max(delta_u_dyn_avg_MX{it_M(end),2})]);
 
 
-###### c records to find connection of x positionings
-#### i_M = 1
-##20211125-M1-15 xoff25_1
-##20211128-M2-28 xoff28_2 = 0
-##20211128-M2-33 xoff28_3
-##20211128-M2-34 xoff28_4
-
-#### i_M = 2
-##20211125-M1-14 xoff25_1 = 0.05
-##20211128-M2-27 xoff28_2
-##20211128-M2-32 xoff28_3 = 0.1;
-##20211128-M2-35 xoff28_4 = 0.1;
-
-#### i_M = 3
-##20211125-M1-10 xoff25_1
-##20211128-M2-25 xoff28_2
-##20211129-M1-8
-##20211129-M1-9
-
-#### i_M = 4
-##20211125-M1-12 xoff25_1
-##20211128-M2-26 xoff28_2
-##20211130-M1-6
-##20211130-M1-4
-
-## TODO: check that u records match ... no they wont exactly since they were usually recorded with phi_sat,
-## if no huuge x offset its best not to offset x since resolution of PIV is much smaller than c
 
 
-## x = 0 position is fixed by wall measured
 
-
-##  yoff = zeros (numel(ap.ids_M), numel(ap.ids_X));
-##  yoff(1,4) = +0.005;
-##  yoff(2,1) = +0.02;
-##  yoff(2,4) = -0.005;
-##  yoff(3,3) = +0.015;
-##  yoff(3,4) = +0.015;
-##  yoff(4,1) = -0.015;
-##  yoff(4,3) = +0.01;
-##  yoff(4,4) = +0.005;
+  ##
+  ##
+  ##
 
   msh_cn = x = y = {};
   cn = delta_u = y_wall = {};
@@ -254,7 +227,8 @@ endif
           x{i_M} = msh_gl{1}(1,:);
           y{i_M} = msh_gl{2}(:,1);
           cn{i_M} = dat_gl.cn_dyn_avg;
-          delta_u{i_M} = dat_gl.delta_u_fit_avg;
+##          delta_u{i_M} = dat_gl.delta_u_fit_avg;
+          delta_u{i_M} = calc_vec_avg_cells (dat_gl.delta_u, "median");
           y_wall{i_M} = dat_gl.y_wall;
           phi_avg{i_M} = dat_gl.phi_avg;
           phi_des{i_M} = dat_gl.phi_des;
@@ -277,12 +251,13 @@ endif
 
   ## check continuity of delta_u, y_wall and surface velocity estimate of stitching result
   u_M_ip = interp2 (msh_u{i_M}{1}, msh_u{i_M}{2}, dat_u{i_M}{4}, msh_cn{i_M}{1}, msh_cn{i_M}{2}, "pchip", 0.0); #
-  u_s = get_surface_val (msh_cn{i_M}, u_M_ip, delta_u{i_M}, "min_y_dist");
+  u_s = get_surface_val (msh_cn{i_M}, u_M_ip, delta_u{i_M}', "min_y_dist");
 
   fh = figure ();
   hold on;
   plot (x{i_M}, u_s/max(u_s), "b;u_s norm;");
   plot (x{i_M}, delta_u{i_M}/max(delta_u{i_M}), "k;delta_u;");
+  plot (msh_gl{1}(1,:), dat_gl.delta_u/max(dat_gl.delta_u), "r;delta_u avg;");
   plot (x{i_M}, y_wall{i_M}/max(y_wall{i_M}), "r;y wall;");
   plot ((x_sec-0.06)*1e3, [0 0 0 0 0; [1 1 1 1 1]], "--k;x section border;")
   xlabel ("x* in mm");

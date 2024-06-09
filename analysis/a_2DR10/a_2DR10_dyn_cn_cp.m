@@ -93,7 +93,7 @@ if 1
       ap.cp_if_sfit_sps = 9;
       switch (i_M)
         case 1
-          c_calib_sig_X = [4 0 0 3] # for i_M=1&i_X=1 saturation recorded film was slightly thinner and thus of lower fluorescence
+          c_calib_sig_X = [2 0 0 2] # for i_M=1&i_X=1 saturation recorded film was slightly thinner and thus of lower fluorescence
         case 2
           c_calib_sig_X = [0 0 0 0] # TODO: first check for intra section offset
         case 3
