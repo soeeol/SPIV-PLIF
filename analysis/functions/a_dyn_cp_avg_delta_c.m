@@ -36,12 +36,12 @@ function [ap] = a_dyn_cp_avg_delta_c (ap)
 
   ## test plot concentration field with interface normal lines
   fh = plot_cn_if_norm (x, delta_u_fit{1}, msh_n, c_msh, cn_dyn{1}, ap.ids_C{ap.i_C}, ap.ids_X(ap.i_X));
-  print (fh, "-djpeg", "-color", ["-r" num2str(500)], [ap.save_dir_id "if-normals"]);
+  print (fh, "-djpeg", "-color", "-r500", [ap.save_dir_id "if-normals"]);
 
   ## test plot interpolated concentration profiles
   fh = plot_cp_norm (p_msh, cp{1});
   title ("cp")
-  print (fh, "-djpeg", "-color", ["-r" num2str(500)], [ap.save_dir_id "cp_if_norm"]);
+  print (fh, "-djpeg", "-color", "-r500", [ap.save_dir_id "cp_if_norm"]);
 
   ## calculate bulk to interface concentration normalized profiles
   [cp_n, cp_b, cp_s] = cp_norm_field (snp, cp);
@@ -53,12 +53,12 @@ function [ap] = a_dyn_cp_avg_delta_c (ap)
   plot (x, cp_s{1}, "b;cn surface;");
   xlabel ("x in mm");
   ylabel ("cn in -");
-  print (fh, "-djpeg", "-color", ["-r" num2str(500)], [ap.save_dir_id "cp_bulk_surface"]);
+  print (fh, "-djpeg", "-color", "-r500", [ap.save_dir_id "cp_bulk_surface"]);
 
   ## test plot normalized concentration profiles
   fh = plot_cp_norm (p_msh, cp_n{1});
   title ("cp normalized")
-  print (fh, "-djpeg", "-color", ["-r" num2str(500)], [ap.save_dir_id "cp_n"]);
+  print (fh, "-djpeg", "-color", "-r500", [ap.save_dir_id "cp_n"]);
 
   ## shift profile peak to snp = 0
   [snp_o, p_msh_o, cp_n_o] = cp_peak_shift (snp, ap.cp_if_sn_idx_off, p_msh, cp_n);
@@ -66,15 +66,15 @@ function [ap] = a_dyn_cp_avg_delta_c (ap)
   ## test plot cp_n shifted
   fh = plot_cp_norm (p_msh_o, cp_n_o{1});
   title ("cp normalized, offset to max")
-  print (fh, "-djpeg", "-color", ["-r" num2str(500)], [ap.save_dir_id "cp_n_o"]);
+  print (fh, "-djpeg", "-color", "-r500", [ap.save_dir_id "cp_n_o"]);
 
   ## compute temporal average concentration profile field
   cp_n_avg = calc_im_avg_cells (cp_n_o, "median");
 
   ## test plot averaged cp_n_o
   fh = plot_cp_norm (p_msh_o, cp_n_avg);
-  title ("cp normalized, offset to max, median")
-  print (fh, "-djpeg", "-color", ["-r" num2str(500)], [ap.save_dir_id "cp_n_avg"]);
+  title ("cp normalized, offset to max, temporal median")
+  print (fh, "-djpeg", "-color", "-r500", [ap.save_dir_id "cp_n_avg"]);
 
   ##
   ## normalized concentration profile fit
@@ -98,7 +98,7 @@ function [ap] = a_dyn_cp_avg_delta_c (ap)
   xlabel ("x in mm");
   ylabel ("delta_c in mm");
   ylim ([0 2.0*median(delta_c)])
-  print (fh, "-djpeg", "-color", ["-r" num2str(500)], [ap.save_dir_id "delta_c_avg"]);
+  print (fh, "-djpeg", "-color", "-r500", [ap.save_dir_id "delta_c_avg"]);
 
   fh = plot_map_msh (p_msh_o, cp_nn_avg, []);
   caxis ([0 1]);
@@ -111,7 +111,7 @@ function [ap] = a_dyn_cp_avg_delta_c (ap)
   ylim ([0 max(snp_o)])
   legend ({"cp nn", "delta_c"});
   legend ("location", "southeast");
-  print (fh, "-djpeg", "-color", ["-r" num2str(500)], [ap.save_dir_id "delta_c_cp_nn_avg"]);
+  print (fh, "-djpeg", "-color", "-r500", [ap.save_dir_id "delta_c_cp_nn_avg"]);
 
   ## store results
   cd (ap.save_dir_id);

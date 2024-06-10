@@ -452,7 +452,7 @@ endif
 
 ## mass flow along x
 [~, ~, rho, ~, ~, ~] = get_fp_lm (pdir, pp.liquid.data, pp.T.data+273.15);
-massflow = size (x_u);
+massflow = zeros (size (x_u));
 for i = 1 : numel (x_u)
   u_y = u_dat{1}(:,i) .* u_masks.gas(:,i) .* u_masks.wall(:,i);
   u_y(isnan(u_y)) = 0.0;

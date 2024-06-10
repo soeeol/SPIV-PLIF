@@ -1,12 +1,12 @@
 ##  SPDX-License-Identifier: BSD-3-Clause
 ##  Copyright (c) 2023, Sören Jakob Gerke
 
-## create "is liquid" mask covering field
+## create "is not part of domain" mask
 ##
 ## Author: Sören J. Gerke
 ##
 
-function mask = masking (field, domain, size_map, y_min, y_if, sf, idx_off, out_val)
+function mask = masking (domain, size_map, y_min, y_if, sf, idx_off, out_val)
 
   mask = ones (size_map); # inside value
 

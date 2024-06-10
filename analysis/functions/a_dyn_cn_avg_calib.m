@@ -101,14 +101,14 @@ function [c_msh, cn_dyn, cn_dyn_avg, x, delta_u, delta_u_fit, delta_u_fit_avg, i
 
   ## plot phi_y_profiles
   fh = plot_y_phi_profiles_test (y, phi_avg, phi_des, phi_sat, n_x, delta_u_phi_avg_valid);
-  print (fh, "-djpeg", "-color", ["-r" num2str(500)], [ap.save_dir_id "phi_y_profiles_test.jpg"]);
+  print (fh, "-djpeg", "-color", "-r500", [ap.save_dir_id "phi_y_profiles_test.jpg"]);
 
   ## plot phi_avg overview
   fh = plot_avg_phi_maps (c_msh, phi_avg, phi_des, phi_sat);
   hold on;
   plot3 (x, delta_u_phi_avg_valid, ones (numel (x), 1), "r");
   plot3 (x, y_wall, ones (numel (x), 1), "r");
-  print (fh, "-djpeg", "-color", ["-r" num2str(500)], [ap.save_dir_id "phi_avg_maps.jpg"]);
+  print (fh, "-djpeg", "-color", "-r500", [ap.save_dir_id "phi_avg_maps.jpg"]);
 
   [phi_avg_s, phi_des_s, phi_sat_s] = phi_surface (phi_avg, phi_des, phi_sat, y_min, delta_u_phi_avg_valid, sf);
   fh = figure ();
@@ -118,7 +118,7 @@ function [c_msh, cn_dyn, cn_dyn_avg, x, delta_u, delta_u_fit, delta_u_fit_avg, i
   plot (x, phi_sat_s, "r;phi sat surf;");
   xlabel ("x in mm")
   ylabel ("intensity in a.u.")
-  print (fh, "-djpeg", "-color", ["-r" num2str(500)], [ap.save_dir_id "phi_surface_profiles.jpg"]);
+  print (fh, "-djpeg", "-color", "-r500", [ap.save_dir_id "phi_surface_profiles.jpg"]);
 
   ##
   ## dynamic concentration field
@@ -141,7 +141,8 @@ function [c_msh, cn_dyn, cn_dyn_avg, x, delta_u, delta_u_fit, delta_u_fit_avg, i
   delta_u_avg = du_xy_avg(:,2);
 
   ## smooth spline fit representation of detected interface
-  spf = splinefit (double(x), delta_u_avg, round (ap.cp_if_sfit_sps * 1), "order", ap.cp_if_sfit_order, "beta", 0.75);
+  ## - rm_ext.m: first remove deviation at the x limits, here +/- 0.25 mm filter width in M13 case
+  spf = splinefit (double(x), rm_ext (x, delta_u_avg, 101), round (ap.cp_if_sfit_sps * 1), "order", ap.cp_if_sfit_order, "beta", 0.75);
   delta_u_fit_avg = ppval (spf, x);
 
   cax_max = get_cax_max (cn_dyn_avg, y_min, delta_u_fit_avg, sf)
@@ -159,19 +160,19 @@ function [c_msh, cn_dyn, cn_dyn_avg, x, delta_u, delta_u_fit, delta_u_fit_avg, i
 
   ## smooth spline fit representation of interface
   for i_t = 1:n_t
-    spf = splinefit (double(x), delta_u{i_t}, round (ap.cp_if_sfit_sps * 1), "order", ap.cp_if_sfit_order, "beta", 0.75);
+    spf = splinefit (double(x),  rm_ext (x, delta_u{i_t}, 101), round (ap.cp_if_sfit_sps * 1), "order", ap.cp_if_sfit_order, "beta", 0.75);
     delta_u_fit{i_t} = ppval (spf, x);
   endfor
 
   ## plot cn_avg
   fh = plot_map_msh_cn (c_msh, cn_dyn_avg, cax_max, x, ap.ids_X(ap.i_X), y_wall, delta_u_avg, delta_u_fit_avg, ap.ids_C(ap.i_C){1});
-  print (fh, "-djpeg", "-color", ["-r" num2str(500)], [ap.save_dir_id "cn_avg.jpg"]);
+  print (fh, "-djpeg", "-color", "-r500", [ap.save_dir_id "cn_avg.jpg"]);
 
   ## plot cn_dyn
   fh = figure ();
   for i_t = 1:1:n_t
     plot_map_msh_cn_t (c_msh, cn_dyn{i_t}, cax_max, x, delta_u_fit_avg, delta_u{i_t}, delta_u_fit{i_t}, i_t, fh)
-    print (fh, "-djpeg", "-color", ["-r" num2str(500)], [ap.save_dir_id "cn_dyn_t_" num2str(i_t) ".jpg"]);
+    print (fh, "-djpeg", "-color", "-r500", [ap.save_dir_id "cn_dyn_t_" num2str(i_t) ".jpg"]);
   endfor
 
   ## plot random cn_dyn_profile
@@ -179,12 +180,12 @@ function [c_msh, cn_dyn, cn_dyn_avg, x, delta_u, delta_u_fit, delta_u_fit_avg, i
   fh = figure ();
   for i_t = 1:1:n_t
     plot_y_cn_profiles_t (fh, y, cn_dyn_avg, cn_dyn{i_t}, delta_u_fit_avg, delta_u{i_t}, x_idx, i_t)
-    print (fh, "-djpeg", "-color", ["-r" num2str(500)], [ap.save_dir_id "cn_dyn_y_profile_t_" num2str(i_t) ".jpg"]);
+    print (fh, "-djpeg", "-color", "-r500", [ap.save_dir_id "cn_dyn_y_profile_t_" num2str(i_t) ".jpg"]);
   endfor
 
   ## plot if stat
   fh = plot_if_stats (if_stats, x, dom);
-  print (fh, "-djpeg", "-color", ["-r" num2str(500)], [ap.save_dir_id "if_dyn_stat.jpg"]);
+  print (fh, "-djpeg", "-color", "-r500", [ap.save_dir_id "if_dyn_stat.jpg"]);
 
   ## store results
   cd (ap.save_dir_id);

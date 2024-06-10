@@ -115,16 +115,18 @@ function [msh_gl dat_gl] = stitch_msh_dat (sd, ap)
     yoff = ap.sd.yoff_X;
     for i_v = 1:n_v
       switch (data_vars{i_v})
-        case {"delta_u_fit_avg"}
-          for i_X = 1:n_X
-            S.(data_vars{i_v}){i_X} = S.(data_vars{i_v}){i_X} + yoff(i_X);
-          endfor
-        case {"y_if_gas"}
-          for i_X = 1:n_X
-            for i_m = 1 : numel (S.(data_vars{i_v}){i_X})
-              S.(data_vars{i_v}){i_X}{i_m} = S.(data_vars{i_v}){i_X}{i_m} + yoff(i_X);
+        case {"delta_u", "y_wall", "y_if_gas", "y_if_wall"}
+          if (iscell (S.(data_vars{i_v}){n_X}))
+            for i_X = 1:n_X
+              for i_m = 1 : numel (S.(data_vars{i_v}){i_X})
+                S.(data_vars{i_v}){i_X}{i_m} = S.(data_vars{i_v}){i_X}{i_m} + yoff(i_X);
+              endfor
             endfor
-          endfor
+          else
+            for i_X = 1:n_X
+              S.(data_vars{i_v}){i_X} = S.(data_vars{i_v}){i_X} + yoff(i_X);
+            endfor
+          endif
       otherwise
       ;
       endswitch

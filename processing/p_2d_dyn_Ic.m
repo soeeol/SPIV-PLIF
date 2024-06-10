@@ -21,7 +21,7 @@ pp.optset.data = "M13"; # set M13 (including M13 M13b M13c) or M26
 pp.alpha.data = 60; # ° 15 60
 pp.liquid.data = "WG141";
 pp.M.data = 64; # kg/h 8 16 32 64
-pp.X.data = 8; # mm 8 0 -8 -16
+pp.X.data = 0; # mm 8 0 -8 -16
 pp.Z.data = 0; # mm
 pp.G.data = 2; # Nl/min
 pp.T.data = 25; # °C
@@ -237,8 +237,8 @@ xy_if_mean_ip = interp1 (xy_if_mean(:,1), xy_if_mean(:,2), x_c, "pchip", "extrap
 
 ## masks
 val_mask = NaN; # 0
-c_masks.gas = masking ("c", "gas", size (c_msh{1}), lims_y(1), c_h.gas{1}, sf_c, 0, val_mask);
-c_masks.wall = masking ("c", "wall", size (c_msh{1}), lims_y(1), c_h.wall, sf_c, 0, val_mask);
+c_masks.gas = masking ("gas", size (c_msh{1}), lims_y(1), c_h.gas{1}, sf_c, 0, val_mask);
+c_masks.wall = masking ("wall", size (c_msh{1}), lims_y(1), c_h.wall, sf_c, 0, val_mask);
 if testplots
   plot_map_msh (c_msh, c_masks.gas .* c_masks.wall, []);
   colormap flag;

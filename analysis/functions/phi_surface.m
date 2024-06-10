@@ -14,8 +14,8 @@ function [phi_avg_s, phi_des_s, phi_sat_s] = phi_surface (phi_avg, phi_des, phi_
   n_x = size (phi_avg, 2);
 
   ## interface region
-  mask_if_u = masking ("c", "gas", size (phi_avg), y_min, delta_u, sf, idx_u, val_mask=0);
-  mask_if_l = masking ("c", "gas", size (phi_avg), y_min, delta_u, sf, idx_l, val_mask);
+  mask_if_u = masking ("gas", size (phi_avg), y_min, delta_u, sf, idx_u, val_mask=0);
+  mask_if_l = masking ("gas", size (phi_avg), y_min, delta_u, sf, idx_l, val_mask);
   mask_if = mask_if_u - mask_if_l;
   mask_if(mask_if==0) = nan;
 

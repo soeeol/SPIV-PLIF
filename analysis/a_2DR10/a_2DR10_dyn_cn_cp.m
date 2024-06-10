@@ -46,8 +46,8 @@ if 1
   i_T = 1; ap.i_T = i_T;
   i_Z = 1; ap.i_Z = i_Z;
   ## overrides
-  i_M = it_M = 1
-  i_X = it_X = [1]
+  it_M = 1:2
+##  i_X = it_X = 1
 
   ap.dyn_cn_if_scmad_dev_max = 0.25; # used for threshold estimation for valid median interface deviation
   ap.dyn_cn_nt_max = 20; # limit number of valid single frame used for the analysis (valid: small deviation to median interface)
@@ -90,10 +90,9 @@ if 1
       mkdir (ap.save_dir_id);
 
       c_calib_sig_X = [];
-      ap.cp_if_sfit_sps = 9;
       switch (i_M)
         case 1
-          c_calib_sig_X = [2 0 0 2] # for i_M=1&i_X=1 saturation recorded film was slightly thinner and thus of lower fluorescence
+          c_calib_sig_X = [2 0 0 3] # for i_M=1&i_X=1 saturation recorded film was slightly thinner and thus of lower fluorescence
         case 2
           c_calib_sig_X = [0 0 0 0] # TODO: first check for intra section offset
         case 3

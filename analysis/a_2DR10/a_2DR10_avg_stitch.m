@@ -2,8 +2,9 @@
 ##  Copyright (c) 2024, Sören Jakob Gerke
 
 ## stitch section results
-## - cn
+## - phi, cn, cp
 ## - velocity field
+## - derived results: delta_u, delta_c_avg, u_s
 
 ##
 ## Author: Sören J. Gerke
@@ -15,8 +16,8 @@ if 1
   ## ap parameters defining the analysis
   ap = [];
   ap.a_type = "a_2DR10_avg_stitch"; # identifier of this analysis
-  ap.c_method = "linear"; # method to transform fluorescence intensity to concentration ("linear" / "nonlinear" .. no impact on delta_c)
-  ap.c_if_method = "calib"; # method to deal with fluorescence intensity decay at the interface ("calib" / "calib-if" .. high impact on delta_c)
+  ap.c_method = "linear"; # method to transform fluorescence intensity to concentration ("linear" / "nonlinear" .. no impact on delta_c_avg)
+  ap.c_if_method = "calib"; # method to deal with fluorescence intensity decay at the interface ("calib" / "calib-if" .. high impact on delta_c_avg)
 
   ## selection of experiments to be analyzed
   ap.ids_A = [60]; # [°] inlination IDs
@@ -43,73 +44,71 @@ if 1
   i_T = 1; ap.i_T = i_T;
   i_Z = 1; ap.i_Z = i_Z;
   ## overrides
-  i_M = it_M = 1
+##  i_M = it_M = 1
+  it_M = 1:2
 ##  i_M = it_M = 1:4
 
   ## prepare directories
   ap.date_str = datestr (now, "yyyymmdd");
   ap.result_dir = [pdir.analyzed ap.a_type "/"];
 
-
   ## per data variable: method for time series averaging before stitching
   ## ("median" or "mean")
   ## or set one for all
-  ap.sd.avg_method = {"median"}
+  ap.sd.avg_method = "median"
 
-endif
+  ## spline interface fit for stable interface normals (defaults)
+  ap.sd.if_sfit_order = 3; # spline order
+  ap.sd.if_sfit_sps = 15; # splines devisions per section (.. generally: increase for curved interface, decrease for flat)
 
-## [10] x-stitch dyn avg data and store
-## - first stitch cn map together with interface to estimate best intersection offset
-
-##if 1
-
+  ##
   ## stitching descriptors
-
+  ##
   sd{1}.sd_name = "cn_dyn_avg";
   sd{1}.a_dir = [pdir.analyzed "a_2DR10_dyn_cn_cp/"];
   sd{1}.a_id_sec = ["cn-" ap.c_method "_" ap.c_if_method];
   sd{1}.msh_fn = "cn_dyn.v7";
   sd{1}.msh_var = "c_msh";
-  sd{1}.dat_fn{1} = "delta_u_dyn.v7";
-  sd{1}.dat_var{1} = {"delta_u" "y_wall"};
-  sd{1}.dat_fn{2} = "cn_dyn.v7";
+  sd{1}.dat_fn{1} = "delta_u_dyn.v7"; ##  "delta_u_dyn.v7" x y_wall delta_u delta_u_fit delta_u_fit_avg
+  sd{1}.dat_var{1} = {"delta_u", "y_wall"};
+  sd{1}.dat_fn{2} = "cn_dyn.v7"; ##  "cn_dyn.v7" c_msh cn_dyn cn_dyn_avg
   sd{1}.dat_var{2} = {"cn_dyn_avg"};
-  sd{1}.dat_fn{3} = "phi_avg.v7";
-  sd{1}.dat_var{3} = {"phi_avg" "phi_des" "phi_sat"};
-
+  sd{1}.dat_fn{3} = "phi_avg.v7"; ##  "phi_avg.v7" c_msh phi_avg phi_des phi_sat x phi_avg_s phi_des_s phi_sat_s
+  sd{1}.dat_var{3} = {"phi_avg", "phi_des", "phi_sat"};
+  ##
   sd{2}.sd_name = "cp_dyn_avg";
   sd{2}.a_dir = [pdir.analyzed "a_2DR10_dyn_cn_cp/"];
   sd{2}.a_id_sec = ["cp-avg-" ap.c_method "_" ap.c_if_method];
   sd{2}.msh_fn = "avg_cp.v7";
   sd{2}.msh_var = "p_msh_o";
-  sd{2}.dat_fn{1} = "avg_cp.v7";
-  sd{2}.dat_var{1} = {"cp_n_avg"};
-  sd{2}.dat_fn{2} = "avg_delta_c.v7";
-  sd{2}.dat_var{2} = {"delta_c"};
-
-  sd{3}.sd_name = "u_avg";
+  sd{2}.dat_fn{1} = "avg_cp.v7"; ##  "avg_cp.v7" snp_o p_msh_o cp_nn_avg cp_n_avg
+  sd{2}.dat_var{1} = {"cp_n_avg", "cp_nn_avg"};
+  sd{2}.dat_fn{2} = "avg_delta_c.v7"; ##  "avg_delta_c.v7" x delta_c a_fit
+  sd{2}.dat_var{2} = {"delta_c", "a_fit"};
+  sd{2}.dat_fn{3} = "dyn_cp.v7"; ##  "dyn_cp.v7" snp p_msh msh_n cp_n cp_s cp_b
+  sd{2}.dat_var{3} = {"cp_s", "cp_b"};
+  ##
+  sd{3}.sd_name = "phi_avg";
   sd{3}.a_dir = [pdir.processed ""];
   sd{3}.a_id_sec = ["2d_avg_uIc1"];
-  sd{3}.msh_fn = "u.v7";
-  sd{3}.msh_var = "u_msh";
-  sd{3}.dat_fn{1} = "u.v7";
-  sd{3}.dat_var{1} = {"u_dat"};
-
-  sd{4}.sd_name = "cn_avg";
+  sd{3}.msh_fn = "c.v7";
+  sd{3}.msh_var = "c_msh";
+  sd{3}.dat_fn{1} = "c.v7"; ##  "c.v7" c_msh c_dat c_masks c_h delta_u y_wall
+  sd{3}.dat_var{1} = {"c_dat", "y_wall", "delta_u"};
+  ##
+  sd{4}.sd_name = "u_avg";
   sd{4}.a_dir = [pdir.processed ""];
   sd{4}.a_id_sec = ["2d_avg_uIc1"];
-  sd{4}.msh_fn = "c.v7";
-  sd{4}.msh_var = "c_msh";
-  sd{4}.dat_fn{1} = "c.v7";
-  sd{4}.dat_var{1} = {"c_dat", "y_wall", "delta_u"};
-  sd{4}.dat_fn{2} = "y_if.v7";
-  sd{4}.dat_var{2} = {"y_if_gas" "y_if_wall"};
+  sd{4}.msh_fn = "u.v7";
+  sd{4}.msh_var = "u_msh";
+  sd{4}.dat_fn{1} = "u.v7"; ##  "u.v7" u_msh u_dat u_masks u_h
+  sd{4}.dat_var{1} = {"u_dat"};
+  ##  "y_if.v7" y_if_wall y_if_gas
 
-  ## TODO: per data variable: if is time series calc temporal average before stitching
+endif
 
-  ##
-  ## prepare inter section offset correction
-  ##
+## [10] prepare inter section offset correction
+if 1
 
   ## using gas-liquid interface as inter section offset indicator
   for i_M = it_M
@@ -128,10 +127,10 @@ endif
       load (data_file, "x", "y_wall", "delta_u");
       x_MX{i_M,i_X} = x;
       y_wall_MX{i_M,i_X} = y_wall;
-      delta_u_dyn_avg_MX{i_M,i_X} = calc_vec_avg_cells (delta_u, "median");
+      delta_u_dyn_avg_MX{i_M,i_X} = calc_vec_avg_cells (delta_u, ap.sd.avg_method);
 
       ## avg all
-      data_files = glob ([sd{4}.a_dir ap.id_meas "/" "*_" sd{4}.a_id_sec "/" sd{4}.dat_fn{1}]);
+      data_files = glob ([sd{4}.a_dir ap.id_meas "/" "*_" sd{3}.a_id_sec "/" sd{3}.dat_fn{1}]);
       data_file = data_files{end} # use latest result
       c_msh = y_wall = delta_u = [];
       load (data_file, "c_msh", "y_wall", "delta_u");
@@ -160,50 +159,60 @@ endif
   endif
 
   xoff = zeros (numel(ap.ids_M), numel(ap.ids_X));
-  xoff(:,1) = +0.005;
-  xoff(1,3:4) = +0.2;
-  xoff(2,1) = +0.025;
-  xoff(4,3:4) = +0.4; # recorded on another day
+  xoff([1 2 4],1) = +0.05;
+  xoff(1,3:4) = +0.1; # recorded on another day
+##  xoff(3,1) = +0.0;
+##  xoff(2,1) = +0.025;
+  xoff(4,3:4) = +0.5; # recorded on another day
 
   yoff = zeros (numel(ap.ids_M), numel(ap.ids_X));
-  yoff(2,1) = -0.005;
-  yoff(3,3) = +0.005;
+  yoff(1,3) = +0.005;
+##  yoff(2,1) = -0.005;
+##  yoff(3,3) = +0.005;
   yoff(4,1) = -0.01;
-  yoff(4,3:4) = +0.01;
+  yoff(4,3:4) = +0.005;
 
   ## test plot offset correction
-  figure (); hold on;
+  figure ();
+  hold on;
   for i_M = it_M
     for i_X = it_X
-      plot (x_MX{i_M,i_X} + ap.ids_X(i_X) + xoff(i_M,i_X), delta_u_dyn_avg_MX{i_M,i_X} + yoff(i_M,i_X), "k;filtered avg;");
-      plot (x_MX{i_M,i_X} + ap.ids_X(i_X) + xoff(i_M,i_X), y_wall_MX{i_M,i_X} + yoff(i_M,i_X), "k;wall;");
-      plot (x_avg_MX{i_M,i_X} + ap.ids_X(i_X) + xoff(i_M,i_X), delta_u_avg_MX{i_M,i_X} + yoff(i_M,i_X), "b;avg;");
-      plot (x_avg_MX{i_M,i_X} + ap.ids_X(i_X) + xoff(i_M,i_X), y_wall_avg_MX{i_M,i_X} + yoff(i_M,i_X), "b;wall;");
+      plot (x_MX{i_M,i_X} + ap.ids_X(i_X) + xoff(i_M,i_X), delta_u_dyn_avg_MX{i_M,i_X} + yoff(i_M,i_X), "k");
+      plot (x_avg_MX{i_M,i_X} + ap.ids_X(i_X) + xoff(i_M,i_X), delta_u_avg_MX{i_M,i_X} + yoff(i_M,i_X), "b");
+      plot (x_MX{i_M,i_X} + ap.ids_X(i_X) + xoff(i_M,i_X), y_wall_MX{i_M,i_X} + yoff(i_M,i_X), "k");
+      plot (x_avg_MX{i_M,i_X} + ap.ids_X(i_X) + xoff(i_M,i_X), y_wall_avg_MX{i_M,i_X} + yoff(i_M,i_X), "b");
     endfor
   endfor
-  plot ((x_sec-0.06)*1e3, [0 0 0 0 0; [1 1 1 1 1]], "--k;x section border;");
+  legend ({"filtered avg" "avg"})
+  legend ("autoupdate", "off");
+  plot ((x_sec-0.06)*1e3, [0 0 0 0 0; [1 1 1 1 1]], "--k");
   axis image;
   ylim ([0 max(delta_u_dyn_avg_MX{it_M(end),2})]);
 
+endif
 
 
 
 
-  ##
-  ##
-  ##
+##
+## [20] stich data and test continuity
+##
+if 1
 
-  msh_cn = x = y = {};
-  cn = delta_u = y_wall = {};
+  msh_cn = x_cn = y_cn = {};
+  cn = delta_u_cn = {};
   phi_avg = phi_des = phi_sat = {};
 
-  msh_cp = snp = {};
-  delta_c = cp_n = {};
+  msh_cp = x_cp = snp = {};
+  delta_c_avg = a_fit_avg = cp_n_avg = cp_nn_avg = {};
 
   msh_u = x_u = y_u = {};
-  dat_u = {};
+  dat_u_avg = {};
 
-  for i_sd = [1,2,3,4]#:2# : numel (sd)
+  msh_c = x_c = y_c = {};
+  delta_u_avg = y_wall_avg = {};
+
+  for i_sd = 1 : numel (sd)
     for i_M = it_M
 
       ## inter section offset settings
@@ -213,287 +222,431 @@ endif
       ap.i_M = i_M;
       ap.i_X = it_X;
 
-      ## prepare result storage path
-      ap.id_meas = get_measid_ap (ap);
-      ap.save_dir_id = [ap.result_dir ap.id_meas "/" ap.date_str "_" "avg_stitch" "/"];
-      mkdir (ap.save_dir_id);
-
       [msh_gl dat_gl] = stitch_msh_dat (sd{i_sd}, ap);
 
-
       switch (sd{i_sd}.sd_name)
+
         case {"cn_dyn_avg"}
           msh_cn{i_M} = msh_gl;
-          x{i_M} = msh_gl{1}(1,:);
-          y{i_M} = msh_gl{2}(:,1);
-          cn{i_M} = dat_gl.cn_dyn_avg;
-##          delta_u{i_M} = dat_gl.delta_u_fit_avg;
-          delta_u{i_M} = calc_vec_avg_cells (dat_gl.delta_u, "median");
-          y_wall{i_M} = dat_gl.y_wall;
+          x_cn{i_M} = msh_cn{i_M}{1}(1,:);
+          y_cn{i_M} = msh_cn{i_M}{2}(:,1);
+          ##
+          cn_avg{i_M} = dat_gl.cn_dyn_avg;
+          delta_u_avg{i_M} = calc_vec_avg_cells (dat_gl.delta_u, ap.sd.avg_method);
           phi_avg{i_M} = dat_gl.phi_avg;
-          phi_des{i_M} = dat_gl.phi_des;
-          phi_sat{i_M} = dat_gl.phi_sat;
+          phi_des_avg{i_M} = dat_gl.phi_des;
+          phi_sat_avg{i_M} = dat_gl.phi_sat;
 
         case {"cp_dyn_avg"}
           msh_cp{i_M} = msh_gl;
-          snp{i_M} = msh_gl{2}(:,1);
-          delta_c{i_M} = dat_gl.delta_c;
-          cp_n{i_M} = dat_gl.cp_n_avg;
+          x_cp{i_M} = msh_cp{i_M}{1}(1,:);
+          snp{i_M} = msh_cp{i_M}{2}(:,1);
+          ##
+          cp_s_avg{i_M} = calc_vec_avg_cells (dat_gl.cp_s, ap.sd.avg_method);
+          cp_b_avg{i_M} = calc_vec_avg_cells (dat_gl.cp_b, ap.sd.avg_method);
+          ##
+          delta_c_avg{i_M} = dat_gl.delta_c;
+          a_fit_avg{i_M} = dat_gl.a_fit;
+          cp_n_avg{i_M} = dat_gl.cp_n_avg;
+          cp_nn_avg{i_M} = dat_gl.cp_nn_avg;
+
+        case {"phi_avg"}
+          msh_c{i_M} = msh_gl;
+          x_c{i_M} = msh_c{i_M}{1}(1,:);
+          y_c{i_M} = msh_c{i_M}{2}(:,1);
+          ##
+          y_wall_avg{i_M} = dat_gl.y_wall;
+          delta_u_phi_avg{i_M} = dat_gl.delta_u;
+
         case {"u_avg"}
           msh_u{i_M} = msh_gl;
-          x_u{i_M} = msh_gl{1}(1,:);
-          y_u{i_M} = msh_gl{2}(:,1);
-          dat_u{i_M} = dat_gl.u_dat;
+          x_u{i_M} = msh_u{i_M}{1}(1,:);
+          y_u{i_M} = msh_u{i_M}{2}(:,1);
+          ##
+          dat_u_avg{i_M} = dat_gl.u_dat;
+
       endswitch
 
     endfor
   endfor
 
   ## check continuity of delta_u, y_wall and surface velocity estimate of stitching result
-  u_M_ip = interp2 (msh_u{i_M}{1}, msh_u{i_M}{2}, dat_u{i_M}{4}, msh_cn{i_M}{1}, msh_cn{i_M}{2}, "pchip", 0.0); #
-  u_s = get_surface_val (msh_cn{i_M}, u_M_ip, delta_u{i_M}', "min_y_dist");
-
   fh = figure ();
   hold on;
-  plot (x{i_M}, u_s/max(u_s), "b;u_s norm;");
-  plot (x{i_M}, delta_u{i_M}/max(delta_u{i_M}), "k;delta_u;");
-  plot (msh_gl{1}(1,:), dat_gl.delta_u/max(dat_gl.delta_u), "r;delta_u avg;");
-  plot (x{i_M}, y_wall{i_M}/max(y_wall{i_M}), "r;y wall;");
-  plot ((x_sec-0.06)*1e3, [0 0 0 0 0; [1 1 1 1 1]], "--k;x section border;")
+  for i_M = it_M
+    u_M_ip = interp2 (msh_u{i_M}{1}, msh_u{i_M}{2}, dat_u_avg{i_M}{4}, msh_cn{i_M}{1}, msh_cn{i_M}{2}, "pchip", 0.0); #
+    u_s_ip = get_surface_val (msh_cn{i_M}, u_M_ip, delta_u_avg{i_M}, "min_y_dist");
+    plot (x_cn{i_M}, u_s_ip/max(u_s_ip), "b;u_s norm;");
+    plot (x_c{i_M}, delta_u_avg{i_M}/max(delta_u_avg{i_M}), "r;delta_u avg;");
+    legend ("autoupdate", "off");
+    plot ((x_sec-0.06)*1e3, [0 0 0 0 0; [1 1 1 1 1]], "--k");
+  endfor
   xlabel ("x* in mm");
   ylabel ("");
 
+  ## check cn field for continuity around section borders
   fh = figure ();
+  plot_map_msh (msh_cn{i_M}, cn_avg{i_M}, fh)
   hold on;
-  for i_M = it_M
-    plot (x{i_M}, delta_c{i_M}, [";i_M = " num2str(i_M) ";"]);
-  endfor
-  xlabel ("x* in mm");
-  ylabel ("delta_c in mm");
-
-  fh = figure ();
-  hold on;
-  for i_M = it_M
-    plot (x{i_M}, delta_u{i_M}, [";i_M = " num2str(i_M) ";"]);
-    plot (x{i_M}, y_wall{i_M}, ["k;i_M = " num2str(i_M) ";"]);
-  endfor
-  axis image;
-  xlabel ("x* in mm");
-  ylabel ("delta_u in mm");
-
-
-  fh = figure ();
-  hold on;
-  plot (x{i_M}, delta_c{i_M}/median(delta_c{i_M}), "r");
-  plot (x{i_M}, delta_u{i_M}/median(delta_u{i_M}), "b");
-
-  plot (msh_gl{1}(1,:), dat_gl.delta_u/median(dat_gl.delta_u), "r");
-  plot (msh_gl{1}(1,:), dat_gl.y_wall/max(dat_gl.y_wall), "k");
-
-  plot (x{i_M}, y_wall{i_M}/max(y_wall{i_M}), "m");
-
-  ## u_s
-  u_M_ip = interp2 (msh_u{i_M}{1}, msh_u{i_M}{2}, dat_u{i_M}{4}, msh_cn{i_M}{1}, msh_cn{i_M}{2}, "pchip", 0.0); #
-  u_s = get_surface_val (msh_cn{i_M}, u_M_ip, delta_u{i_M}, "min_y_dist");
-  plot (x{i_M}, u_s/max(u_s), "g");
-
+  draw_cell (ap.ids_C{ap.i_C}, 0, 1);
+  plot (x_c{i_M}, y_wall_avg{i_M}, "r");
+  plot (x_c{i_M}, delta_u_avg{i_M}, "r");
+  plot ((x_sec-0.06)*1e3, [0 0 0 0 0; 2.5 * [1 1 1 1 1]], "--m");
   xlabel ("x* in mm");
   ylabel ("y in mm");
-
-##  fh = figure ();
-##  plot_map_msh (msh_cn{i_M}, phi_sat{i_M}, fh)
-##  hold on;
-##  draw_cell (ap.ids_C{ap.i_C}, 0, 1);
-##  plot (x{i_M}, y_wall{i_M}, "r");
-##  plot (x{i_M}, delta_u{i_M}, "r");
-##  xlabel ("x* in mm");
-##  ylabel ("y in mm");
 ##  axis image;
-##  ylim ([-0.1 2.5])
+  ylim ([-0.1 2.5]);
 
-
+  ## check velocity field for continuity around section borders
   fh = figure ();
-  plot_map_msh (msh_gl, dat_gl.c_dat{1}, fh)
+  plot_map_msh (msh_u{i_M}, dat_u_avg{i_M}{4}, fh)
+  caxis ([ 0 median(max(dat_u_avg{i_M}{4}, [], 2), "omitnan") ]);
+  draw_cell (ap.ids_C{ap.i_C}, 0, 1);
   hold on;
-##  draw_cell (ap.ids_C{ap.i_C}, 0, 1);
-  plot (msh_gl{1}(1,:), dat_gl.y_wall, "r");
-  plot (msh_gl{1}(1,:), dat_gl.delta_u, "r");
+  plot (x_c{i_M}, y_wall_avg{i_M}, "r");
+  plot (x_c{i_M}, delta_u_avg{i_M}, "r");
+  plot ((x_sec-0.06)*1e3, [0 0 0 0 0; 2.5 * [1 1 1 1 1]], "--m");
   xlabel ("x* in mm");
   ylabel ("y in mm");
-  axis image;
-  ylim ([-0.1 2.5])
+##  axis image;
+  ylim ([-0.1 2.5]);
+
+  if (i_M == 3)
+    ## dirty fix for velocity field of M 32: severe particle accumulation blocked PIV analysis
+    ## replace area with moving median:
+    ## -5.4 < x < -4.3
+    ## y < 0.16
+    for i = 1 : numel (dat_u_avg{i_M})
+      idx_x = (-5.4 <= msh_u{i_M}{1}) & (msh_u{i_M}{1} <= -4.3);
+      idx_y = ( 0.0 <= msh_u{i_M}{2}) & (msh_u{i_M}{2} <= +0.16);
+      idx = idx_x & idx_y;
+      switch (i)
+        case {1, 4}
+          median_wall_profile = repmat (max (dat_u_avg{i_M}{i} .* idx_y, [], 2), 1, size (idx_x, 2));
+        otherwise
+          median_wall_profile = repmat (median (dat_u_avg{i_M}{i} .* idx_y, 2), 1, size (idx_x, 2));
+      endswitch
+      dat_u_avg{i_M}{i}(idx) = median_wall_profile(idx);
+      mmm = movmedian (dat_u_avg{i_M}{i}, [7, 7]);
+      dat_u_avg{i_M}{i}(idx) = mmm(idx);
+    endfor
+  endif
+
+endif
+
+##
+## [30] interpolate on common mesh and store result
+##
+if 1
 
 
-  fh = figure ();
-  plot_map_msh (msh_cp{i_M}, cp_n{i_M}, fh)
-  xlabel ("x* in mm");
-  ylabel ("snp in mm");
+  ## prepare result storage path
+  ap.i_M = [];
+  ap.i_X = it_X;
+  ap.id_meas = get_measid_ap (ap);
+  ap.save_dir_id = [ap.result_dir ap.id_meas "/"];
+  mkdir (ap.save_dir_id);
 
+  msh = msh_cn;
+  x = y = {};
+  msh_p = {}; # to keep the finer profile resolution
+  s_n = s_t = {};
 
+  y_wall = delta_u = {};
+  delta_u_fit = mask_g = mask_w = {};
+  phi = phi_des = phi_sat = {};
+  cn = {};
+  cp_b = cp_s = cp_n = cp_nn = delta_c = a_fit_cp_scale = {};
+  u_dat = u_x = u_y = u_z = u_m = {};
+  u_s = incl_s = curve_s = l_s = y_h = vfr = {};
 
-##      fh = figure ();
-####      plot_map_msh (msh_cn{i_M}, phi_avg{i_M}, fh)
-####      plot_map_msh (msh_cn{i_M}, phi_des{i_M}, fh)
-##      plot_map_msh (msh_cn{i_M}, phi_sat{i_M}, fh)
-##      hold on;
-####      draw_cell (ap.ids_C{ap.i_C}, 0, 1);
-##      plot (x{i_M}, y_wall{i_M}, "r");
-##      plot (x{i_M}, delta_u{i_M}, "r");
-##      xlabel ("x* in mm");
-##      ylabel ("y in mm");
-##      axis image;
-##      ylim ([-0.1 2.5]);
+  ##
+  for i_M = it_M
 
+    x{i_M} = msh{i_M}{1}(1,:);
+    y{i_M} = msh{i_M}{2}(:,1);
+    z = msh{i_M}{3}(1,1);
+    sf = get_sf (msh{i_M});
+    sf_p = get_sf (msh_cp{i_M});
+    s_n_min = min (snp{i_M})
+    s_n_max = max (snp{i_M})
+    s_n{i_M} = linspace (0, s_n_max, (s_n_max-s_n_min)/sf_p(2)+1);
+    [XX, YY, ZZ] = meshgrid (x{i_M}, s_n{i_M}, z);
+    msh_p{i_M} = {XX, YY, ZZ};
+
+    ## wall
+    y_wall{i_M} = interp1 (x_c{i_M}, y_wall_avg{i_M}, x{i_M}, "pchip", "extrap");
+    ## gas-liquid interface
+    delta_u{i_M} = interp1 (x_cn{i_M}, rm_ext (x_cn{i_M}, delta_u_avg{i_M}, 101), x{i_M}, "pchip", "extrap");
+
+    ## using smooth gas-liquid interface to mask_g the reflective part but leaving some little extra tolerance
+    spf{i_M} = splinefit (double (x{i_M}),  double (rm_ext (x{i_M}, delta_u{i_M}, 101)), ap.sd.if_sfit_sps * numel(it_X), "order", ap.sd.if_sfit_order, "beta", 0.75);
+    delta_u_fit{i_M} = ppval (spf{i_M}, x{i_M});
+    mask_g{i_M} = masking ("gas", size (msh{i_M}{1}), min (y{i_M}), delta_u_fit{i_M}, get_sf(msh{i_M}), 0, nan);
+    mask_w{i_M} = masking ("wall", size (msh{i_M}{1}), min (y{i_M}), y_wall{i_M}, get_sf(msh{i_M}), 0, nan);
+
+    ## avg fluorescence recordings
+    phi{i_M} = interp2 (msh_cn{i_M}{1}, msh_cn{i_M}{2}, phi_avg{i_M}, msh{i_M}{1}, msh{i_M}{2}, "pchip", 0.0);
+    phi_des{i_M} = interp2 (msh_cn{i_M}{1}, msh_cn{i_M}{2}, phi_des_avg{i_M}, msh{i_M}{1}, msh{i_M}{2}, "pchip", 0.0);
+    phi_sat{i_M} = interp2 (msh_cn{i_M}{1}, msh_cn{i_M}{2}, phi_sat_avg{i_M}, msh{i_M}{1}, msh{i_M}{2}, "pchip", 0.0);
+
+    ## normalized concentration field
+    cn{i_M} = interp2 (msh_cn{i_M}{1}, msh_cn{i_M}{2}, cn_avg{i_M}, msh{i_M}{1}, msh{i_M}{2}, "pchip", 0.0);
+
+    ## bulk and surface normalized concentration
+    cp_b{i_M} = interp1 (x_cp{i_M}, rm_ext (x{i_M}, cp_b_avg{i_M}, 101), x{i_M}, "pchip", "extrap");
+    cp_s{i_M} = interp1 (x_cp{i_M}, rm_ext (x{i_M}, cp_s_avg{i_M}, 101), x{i_M}, "pchip", "extrap");
+    ## concentration profiles
+    cp_n{i_M} = interp2 (msh_cp{i_M}{1}, msh_cp{i_M}{2}, cp_n_avg{i_M}, msh_p{i_M}{1}, msh_p{i_M}{2}, "pchip", 0.0);
+    cp_nn{i_M} = interp2 (msh_cp{i_M}{1}, msh_cp{i_M}{2}, cp_nn_avg{i_M}, msh_p{i_M}{1}, msh_p{i_M}{2}, "pchip", 0.0);
+
+    ## concentration boundary layer thickness
+    delta_c{i_M} = interp1 (x_cp{i_M}, rm_ext (x_cp{i_M}, delta_c_avg{i_M}, 101), x{i_M}, "pchip", "extrap");
+    a_fit_cp_scale{i_M} = interp1 (x_cp{i_M}, a_fit_avg{i_M}(:,2), x{i_M}, "pchip", "extrap");
+
+    ## velocity field
+    for i_u = 1 : numel (dat_u_avg{i_M})
+      u_dat{i_M}{i_u} = interp2 (msh_u{i_M}{1}, msh_u{i_M}{2}, dat_u_avg{i_M}{i_u}, msh{i_M}{1}, msh{i_M}{2}, "pchip", 0.0);
+    endfor
+    u_x{i_M} = u_dat{i_M}{1};
+    u_y{i_M} = u_dat{i_M}{2};
+    u_z{i_M} = u_dat{i_M}{3};
+    u_m{i_M} = u_dat{i_M}{4};
+
+    ## extract:
+    ## - surface velocity
+    u_s{i_M} = get_surface_val (msh{i_M}, u_dat{i_M}{4}, delta_u_fit{i_M}, "min_y_dist");
+    u_s{i_M} = rm_ext (x{i_M}, u_s{i_M}, 401);
+    ## - gas-liquid interface inclination vs. horizontal
+    [~, ~, incl_s{i_M}] = calc_if_len (double(x{i_M}), delta_u_fit{i_M});
+    ## - gas-liquid interface curvature estimate
+    [curve_s{i_M}, ~] = calc_curvature_xy (double (x{i_M}), double (delta_u_fit{i_M}));
+    ## - gas-liquid interface length and tangent coordinate
+    [~, l_s{i_M}, ~, s_t{i_M}] = calc_if_len (double(x{i_M}), delta_u_fit{i_M});
+    ## - local film thickness
+    y_h{i_M} = delta_u_fit{i_M} - y_wall{i_M};
+
+    ## flow profile specific flow rate along x over cell width
+    vfr{i_M} = zeros (size (x{i_M}));
+    u_x_masked = u_x{i_M} .* mask_w{i_M} .* mask_g{i_M};
+    u_x_masked(isnan(u_x_masked)) = 0.0;
+    for i_p = 1 : numel (x{i_M})
+      u_x_yp = u_x_masked(:,i_p);
+      vfr{i_M}(i_p) = sum (u_x_yp) * sf(2) / 1000 * cell_width / 1000 * 3600; # m^3 / s
+    endfor
+
+  endfor
+
+  cd (ap.save_dir_id);
+  save -v7 "sd_xy_map.v7" msh x y phi phi_des phi_sat cn u_x u_y u_z u_m
+  save -v7 "sd_nt_map.v7" msh_p s_n s_t cp_n cp_nn
+  save -v7 "sd_x_vec.v7" x cp_b cp_s l_s curve_s incl_s y_wall y_h delta_u delta_u_fit u_s delta_c a_fit_cp_scale
+  save -text "sd_ap.txt" ap
+  cd (pdir.work);
+
+  ## stitching result overview plots
+  if 1
+    for i_M = it_M
+
+      ## x vectors
 
       fh = figure ();
-      plot_map_msh (msh_cn{i_M}, cn{i_M}, fh)
       hold on;
-      draw_cell (ap.ids_C{ap.i_C}, 0, 1);
+      plot (x{i_M}, cp_b{i_M}, ";cn bulk;");
+      plot (x{i_M}, cp_s{i_M}, ";cn surface;");
+      legend ("autoupdate", "off");
+      plot ((x_sec-0.06)*1e3, [0 0 0 0 0; 1.0 * [1 1 1 1 1]], "--k");
+      xlabel ("x* in mm");
+      ylabel ("cn in -");
+      print (fh, "-djpeg", "-r1000", [ap.save_dir_id "vec_cn_b___cn_s___i_M=" num2str(i_M) ".jpg"]);
+      close (fh);
+
+      fh = figure ();
+      hold on;
+      plot (x{i_M}, y_wall{i_M}, "k;wall;");
+      plot (x{i_M}, delta_u{i_M}, "b;delta_u;");
+      plot (x{i_M}, delta_u_fit{i_M}, "r;fit;");
+      plot (x{i_M}, y_h{i_M}, "m;h;");
+      legend ("autoupdate", "off");
+      plot ((x_sec-0.06)*1e3, [0 0 0 0 0; 2.0 * [1 1 1 1 1]], "--k");
+      xlabel ("x* in mm");
+      ylabel ("y in mm");
+      print (fh, "-djpeg", "-r1000", [ap.save_dir_id "vec_delta_u___y_h___i_M=" num2str(i_M) ".jpg"]);
+      close (fh);
+
+      fh = figure ();
+      hold on;
+      plot (x{i_M}, y_wall{i_M}, "k;y wall in mm;");
+      plot (x{i_M}, delta_u_fit{i_M}, "k;delta_u fit in mm;");
+      plot (x{i_M}, (incl_s{i_M}), ";inclination in rad;");
+      plot (x{i_M}, curve_s{i_M}, ";curvature in 1/m;");
+      legend ("autoupdate", "off");
+      plot ((x_sec-0.06)*1e3, [0 0 0 0 0; 2.0 * [1 1 1 1 1]], "--k");
+      xlabel ("x* in mm");
+      print (fh, "-djpeg", "-r1000", [ap.save_dir_id "vec_incl_s___curv_s___i_M=" num2str(i_M) ".jpg"]);
+      close (fh);
+
+      fh = figure ();
+      hold on;
+      plot (x{i_M}, y_wall{i_M}, "k;wall;");
+      plot (x{i_M}, delta_u_fit{i_M}, "k;delta_u fit in mm;");
+      plot (x{i_M}, u_s{i_M} / median (u_s{i_M}), ";u_s norm;");
+      legend ("autoupdate", "off");
+      plot ((x_sec-0.06)*1e3, [0 0 0 0 0; 2.0 * [1 1 1 1 1]], "--k");
+      xlabel ("x* in mm");
+      print (fh, "-djpeg", "-r1000", [ap.save_dir_id "vec_u_s_norm___i_M=" num2str(i_M) ".jpg"]);
+      close (fh);
+
+      fh = figure ();
+      hold on;
+      plot (x{i_M}, vfr{i_M}, "b;VFR in m^3/s;");
+      legend ("autoupdate", "off");
+      legend ("location", "southeast");
+      plot ((x_sec-0.06)*1e3, [0 0 0 0 0; max(vfr{i_M}) * [1 1 1 1 1]], "--k");
+      xlabel ("x* in mm");
+      ylabel ("VFR in m^3 / s");
+      print (fh, "-djpeg", "-r1000", [ap.save_dir_id "vec_vfr___i_M=" num2str(i_M) ".jpg"]);
+      close (fh);
+
+      fh = figure ();
+      hold on;
+      plot (x{i_M}, s_t{i_M} ./ (x{i_M}-min(x{i_M})), ";s_t;");
+      legend ("autoupdate", "off");
+      plot ((x_sec-0.06)*1e3, [min(s_t{i_M} ./ (x{i_M}-min(x{i_M}))) * [1 1 1 1 1] ; max(s_t{i_M} ./ (x{i_M}-min(x{i_M}))) * [1 1 1 1 1]], "--k");
+      xlabel ("x* in mm");
+      print (fh, "-djpeg", "-r1000", [ap.save_dir_id "vec_s_t_by_x___i_M=" num2str(i_M) ".jpg"]);
+      close (fh);
+
+      fh = figure ();
+      hold on;
+      plot (x{i_M}, delta_c{i_M}, ";delta_c;");
+      legend ("autoupdate", "off");
+      plot ((x_sec-0.06)*1e3, [0 0 0 0 0; max(delta_c{i_M}) * [1 1 1 1 1]], "--k");
+      xlabel ("x* in mm");
+      ylabel ("delta_c in mm");
+      print (fh, "-djpeg", "-r1000", [ap.save_dir_id "vec_delta_c___i_M=" num2str(i_M) ".jpg"]);
+      close (fh);
+
+      fh = figure ();
+      hold on;
+      plot (x{i_M}, a_fit_cp_scale{i_M}, ";a_fit_cp_scale;");
+      legend ("autoupdate", "off");
+      plot ((x_sec-0.06)*1e3, [0 0 0 0 0; 2 * [1 1 1 1 1]], "--k");
+      xlabel ("x* in mm");
+      ylabel ("a_fit_cp_scale");
+      print (fh, "-djpeg", "-r1000", [ap.save_dir_id "vec_a_fit_cp_scale___i_M=" num2str(i_M) ".jpg"]);
+      close (fh);
+
+      ## maps
+
+      fh = plot_map_msh (msh{i_M}, phi{i_M}, []);
+      hold on;
+      plot ((x_sec-0.06)*1e3, [0 0 0 0 0; max(y{i_M}) * [1 1 1 1 1]], "--k");
       plot (x{i_M}, y_wall{i_M}, "r");
-      plot (x{i_M}, delta_u{i_M}, "r");
+      axis image;
       xlabel ("x* in mm");
       ylabel ("y in mm");
-      axis image;
-      ylim ([-0.1 2.5]);
+      print (fh, "-djpeg", "-r1000", [ap.save_dir_id "map_phi___i_M=" num2str(i_M) ".jpg"]);
+      close (fh);
 
-      fh = figure ();
-      plot_map_msh (msh_u{i_M}, dat_u{i_M}{4}, fh)
-      caxis ([ 0 median(max(dat_u{i_M}{4}, [], 2), "omitnan") ])
+      fh = plot_map_msh (msh{i_M}, phi_des{i_M}, []);
       hold on;
-      plot (msh_gl{1}(1,:), dat_gl.y_wall, "r");
-      plot (msh_gl{1}(1,:), dat_gl.delta_u, "r");
+      plot ((x_sec-0.06)*1e3, [0 0 0 0 0; max(y{i_M}) * [1 1 1 1 1]], "--k");
+      plot (x{i_M}, y_wall{i_M}, "r");
+      axis image;
       xlabel ("x* in mm");
       ylabel ("y in mm");
-      axis image;
-      ylim ([-0.1 2.5]);
+      print (fh, "-djpeg", "-r1000", [ap.save_dir_id "map_phi_des___i_M=" num2str(i_M) ".jpg"]);
+      close (fh);
 
-      ##    if (i_sd==1)
-      fh = figure ();
+      fh = plot_map_msh (msh{i_M}, phi_sat{i_M}, []);
       hold on;
-      for i = 1:3
-        plot (msh_gl{1}(1,:), dat_gl.y_if_gas{i}, [";gas phi idx = " num2str(i) ";" ]);
-        plot (msh_gl{1}(1,:), dat_gl.y_if_wall{i}, "k;wall;");
-      endfor
+      plot ((x_sec-0.06)*1e3, [0 0 0 0 0; max(y{i_M}) * [1 1 1 1 1]], "--k");
+      plot (x{i_M}, y_wall{i_M}, "r");
       axis image;
       xlabel ("x* in mm");
       ylabel ("y in mm");
+      print (fh, "-djpeg", "-r1000", [ap.save_dir_id "map_phi_sat___i_M=" num2str(i_M) ".jpg"]);
+      close (fh);
 
+      fh = plot_map_msh (msh{i_M}, cn{i_M}, []);
+      hold on;
+      plot ((x_sec-0.06)*1e3, [0 0 0 0 0; max(y{i_M}) * [1 1 1 1 1]], "--k");
+      plot (x{i_M}, y_wall{i_M}, "r");
+      axis image;
+      xlabel ("x* in mm");
+      ylabel ("y in mm");
+      print (fh, "-djpeg", "-r1000", [ap.save_dir_id "map_cn___i_M=" num2str(i_M) ".jpg"]);
+      close (fh);
 
-##      print (fh, "-dpng", "-color", ["-r" num2str(500)], [ap.save_dir_id sd{i_sd}.sd_name "_stitched.png"]);
-##    endif
+      fh = plot_map_msh (msh_p{i_M}, cp_n{i_M}, []);
+      caxis ([0 1]);
+      set (gca (), "ydir", "reverse");
+      ylim ([0 0.1]);
+      hold on;
+      plot ((x_sec-0.06)*1e3, [0 0 0 0 0; 0.1 * [1 1 1 1 1]], "--k");
+      xlabel ("x* in mm");
+      ylabel ("s_n in mm");
+      print (fh, "-djpeg", "-r500", [ap.save_dir_id "map_cp_n___i_M=" num2str(i_M) ".jpg"]);
+      close (fh);
 
-##    if (i_sd==2)
-##
-##      fh = plot_map_msh (msh_gl, dat_gl.cp_n_avg, [])
-##      hold on;
-##      plot (msh_gl{1}(1,:), dat_gl.delta_c, "r");
-##      xlabel ("x* in mm");
-##      ylabel ("s_n in mm");
-##      print (fh, "-dpng", "-color", ["-r" num2str(500)], [ap.save_dir_id sd{i_sd}.sd_name "_stitched.png"]);
-##
-##    endif
-##
-##
-##    if (i_sd==3)
-##      yoff = 0.08 # offset u vs c msh
-##
-##      fh = plot_map_msh ({msh_gl{1} msh_gl{2}+yoff msh_gl{3}}, dat_gl.u_dat{4}, [])
-##      hold on;
-####      plot (msh_gl{1}(1,:), dat_gl.delta_c, "r");
-##      axis image
-####      caxis ([0 0.5])
-##      xlabel ("x in mm");
-##      ylabel ("y in mm");
-##      for i_M = it_M
-##        for i_X = it_X
-##          plot (x_MX{i_M,i_X}+ap.ids_X(i_X), 0. + delta_u_avg_MX{i_M,i_X}, "r");
-####          plot (x_MX{i_M,i_X}+ap.ids_X(i_X), 0.02 + delta_u_avg_MX{i_M,i_X}, "m");
-####          plot (x_MX{i_M,i_X}+ap.ids_X(i_X), 0.04 + delta_u_avg_MX{i_M,i_X}, "c");
-##          plot (x_MX{i_M,i_X}+ap.ids_X(i_X), y_wall_MX{i_M,i_X}, "r");
-##        endfor
-##      endfor
-##
-##      figure ();
-##      hold on;
-##      i_p = [20, 50, 600, 750, 800]
-##      for k = 1:numel(i_p)
-##
-##        i = i_p(k)
-##
-##        u_p = dat_gl.u_dat{4}(:,i);
-##
-##        h_lim_l = 0.2;
-##        h_lim_h = 1.04;
-##
-##        y_p = msh_gl{2}(:,1) + yoff;
-##        idx_p = (y_p >= h_lim_l) & (y_p <= h_lim_h);
-##
-##        p_uy_fit = polyfit (y_p(idx_p), u_p(idx_p), 2);
-##
-##        uyoff = min (roots (p_uy_fit))
-##
-##        plot (msh_gl{2}(:,1) + yoff, u_p, [";" num2str(i) ";"])
-##        plot (msh_gl{2}(:,1) + yoff, polyval (p_uy_fit, y_p), ["--;off " num2str(i) ";"])
-##
-##      endfor
-##
-##    endif
-##  endfor
+      fh = plot_map_msh (msh_p{i_M}, cp_nn{i_M}, []);
+      caxis ([0 1]);
+      set (gca (), "ydir", "reverse")
+      ylim ([0 0.1]);
+      hold on;
+      plot ((x_sec-0.06)*1e3, [0 0 0 0 0; 0.1 * [1 1 1 1 1]], "--k");
+      xlabel ("x* in mm");
+      ylabel ("s_n in mm");
+      print (fh, "-djpeg", "-r500", [ap.save_dir_id "map_cp_nn___i_M=" num2str(i_M) ".jpg"]);
+      close (fh);
 
-##endif
+      fh = plot_map_msh (msh{i_M}, u_x{i_M}, []);
+      hold on;
+      plot ((x_sec-0.06)*1e3, [0 0 0 0 0; max(y{i_M}) * [1 1 1 1 1]], "--k");
+      plot (x{i_M}, y_wall{i_M}, "r");
+      plot (x{i_M}, delta_u_fit{i_M}, "r");
+      axis image;
+      xlabel ("x* in mm");
+      ylabel ("y in mm");
+      print (fh, "-djpeg", "-r1000", [ap.save_dir_id "map_u_x___i_M=" num2str(i_M) ".jpg"]);
+      close (fh);
 
-## procedure:
-## 1. stitch cn, y_wall and delta_u {best case: dyn result is available}
-##    - defines global mesh with common resolution
-## 2. relative to y_wall and delta_u check positioning of u_fields {avg result is good}
-##    - adjust y offset if needed in processing step of that section
-##    - stitch that at u resolution
-##    - interpolate that on c resolution global mesh
-##
-## inter section offsets have to be correted before stitching! same x offsets for u and c mesh
-##
-##
-## strategy for u field y wall offset
-## find good y offset for flat region and adjust microstructure region to match nicely
-##
+      fh = plot_map_msh (msh{i_M}, u_y{i_M}, []);
+      hold on;
+      plot ((x_sec-0.06)*1e3, [0 0 0 0 0; max(y{i_M}) * [1 1 1 1 1]], "--k");
+      plot (x{i_M}, y_wall{i_M}, "r");
+      plot (x{i_M}, delta_u_fit{i_M}, "r");
+      axis image;
+      xlabel ("x* in mm");
+      ylabel ("y in mm");
+      print (fh, "-djpeg", "-r1000", [ap.save_dir_id "map_u_y___i_M=" num2str(i_M) ".jpg"]);
+      close (fh);
 
-## load avg velocity field per section (plus related mesh),
-## find offset from velocity profile fit and cerrect offset before stitching.
-## update avg processing and redo all the cases? or assume that x position of
-## old and new processing is the same (which it probably is)
-##
+      fh = plot_map_msh (msh{i_M}, u_z{i_M}, []);
+      hold on;
+      plot ((x_sec-0.06)*1e3, [0 0 0 0 0; max(y{i_M}) * [1 1 1 1 1]], "--k");
+      plot (x{i_M}, y_wall{i_M}, "r");
+      plot (x{i_M}, delta_u_fit{i_M}, "r");
+      axis image;
+      xlabel ("x* in mm");
+      ylabel ("y in mm");
+      print (fh, "-djpeg", "-r1000", [ap.save_dir_id "map_u_z___i_M=" num2str(i_M) ".jpg"]);
+      close (fh);
 
-##
+      fh = plot_map_msh (msh{i_M}, u_m{i_M}, []);
+      hold on;
+      plot ((x_sec-0.06)*1e3, [0 0 0 0 0; max(y{i_M}) * [1 1 1 1 1]], "--k");
+      plot (x{i_M}, y_wall{i_M}, "r");
+      plot (x{i_M}, delta_u_fit{i_M}, "r");
+      axis image;
+      xlabel ("x* in mm");
+      ylabel ("y in mm");
+      print (fh, "-djpeg", "-r1000", [ap.save_dir_id "map_u_m___i_M=" num2str(i_M) ".jpg"]);
+      close (fh);
 
-#### load processed data of all sections (from Ic and velocity records)
-##pdat = load_all_2d (pdir, aid, it_A, it_C, it_M, it_X);
-##
-##
-##  cd (fullpath);
-##
-##  c_tmp = load ("c.v7");
-##  msh_c = c_tmp.c_msh;
-##  cdata = c_tmp.c_dat;
-##  masks_c = c_tmp.c_masks;
-##  h_c = c_tmp.c_h;
-##
-##  u_tmp = load ("u.v7");
-##  msh_u = u_tmp.u_msh;
-##  udata = u_tmp.u_dat;
-##  masks_u = u_tmp.u_masks;
-##  h_u = u_tmp.u_h;
-##
-##  pp_tmp = load ("pp.v7");
-##  pp = pp_tmp.pp;
+    endfor
+  endif
 
-#"2d_avg_uIc1"
-
-##
-## TODO: test for surface concentration influences
-## vs_
-## - phi
-## - u_s
-## - inclination of surface
-## - film height
-##
+endif
 
