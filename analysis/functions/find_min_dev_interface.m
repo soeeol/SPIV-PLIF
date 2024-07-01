@@ -23,7 +23,7 @@ function [i_t_valid delta_u_phi_avg_valid] = find_min_dev_interface (delta_u_phi
     plot ([1 numel(scmad_dev)], ap.dyn_cn_if_scmad_dev_max * median (scmad) * [1 1] , "--r;upper threshold;");
     xlabel ("# rec");
     ylabel ("scmad dev");
-    print (fh, "-djpeg", "-color", ["-r" num2str(500)], [ap.save_dir_id "scmad-test_dev.jpg"]);
+    print (fh, "-djpeg", "-color", "-r500", [ap.save_dir_id "scmad-test_dev.jpg"]);
   endif
 
   ## gas-liquid interface outliers
@@ -45,7 +45,7 @@ function [i_t_valid delta_u_phi_avg_valid] = find_min_dev_interface (delta_u_phi
     plot (delta_u_phi_avg_valid, "b", "linewidth", 2);
     xlabel ("x idx");
     ylabel ("delta_u");
-    print (fh, "-djpeg", "-color", ["-r" num2str(500)], [ap.save_dir_id "scmad-test_delta_u.jpg"]);
+    print (fh, "-djpeg", "-color", "-r500", [ap.save_dir_id "scmad-test_delta_u.jpg"]);
   endif
 
 endfunction

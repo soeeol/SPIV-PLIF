@@ -34,9 +34,9 @@ function fp = get_fp_log (pdir, id_exp)
       ##
       fp.n = nref_test;
       fp.w = w_exp;
-      fp.rho = rho_tab;
-      fp.eta = eta_tab;
+      fp.rho = rho_test;
       fp.eta = eta_test;
+      fp.nu = fp.eta / fp.rho;
     otherwise
       error ("get_fp_exp: no data for id_exp");
   endswitch

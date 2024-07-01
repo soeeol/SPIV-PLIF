@@ -7,7 +7,11 @@
 ##
 
 function [ux_ul uy_ul] = vec_uni_len (ux, uy)
+
   um = vec_mag (ux, uy);
+
   ux_ul = ux ./ um;
+
   uy_ul = uy ./ um;
+
 endfunction

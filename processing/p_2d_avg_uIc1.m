@@ -31,12 +31,12 @@ pp = init_param ();
 pp.type.data = "2d_avg_uIc1";
 
 ## select measurement to process by setting the matching parameters
-pp.cell.data = "2d-r10"; # "flat" "2d-c10" "2d-t10" "2d-r10" "2d-r10-60" "2d-r10-40" "2d-r10-20"
+pp.cell.data = "flat"; # "flat" "2d-c10" "2d-t10" "2d-r10" "2d-r10-60" "2d-r10-40" "2d-r10-20"
 pp.optset.data = "M13"; # set M13 (including M13 M13b M13c) or M26
 pp.alpha.data = 60; # ° 15 60
 pp.liquid.data = "WG141";
 pp.M.data = 64; # kg/h 8 16 32 64
-pp.X.data = -16; # mm 8 0 -8 -16
+pp.X.data = 0; # mm 8 0 -8 -16 = - id_X
 pp.Z.data = 0; # mm
 pp.G.data = 2; # Nl/min
 pp.T.data = 25; # °C
@@ -45,9 +45,10 @@ pp.T.data = 25; # °C
 pp.isec_rcurv_lim.data = 100; # [mm] threshold for "flat" interface curvature radius
 pp.sfit_order.data = 3; # spline order
 pp.sfit_sps.data = 12; # spline devisions per section
-pp.isec_shift_lim.data = [0.25 0.05]; # mm
+pp.isec_shift_lim.data = [0.01 0.05]; # mm
 
 testplots = false;
+no_checks = false;
 
 ## read parameters from linking table if available
 [pp, idx_measid, head] = get_pp_ltab (ltab, pp);
@@ -63,6 +64,10 @@ mkdir (save_dir);
 
 ## limits for common grid
 domain = get_domain (pp);
+
+##
+##
+##
 
 ## read records: PLIF recordings and SPIV data
 recids = {"recid_Ic" "recid_Ic0" "recid_Ic1" "recid_u"};
@@ -109,7 +114,7 @@ endif
 printf ([">>> alignment of maps and meshes ... \n"])
 
 ## manually select point on wall on the left side of map (upstream)
-[pp.yoff_c_ini.data] = est_param (msh_c{1}, ind_wall_c (rec_c{1}), [], "yoff_c_ini", pp, "man");
+[pp.yoff_c_ini.data] = est_param (msh_c{1}, ind_wall_c (rec_c{1}), [], "yoff_c_ini", pp, "man", no_checks);
 ##[pp.yoff_c1_ini.data] = est_param (msh_c{3}, ind_wall_c (rec_c{3}), [], "yoff_c1_ini", pp, "man"); # if not mesh from file
 
 ## shift mesh with inital y offset
@@ -138,7 +143,7 @@ xlabel ("x in mm");
 ylabel ("y in mm");
 title ("estimated wall coordinates");
 legend ("Ic map", "wall Ic", "wall Ic0", "wall Ic1");
-if (strcmp (questdlg ("did the wall estimation work?", "processing", "Yes", "No", "Yes"), "Yes"))
+if (no_checks || strcmp (questdlg ("did the wall estimation work?", "processing", "Yes", "No", "Yes"), "Yes"))
   close (fh);
   csv_param_update (idx_measid, ltab, pdir.ltab, pp, head);
 else
@@ -176,16 +181,7 @@ msh_u = mesh_uc (idxx, idxy, xmin, ymin, pp, "u", sf_u);
 ##
 
 ## best of wall estimates combined
-walls_y = [];
-for i = 1:nmap_msh_c
- walls_y(:,i) = vec (interp1 (xy_wall{i}(:,1), xy_wall{i}(:,2), msh_c{1}{1}(1,:), "pchip", "extrap"));
-endfor
-lim_y = 0.4; # mm
-wall_y_min = min (walls_y, [], 2);
-wall_y_max = max (walls_y, [], 2);
-idx_min = wall_y_max < lim_y;
-idx_max = wall_y_max >= lim_y;
-wall_y = wall_y_max .* idx_max + wall_y_min .* idx_min;
+wall_y = best_y_wall (xy_wall, pp);
 
 ## visual check of wall alignment
 fh = figure ();
@@ -200,7 +196,7 @@ ylabel ("y in mm");
 title ("wall alignment");
 legend ("wall Ic", "wall Ic0", "wall Ic1", "best wall");
 hold off;
-if (strcmp (questdlg (["is the alignment ok?"], "@processing", "Yes", "No", "Yes"), "Yes"))
+if (no_checks || strcmp (questdlg (["is the alignment ok?"], "@processing", "Yes", "No", "Yes"), "Yes"))
   close (fh)
 else
   error ("adjust tolerance or use manual estimate");
@@ -211,7 +207,7 @@ endif
 ##
 printf ([">>> interface detection ... \n"]);
 
-pp.tol_if.data = tol = int32 (10);
+pp.tol_if.data = tol = int32 (5);
 ## Ic usually passes detection due to strong signal, use result to initialzie search for Ic0 and Ic1
 i = 1;
 [xy_if{i}, xy_idx{i}, ispeak{i}] = interface_xy (msh_c{i}, ind_if(rec_c{i}), tol, "min", pp, []);
@@ -222,23 +218,23 @@ xy_idx_sm = movmean (xy_idx{1}(:,2), 32);
 idx_y_delta = idx_y_3 - idx_y_1;
 fh = check_if_plot (xy_if{i}, ispeak{i}, msh_c{i}, rec_c{i}, []);
 msg = {"interface detection ok?", "adjust tol, starting point or method"};
-if strcmp (questdlg (msg{1}, "", "Yes", "No", "Yes"), "Yes")
+if (no_checks || strcmp (questdlg (msg{1}, "", "Yes", "No", "Yes"), "Yes"))
   clf (fh);
   i = 2; # initalize search with Ic result
   [xy_if{i}, xy_idx{i}, ispeak{i}] = interface_xy (msh_c{i}, ind_if (rec_c{i}), tol/2, "min", pp, xy_idx_sm);
 ##  [xy_if{i}, xy_idx{i}, ispeak{i}] = interface_xy (msh_c{i}, ind_if (rec_c{i}), tol*2, "min", pp, []);
   fh = check_if_plot (xy_if{i}, ispeak{i}, msh_c{i}, rec_c{i}, fh);
-  if strcmp (questdlg (msg{1}, "", "Yes", "No", "Yes"), "Yes")
+  if (no_checks || strcmp (questdlg (msg{1}, "", "Yes", "No", "Yes"), "Yes"))
     clf (fh);
     if (nmap_msh_c==3)
       i = 3; # initalize search with Ic result
       try ## start a fresh search for the gas-liquid interface
         [xy_if{i}, xy_idx{i}, ispeak{i}] = interface_xy (msh_c{i}, ind_if (rec_c{i}), tol, "min", pp, []);
       catch
-        [xy_if{i}, xy_idx{i}, ispeak{i}] = interface_xy (msh_c{i}, ind_if (rec_c{i}), 2*tol, "min", pp, idx_y_delta+xy_idx_sm);
+        [xy_if{i}, xy_idx{i}, ispeak{i}] = interface_xy (msh_c{i}, ind_if (rec_c{i}), 1*tol, "min", pp, idx_y_delta+xy_idx_sm);
       end_try_catch
       fh = check_if_plot (xy_if{i}, ispeak{i}, msh_c{i}, rec_c{i}, fh);
-      if strcmp (questdlg (msg{1}, "", "Yes", "No", "Yes"), "Yes")
+      if (no_checks || strcmp (questdlg (msg{1}, "", "Yes", "No", "Yes"), "Yes"))
         close (fh);
       else
         error (msg{2});
@@ -259,9 +255,17 @@ csv_param_update (idx_measid, ltab, pdir.ltab, pp, head);
 wg_if = {[msh_c{1}{1}(1,:)' wall_y], xy_if{1}};
 
 ##
-## improve intra section alignment (gas-liquid interface of phi/phi_des vs. phi_sat)
+## improve intra section alignment based on gas-liquid interface of phi/phi_des vs. phi_sat
 ##   rec_c{3} will loose wall alignment
 ##
+
+## correct for systematic intra section offset
+[phi_sat_tmp, x_idx_soff, y_idx_soff] = corr_intra_section_phi_sys_offset (rec_c{3}, pp.cell.data, pp.M.data, -pp.X.data);
+if testplots
+  plot_map_msh (msh_c{1}, rec_c{1}, []); xlim ([-5 5]); ylim ([0 1.5]);  caxis ([0 0.042])
+##  plot_map_msh (msh_c{2}, rec_c{2}, []); xlim ([-5 5]); ylim ([0 1.5]); caxis ([0 0.042])
+  plot_map_msh (msh_c{3}, rec_c{3}, []); xlim ([-5 5]); ylim ([0 1.5]); caxis ([0 0.042])
+endif
 
 ## smooth spline fit representation of detected interface for curvature check
 x_fit = double (msh_c{1}{1}(1,:));
@@ -279,17 +283,12 @@ endif
 r_curvature_abs = median (abs (r_curvature));
 printf (["median radius of abs curvature: " num2str(r_curvature_abs) " mm \n"])
 
-## correct for systematic offset (used here for flat sections)
-[phi_sat_tmp, x_idx_soff, y_idx_soff] = corr_intra_section_phi_sys_offset (rec_c{3}, pp.cell.data, pp.M.data, pp.X.data);
-
 ##
 if (r_curvature_abs > pp.isec_rcurv_lim.data) # basically flat film, only use y offset correction
   printf (["basically flat interface, might do x offset correction manually\n"]);
-  pp.isec_shift_lim.data(1) = 0.025 # mm
-  rec_c_sat_ip = interp2 (msh_c{3}{1}, msh_c{3}{2}, phi_sat_tmp, msh_c{1}{1}, msh_c{1}{2}, "pchip", 0); # ensure same domain for method input
-else
-  rec_c_sat_ip = interp2 (msh_c{3}{1}, msh_c{3}{2}, rec_c{3}, msh_c{1}{1}, msh_c{1}{2}, "pchip", 0); # ensure same domain for method input
+  pp.isec_shift_lim.data(1) = 0.01 # mm
 endif
+rec_c_sat_ip = interp2 (msh_c{3}{1}, msh_c{3}{2}, phi_sat_tmp, msh_c{1}{1}, msh_c{1}{2}, "pchip", 0); # ensure same domain for method input
 
 ## estimate best offset
 [~, dx_mm_min, dy_mm_min] = corr_xy_offset_min_ddeltau (msh_c{1}, rec_c{1}, rec_c_sat_ip, xy_if{1}(:,2), pp.isec_shift_lim.data, false);
@@ -338,9 +337,9 @@ rec_u = rec_u_org;
 
 ## manual rot_u adjustment
 if strcmp (method_piv, "APIV")
-  pp.rot_u.data  = est_param (msh_u, rec_u{5}, [], "rot_u", pp, "man");
+  pp.rot_u.data  = est_param (msh_u, rec_u{5}, [], "rot_u", pp, "man", no_checks);
 else
-  pp.rot_u.data  = est_param (msh_u, ind_wall_u (rec_u{4}, 0.05), wg_if, "rot_u", pp, "man");
+  pp.rot_u.data  = est_param (msh_u, ind_wall_u (rec_u{4}, 0.05), wg_if, "rot_u", pp, "man", no_checks);
 end
 ## rotate u maps
 for i = 1:nmap_u
@@ -353,9 +352,9 @@ msh_u = mesh_uc (idxx, idxy, xmin, ymin, pp, "u", sf_u);
 
 ## manual xoff_u adjustment
 if strcmp (method_piv, "APIV")
-  pp.rot_u.data  = est_param (msh_u, rec_u{5}, wg_if, "xoff_u", pp, "man");
+  pp.rot_u.data  = est_param (msh_u, rec_u{5}, wg_if, "xoff_u", pp, "man", no_checks);
 else
-  pp.xoff_u.data = est_param (msh_u, ind_wall_u (rec_u{4}, 0.05), wg_if, "xoff_u", pp, "man");
+  pp.xoff_u.data = est_param (msh_u, ind_wall_u (rec_u{4}, 0.05), wg_if, "xoff_u", pp, "man", no_checks);
 end
 
 ## adjust for first micro structure to align symmetrically to x = 0 position
@@ -375,9 +374,9 @@ pp.xoff_u.data = pp.xoff_u.data + xcenter_ms;
 
 ## manual yoff_u adjustment
 if strcmp (method_piv, "APIV")
-  pp.yoff_u.data = est_param (msh_u, rec_u{5}, wg_if, "yoff_u", pp, "man");
+  pp.yoff_u.data = est_param (msh_u, rec_u{5}, wg_if, "yoff_u", pp, "man", no_checks);
 else
-  pp.yoff_u.data = est_param (msh_u, ind_wall_u (rec_u{4}, 0.05), wg_if, "yoff_u", pp, "man");
+  pp.yoff_u.data = est_param (msh_u, ind_wall_u (rec_u{4}, 0.05), wg_if, "yoff_u", pp, "man", no_checks);
 endif
 ##
 [msh_u] = tform_mesh (msh_u, pp, "yoff_u", []);
@@ -438,10 +437,10 @@ legend ("location", "southwest");
 
 ## masks
 val_mask = NaN; # 0
-c_masks.gas = masking ("c", "gas", size(c_msh{1}), lims_y(1), delta_u, sf_c, 0, val_mask);
-c_masks.wall = masking ("c", "wall", size(c_msh{1}), lims_y(1), y_wall, sf_c, 0, val_mask);
-u_masks.gas = masking ("u", "gas", size(u_msh{1}), lims_y(1), u_h.gas, sf_u, 0, val_mask);
-u_masks.wall = masking ("u", "wall", size(u_msh{1}), lims_y(1), u_h.wall, sf_u, 0, val_mask);
+c_masks.gas = masking ("gas", size(c_msh{1}), lims_y(1), delta_u, sf_c, 0, val_mask);
+c_masks.wall = masking ("wall", size(c_msh{1}), lims_y(1), y_wall, sf_c, 0, val_mask);
+u_masks.gas = masking ("gas", size(u_msh{1}), lims_y(1), u_h.gas, sf_u, 0, val_mask);
+u_masks.wall = masking ("wall", size(u_msh{1}), lims_y(1), u_h.wall, sf_u, 0, val_mask);
 
 if testplots
   plot_map_msh (c_msh, c_masks.gas .* c_masks.wall, []);

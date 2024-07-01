@@ -38,7 +38,7 @@ function [msh_gl dat_gl] = stitch_msh_dat (sd, ap)
   M = collect_sec_var (msh_file_x, {msh_var});
 
   ## correct inter section mesh offsets
-  ## xoff - applies to all types of section meshes so far
+  ## xoff
   if (isfield (ap.sd, "xoff_X"))
     xoff = ap.sd.xoff_X
     for i_X = 1 : numel (xoff)
@@ -50,8 +50,26 @@ function [msh_gl dat_gl] = stitch_msh_dat (sd, ap)
     case {"c_msh", "u_msh"}
       if (isfield (ap.sd, "yoff_X"))
         yoff = ap.sd.yoff_X
-        for i_X = 1 : numel (yoff)
+        for i_X = it_X
           M.(msh_var){i_X}{2} = M.(msh_var){i_X}{2} + yoff(i_X);
+        endfor
+      endif
+    otherwise
+      ;
+  endswitch
+  ## u vs c map offsets
+  switch (msh_var)
+    case {"u_msh"}
+      if (isfield (ap.sd, "x_u_off_X"))
+        xuoff = ap.sd.x_u_off_X
+        for i_X = it_X
+          M.(msh_var){i_X}{1} = M.(msh_var){i_X}{1} + xuoff(i_X);
+        endfor
+      endif
+      if (isfield (ap.sd, "y_u_off_X"))
+        yuoff = ap.sd.y_u_off_X
+        for i_X = it_X
+          M.(msh_var){i_X}{2} = M.(msh_var){i_X}{2} + yuoff(i_X);
         endfor
       endif
     otherwise
@@ -59,7 +77,8 @@ function [msh_gl dat_gl] = stitch_msh_dat (sd, ap)
   endswitch
 
   ## build meshes
-  [msh_xs msh_gl msh_gl_sec ~] = stitch_x_msh (M.(msh_var), ap, 3);
+  [msh_xs msh_gl msh_gl_sec x_seams ~] = stitch_x_msh (M.(msh_var), ap, 3);
+  x_seams
 
   ##
   ## combine data
@@ -135,6 +154,7 @@ function [msh_gl dat_gl] = stitch_msh_dat (sd, ap)
 
   ## x - stitch each variable
   for i_v = 1 : numel (data_vars)
+    printf (["stitch_msh_dat: " data_vars{i_v} "\n"]);
     dat_gl.(data_vars{i_v}) = stitch_x_dim (msh_xs, S.(data_vars{i_v}), msh_gl_sec, it_X);
   endfor
 

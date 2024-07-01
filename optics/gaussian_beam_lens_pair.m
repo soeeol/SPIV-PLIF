@@ -4,7 +4,7 @@
 ## Gaussian beam calculation for the basic design of a beam expander and a
 ## light sheet optic
 ##
-## Author: Sören J. Gerke 421016+git@mailbox.org
+## Author: Sören J. Gerke
 ##
 
 ## bp  .. beam parameter product

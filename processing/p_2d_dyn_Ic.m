@@ -16,18 +16,19 @@ pp = init_param ();
 pp.type.data = "2d_dyn_Ic";
 
 ## select measurement to process by setting the matching parameters
-pp.cell.data = "2d-r10"; # "flat" "2d-c10" "2d-t10" "2d-r10" "2d-r10-60" "2d-r10-40" "2d-r10-20"
+pp.cell.data = "flat"; # "flat" "2d-c10" "2d-t10" "2d-r10" "2d-r10-60" "2d-r10-40" "2d-r10-20"
 pp.optset.data = "M13"; # set M13 (including M13 M13b M13c) or M26
 pp.alpha.data = 60; # ° 15 60
 pp.liquid.data = "WG141";
 pp.M.data = 64; # kg/h 8 16 32 64
-pp.X.data = 0; # mm 8 0 -8 -16
+pp.X.data = -16; # mm 8 0 -8 -16 = - id_X
 pp.Z.data = 0; # mm
 pp.G.data = 2; # Nl/min
 pp.T.data = 25; # °C
 f_Hz = 10;
 
 testplots = false;
+no_checks = true;
 
 ## read parameters from linking table if available
 [pp, idx_measid, head] = get_pp_ltab (ltab, pp);
@@ -94,7 +95,7 @@ endif
 ## correct initial offset in Ic maps
 
 ## manually select point on wall on the left side of map (upstream)
-[pp.yoff_c_ini.data] = est_param (msh_c{3}, ind_wall_c (rec_c{3,1}), [], "yoff_c_ini", pp, "man");
+[pp.yoff_c_ini.data] = est_param (msh_c{3}, ind_wall_c (rec_c{3,1}), [], "yoff_c_ini", pp, "man", no_checks);
 
 ## shift mesh with inital y offset
 for i = 1:nmap_msh_c
@@ -120,7 +121,7 @@ xlabel ("x in mm");
 ylabel ("y in mm");
 title ("estimated wall coordinates");
 legend ("Ic map", "wall Ic", "wall Ic0", "wall Ic1");
-if (strcmp (questdlg ("did the wall estimation work?", "processing", "Yes", "No", "Yes"), "Yes"))
+if (no_checks || strcmp (questdlg ("did the wall estimation work?", "processing", "Yes", "No", "Yes"), "Yes"))
   close (fh);
   csv_param_update (idx_measid, ltab, pdir.ltab, pp, head);
 else
@@ -148,16 +149,7 @@ endfor
 [msh_c, xy_wall, pp] = xy_off_trans (msh_c, rec_c(1:3,1), pp, thrs);
 
 ## best of wall estimates combined
-walls_y = [];
-for i = 1:nmap_msh_c
- walls_y(:,i) = vec (interp1 (xy_wall{i}(:,1), xy_wall{i}(:,2), msh_c{1}{1}(1,:), "pchip", "extrap"));
-endfor
-lim_y = 0.4; # mm
-wall_y_min = min (walls_y, [], 2);
-wall_y_max = max (walls_y, [], 2);
-idx_min = wall_y_max < lim_y;
-idx_max = wall_y_max >= lim_y;
-wall_y = wall_y_max .* idx_max + wall_y_min .* idx_min;
+wall_y = best_y_wall (xy_wall, pp);
 
 ## visual check of wall alignment
 fh = figure ();
@@ -172,7 +164,7 @@ ylabel ("y in mm");
 title ("wall alignment");
 legend ("wall Ic", "wall Ic0", "wall Ic1", "best wall");
 hold off;
-if (strcmp (questdlg (["is the alignment ok?"], "@processing", "Yes", "No", "Yes"), "Yes"))
+if (no_checks || strcmp (questdlg (["is the alignment ok?"], "@processing", "Yes", "No", "Yes"), "Yes"))
   close (fh)
 else
   error ("adjust tolerance or use manual estimate");
@@ -197,7 +189,7 @@ tol = 5;
 [xy_if{i}, xy_idx{i}, ispeak{i}] = interface_xy (msh_c{1}, ind_if (rec_c{1,i}), tol, "min", pp, xy_idx_sm);
 fh = check_if_plot (xy_if{i}, ispeak{i}, msh_c{1}, rec_c{1,i}, []);
 msg = {"interface detection ok?", "adjust tol, starting point or method"};
-if strcmp (questdlg (msg{1}, "", "Yes", "No", "Yes"), "Yes")
+if (no_checks || strcmp (questdlg (msg{1}, "", "Yes", "No", "Yes"), "Yes"))
   close (fh)
   for i = 2:nmap_c # initalize search with Ic result
     [xy_if{i}, xy_idx{i}, ispeak{i}] = interface_xy (msh_c{1}, ind_if (rec_c{1,i}), tol, "max", pp, xy_idx_sm);
@@ -209,6 +201,9 @@ pp.y0_if_c.data = xy_if{1}(1,2);
 
 ## update ltab on disk
 csv_param_update (idx_measid, ltab, pdir.ltab, pp, head);
+
+## correct for systematic intra section offset
+[rec_c{3,1}, ~, ~] = corr_intra_section_phi_sys_offset (rec_c{3}, pp.cell.data, pp.M.data, -pp.X.data);
 
 ## interpolate c_dat and u_dat on common grid
 ymax = max (msh_c{1}{2}(:,1));
@@ -345,22 +340,19 @@ xlabel ("x in mm");
 ylabel ("dispersion measures in mm");
 
 ## result
-if (strcmp (questdlg (["store results in \n " save_dir], "@processing", "Yes", "No "), "Yes"))
-  status = save_result (save_dir, pdir.work, c_msh, c_dat, c_masks, c_h, [], [], [], [], pp);
-  ## save statistics
-  cd (save_dir);
-  files = glob ([save_dir "if_stat.txt"]);
-  save -text "if_stat.txt" nmap_c mmax_dev mmad_dev mstd_dev max_dev mad_dev std_dev
-  if status
-    pp.savedate.data = date_str;
-    ## update ltab on disk
-    csv_param_update (idx_measid, ltab, pdir.ltab, pp, head);
-    ##
-    print (fig_ift, "-djpeg", "-color", "-r500", [save_dir "overview_5_ift.jpg"]);
-    print (fig_ifp, "-djpeg", "-color", "-r500", [save_dir "overview_5_ifp.jpg"]);
-    print (fig_ifs, "-djpeg", "-color", "-r500", [save_dir "overview_5_ifs.jpg"]);
-    print (fig_if, "-djpeg", "-color", "-r500", [save_dir "overview_5_if.jpg"]);
-  endif
-else
-  error ("not ready to save");
-endif
+cd (save_dir);
+save -v7 "c.v7" c_msh c_dat c_masks c_h
+save -v7 "pp.v7" pp
+save -text "if_stat.txt" nmap_c mmax_dev mmad_dev mstd_dev max_dev mad_dev std_dev
+cd (pdir.work);
+
+pp.savedate.data = date_str;
+## update ltab on disk
+csv_param_update (idx_measid, ltab, pdir.ltab, pp, head);
+##
+print (fig_ift, "-djpeg", "-color", "-r500", [save_dir "overview_5_ift.jpg"]);
+print (fig_ifp, "-djpeg", "-color", "-r500", [save_dir "overview_5_ifp.jpg"]);
+print (fig_ifs, "-djpeg", "-color", "-r500", [save_dir "overview_5_ifs.jpg"]);
+print (fig_if, "-djpeg", "-color", "-r500", [save_dir "overview_5_if.jpg"]);
+
+

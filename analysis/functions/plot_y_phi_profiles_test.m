@@ -1,10 +1,11 @@
 ##  SPDX-License-Identifier: BSD-3-Clause
 ##  Copyright (c) 2024, Sören Jakob Gerke
 
-## plot some phi_y_profiles to check alignment of phi_sat vs. phi/phi_des
+## plot some phi_y_profiles to check alignment of phi_sat vs. phi / phi_des
 ##
 ## Author: Sören J. Gerke
 ##
+
 function fh = plot_y_phi_profiles_test (y, phi_avg, phi_des, phi_sat, n_x, delta_u)
 
   d_nx = round (n_x / 4);

@@ -12,7 +12,11 @@ function dat_gl = stitch_x_dim (msh_xs, dat, msh_st_sec, it_X)
 
   if (iscell (A)) # this path is only for float matrix in cells
 
-    nmaps = numel (A);
+    nm = [];
+    for i_X = it_X
+      nm(i_X) = numel (dat{i_X});
+    endfor
+    nmaps = min (nm);
 
     if ((columns (A{1}) > 1) && (rows (A{1}) > 1))
       ndims = 2;

@@ -35,7 +35,7 @@ function sc_vec_rm_ext = rm_ext (x_vec, sc_vec, wlen)
     sc_dmax = (sc_max - sc_m);
     sc_delta = sc_max - sc_min;
     if (! sc_dmin * sc_dmax == 0)
-      if (abs (1 - abs (sc_dmin / sc_dmax)) < 1) # otherwise strongly asymmetric
+      if (abs (1 - abs (sc_dmin / sc_dmax)) < 0.5) # otherwise strongly asymmetric
             sc_vec_rm_ext(idx_border) = sc_vec(idx_border); # keep original data in border region
       endif
     endif

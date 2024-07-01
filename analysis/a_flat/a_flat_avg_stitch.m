@@ -16,13 +16,13 @@ if 1
 
   ## ap parameters defining the analysis
   ap = [];
-  ap.a_type = "a_2DR10_avg_stitch"; # identifier of this analysis
+  ap.a_type = "a_flat_avg_stitch"; # identifier of this analysis
   ap.c_method = "linear"; # method to transform fluorescence intensity to concentration ("linear" / "nonlinear" .. no impact on delta_c_avg)
   ap.c_if_method = "calib"; # method to deal with fluorescence intensity decay at the interface ("calib" / "calib-if" .. high impact on delta_c_avg)
 
   ## selection of experiments to be analyzed
   ap.ids_A = [60]; # [°] inlination IDs
-  ap.ids_C = {"2d-r10"}; # cell IDs
+  ap.ids_C = {"flat"}; # cell IDs
   ap.ids_G = [2]; # [Nl/min] gas flow IDs
   ap.ids_L = {"WG141"}; # liquid IDs
   ap.ids_M = [8 16 32 64]; # [kg/h] mass flow IDs
@@ -45,8 +45,7 @@ if 1
   i_T = 1; ap.i_T = i_T;
   i_Z = 1; ap.i_Z = i_Z;
   ## overrides
-##  it_M = 1
-##  i_M = it_M = 1
+##  it_M = 4
 
   ## prepare directories
   ap.date_str = datestr (now, "yyyymmdd");
@@ -59,13 +58,13 @@ if 1
 
   ## spline interface fit for stable interface normals (defaults)
   ap.sd.if_sfit_order = 3; # spline order
-  ap.sd.if_sfit_sps = 15; # splines devisions per section (.. generally: increase for curved interface, decrease for flat)
+  ap.sd.if_sfit_sps = 9; # splines devisions per section (.. generally: increase for curved interface, decrease for flat)
 
   ##
   ## stitching descriptors
   ##
   sd{1}.sd_name = "cn_dyn_avg";
-  sd{1}.a_dir = [pdir.analyzed "a_2DR10_dyn_cn_cp/"];
+  sd{1}.a_dir = [pdir.analyzed "a_flat_dyn_cn_cp/"];
   sd{1}.a_id_sec = ["cn-" ap.c_method "_" ap.c_if_method];
   sd{1}.msh_fn = "cn_dyn.v7";
   sd{1}.msh_var = "c_msh";
@@ -77,7 +76,7 @@ if 1
   sd{1}.dat_var{3} = {"phi_avg", "phi_des", "phi_sat"};
   ##
   sd{2}.sd_name = "cp_dyn_avg";
-  sd{2}.a_dir = [pdir.analyzed "a_2DR10_dyn_cn_cp/"];
+  sd{2}.a_dir = [pdir.analyzed "a_flat_dyn_cn_cp/"];
   sd{2}.a_id_sec = ["cp-avg-" ap.c_method "_" ap.c_if_method];
   sd{2}.msh_fn = "avg_cp.v7";
   sd{2}.msh_var = "p_msh_o";
@@ -94,7 +93,7 @@ if 1
   sd{3}.msh_fn = "c.v7";
   sd{3}.msh_var = "c_msh";
   sd{3}.dat_fn{1} = "c.v7"; ##  "c.v7" c_msh c_dat c_masks c_h delta_u y_wall
-  sd{3}.dat_var{1} = {"c_dat", "y_wall", "delta_u"};
+  sd{3}.dat_var{1} = {"y_wall", "delta_u"};
   ##
   sd{4}.sd_name = "u_avg";
   sd{4}.a_dir = [pdir.processed ""];
@@ -175,20 +174,12 @@ if 1
   endif
 
   xoff = zeros (numel(ap.ids_M), numel(ap.ids_X));
-  xoff([1 2 4],1) = +0.05;
-  xoff(1,3:4) = +0.1; # recorded on another day
-##  xoff(3,1) = +0.0;
-##  xoff(2,1) = +0.025;
-  xoff(4,3:4) = +0.5; # recorded on another day
+  xoff(1,:) = 1e-3 * [+0 +0 +0 +0];
 
   yoff = zeros (numel(ap.ids_M), numel(ap.ids_X));
-  yoff(1,3) = +0.005;
-##  yoff(2,1) = -0.005;
-##  yoff(3,3) = +0.005;
-  yoff(4,1) = -0.01;
-  yoff(4,3:4) = +0.005;
+  yoff(3,:) = 1e-3 * [+0 -5 +0 +0];
 
-  if 0
+  if 1
     ## test plot offset correction
     figure ();
     hold on;
@@ -203,16 +194,18 @@ if 1
     legend ({"filtered avg" "avg"})
     legend ("autoupdate", "off");
     plot ((x_sec-0.06)*1e3, [0 0 0 0 0; [1 1 1 1 1]], "--k");
-    axis image;
+##    axis image;
     ylim ([0 max(delta_u_dyn_avg_MX{it_M(end),2})]);
   endif
 
   ## intra section u vs c offset - fine tuning ## TODO fix big offset in processing
   x_u_off = zeros (numel(ap.ids_M), numel(ap.ids_X)); # + shifts u vs c in +x
-  x_u_off(1,2) = + 0.04;
-  x_u_off(2,2) = + 0.04;
 
-  y_u_off = zeros (numel(ap.ids_M), numel(ap.ids_X));# + shifts u vs c in +y
+  y_u_off = zeros (numel(ap.ids_M), numel(ap.ids_X)); # + shifts u vs c in +y
+  y_u_off(1,:) = 1e-3 * [-3 +2 -3 +2];
+  y_u_off(2,:) = 1e-3 * [-7 -1 +10 +10];
+  y_u_off(3,:) = 1e-3 * [+0 +5 +5 +0];
+  y_u_off(4,:) = 1e-3 * [+5 +10 -2 -13];
 
 endif
 
@@ -309,6 +302,74 @@ if 1
   xlabel ("x* in mm");
   ylabel ("");
 
+  ## velocity profile per section - comparison with Nusselt profile
+  ## check y u offset - valid for flat film
+  ##
+
+  yp_eq_nd = linspace (0, 1, 101);
+  up_eq_nd = model_filmflow_laminar_u_profile (yp_eq_nd, 1, 1);
+  for i_M = it_M
+    fh = figure ();
+    hold on;
+    plot (up_eq_nd, yp_eq_nd, "-k;Nusselt normalized;", "linewidth", 2);
+    ##
+    yp = y_cn{i_M};
+    for i_X = it_X
+      ## select x section range for most flat film
+      x_u_l = ap.ids_X(i_X) - 2;
+      x_u_u = ap.ids_X(i_X) + 2;
+      ##
+      idx_sec = (x_u{i_M} >= x_u_l) & (x_u{i_M} <= x_u_u);
+      ##
+      up_mean = median (dat_u_avg{i_M}{1}(:,idx_sec), 2);
+      up = interp1 (y_u{i_M}, up_mean, yp);
+      ysp = median (delta_u_avg{i_M}(idx_sec));
+      [~, idx_us] = min (abs (yp - ysp));
+      usp = up (idx_us);
+      ##
+      plot (up / usp, yp / ysp, ["x-;exp M" num2str(i_M) "X" num2str(i_X) " delta_u = " num2str(ysp) " mm;"]);
+    endfor
+    legend ("autoupdate", "off");
+    plot ([0 1], 1 * [1 1], "--k");
+    xlim ([0 1.1]);
+    ylim ([0 1.1]);
+    xlabel ("u / u_s");
+    ylabel ("y / delta_u");
+    legend ("location", "northwest");
+    print (fh, "-djpeg", "-r1000", [ap.save_dir_id "test_y_u_off___i_M=" num2str(i_M) ".jpg"]);
+##    close (fh);
+  endfor
+
+  if 0
+    ##
+    ## check alignment of velocity vectors with interfaces and for continuity around section borders
+    ##
+    dx = 0.08; # mm double of measurement IA size
+    dy = 0.08; # mm
+    lim_um = 100e-6;
+    for i_M = it_M
+      mask_g{i_M} = masking ("gas", size (msh_u{i_M}{1}), min (y_u{i_M}), delta_u_avg{i_M}, get_sf (msh_u{i_M}), 0, nan);
+      mask_w{i_M} = masking ("wall", size (msh_u{i_M}{1}), min (y_u{i_M}), y_wall_avg{i_M}, get_sf (msh_u{i_M}), 2, nan);
+      mask = ones ( size (msh_u{i_M}{1}));
+
+      lim_x = [min(x_u{i_M}) max(x_u{i_M})]; # in mm
+      lim_y = [min(y_u{i_M}) max(delta_u_avg{i_M}) + 2*dy]; # in mm
+
+      [x_v y_v ux_v uy_v um_v] = u_xy_vec (msh_u{i_M}, dat_u_avg{i_M}{1}, dat_u_avg{i_M}{2}, mask, dx, dy, lim_x, lim_y, lim_um);
+
+      fh = figure ();
+      plot_map_msh (msh_u{i_M}, dat_u_avg{i_M}{4}, fh)
+      caxis ([ 0 median(max(dat_u_avg{i_M}{4}, [], 2), "omitnan") ]);
+      hold on;
+      quiver (x_v, y_v, ux_v, uy_v, 1, "k");
+      axis image;
+      plot (x_cn{i_M}, delta_u_avg{i_M}, "r-", "linewidth", 1);
+      plot (x_cn{i_M}, y_wall_avg{i_M}, "r-");
+      xlabel ("x in mm");
+      ylabel ("y in mm");
+    endfor
+  endif
+
   ## check cn field for continuity around section borders
   fh = figure ();
   plot_map_msh (msh_cn{i_M}, cn_avg{i_M}, fh)
@@ -320,107 +381,6 @@ if 1
   xlabel ("x* in mm");
   ylabel ("y in mm");
   ylim ([-0.1 2.5]);
-
-  ## velocity profile per section - comparison with Nusselt profile
-  ## check y u offset - valid for flat film
-  ##
-
-  yp_eq_nd = linspace (0, 1, 101);
-  up_eq_nd = model_filmflow_laminar_u_profile (yp_eq_nd, 1, 1);
-  for i_M = it_M
-
-    fh = figure ();
-    hold on;
-    plot (up_eq_nd, yp_eq_nd, "-k;Nusselt normalized;", "linewidth", 2);
-
-    yp = y_cn{i_M};
-
-    for i_X = it_X
-
-      ## select x section range for most flat film
-      x_u_l = ap.ids_X(i_X) - 2;
-      x_u_u = ap.ids_X(i_X) + 2;
-      if ap.ids_X(i_X) < 0
-        x_u_l = ap.ids_X(i_X) - 4;
-        x_u_u = ap.ids_X(i_X) + 0;
-      elseif ap.ids_X(i_X) > 0
-        x_u_l = ap.ids_X(i_X) - 0;
-        x_u_u = ap.ids_X(i_X) + 4;
-      endif
-      idx_sec = (x_u{i_M} >= x_u_l) & (x_u{i_M} <= x_u_u);
-
-      up_mean = median (dat_u_avg{i_M}{1}(:,idx_sec), 2);
-      up = interp1 (y_u{i_M}, up_mean, yp);
-      ysp = median (delta_u_avg{i_M}(idx_sec));
-      [~, idx_us] = min (abs (yp - ysp));
-      usp = up (idx_us);
-
-      plot (up / usp, yp / ysp, [".-;exp M" num2str(i_M) "X" num2str(i_X) " delta_u = " num2str(ysp) " mm;"]);
-
-    endfor
-
-    legend ("autoupdate", "off");
-    plot ([0 1], 1 * [1 1], "--k");
-    xlim ([0 1.1]);
-    ylim ([0 1.1]);
-    xlabel ("u / u_s");
-    ylabel ("y / delta_u");
-    legend ("location", "northwest");
-    print (fh, "-djpeg", "-r1000", [ap.save_dir_id "test_y_u_off___i_M=" num2str(i_M) ".jpg"]);
-    close (fh);
-
-  endfor
-
-
-  ##
-  ## check alignment of velocity vectors with interfaces and for continuity around section borders
-  ##
-  dx = 0.08; # mm double of measurement IA size
-  dy = 0.08; # mm
-  lim_um = 100e-6;
-  for i_M = it_M
-    mask_g{i_M} = masking ("gas", size (msh_u{i_M}{1}), min (y_u{i_M}), delta_u_avg{i_M}, get_sf (msh_u{i_M}), 0, nan);
-    mask_w{i_M} = masking ("wall", size (msh_u{i_M}{1}), min (y_u{i_M}), y_wall_avg{i_M}, get_sf (msh_u{i_M}), 2, nan);
-    mask = ones ( size (msh_u{i_M}{1}));
-
-    lim_x = [min(x_u{i_M}) max(x_u{i_M})]; # in mm
-    lim_y = [min(y_u{i_M}) max(delta_u_avg{i_M}) + 2*dy]; # in mm
-
-    [x_v y_v ux_v uy_v um_v] = u_xy_vec (msh_u{i_M}, dat_u_avg{i_M}{1}, dat_u_avg{i_M}{2}, mask, dx, dy, lim_x, lim_y, lim_um);
-
-    fh = figure ();
-    plot_map_msh (msh_u{i_M}, dat_u_avg{i_M}{4}, fh)
-    caxis ([ 0 median(max(dat_u_avg{i_M}{4}, [], 2), "omitnan") ]);
-    hold on;
-    quiver (x_v, y_v, ux_v, uy_v, 1, "k");
-    axis image;
-    plot (x_cn{i_M}, delta_u_avg{i_M}, "r-", "linewidth", 1);
-    plot (x_cn{i_M}, y_wall_avg{i_M}, "r-");
-    xlabel ("x in mm");
-    ylabel ("y in mm");
-  endfor
-
-
-  ## dirty fix for small section of velocity field of M 32: severe particle accumulation blocked PIV analysis
-  ## replace area with moving median:
-  ## -5.4 < x < -4.3
-  ## y < 0.16
-  for i_M = it_M
-    if i_M == 3
-      for i = 1 : numel (dat_u_avg{i_M})
-        idx_x = (msh_u{i_M}{1} >= -5.3) & (msh_u{i_M}{1} <= -4.4);
-        idx_y = (msh_u{i_M}{2} >= +0.02) & (msh_u{i_M}{2} <= +0.18);
-        idx = idx_x & idx_y;
-        switch (i)
-          case {1, 4}
-            median_wall_profile = repmat (max (dat_u_avg{i_M}{i} .* idx_y, [], 2), 1, size (idx_x, 2));
-          otherwise
-            median_wall_profile = repmat (median (dat_u_avg{i_M}{i} .* idx_y, 2, "omitnan"), 1, size (idx_x, 2));
-        endswitch
-        dat_u_avg{i_M}{i} = dat_u_avg{i_M}{i} .* (! idx) + median_wall_profile .* idx;
-      endfor
-    endif
-  endfor
 
 endif
 
@@ -515,6 +475,7 @@ if 1
       u_x_yp = u_x_masked(:,i_p);
       vfr{i_M}(i_p) = sum (u_x_yp) * sf(2) / 1000 * cell_width / 1000 * 3600; # m^3 / s
     endfor
+    vfr{i_M} = rm_ext (x{i_M}, vfr{i_M}, 401);
 
   endfor
 

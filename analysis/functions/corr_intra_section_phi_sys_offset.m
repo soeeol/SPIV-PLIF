@@ -16,21 +16,12 @@ function [phi_sat_corr, xoff, yoff] = corr_intra_section_phi_sys_offset (phi_sat
     case {"flat"}
     ## systematic offset between phi/phi_des and phi_sat was found for all M13 flat measurements
       switch (id_M)
-        case {64, 32, 16, 8}
+        case {8, 16, 32, 64}
           switch (id_X)
             case {-8, 0, 8, 16} # checked for all cases
-              xoff = - 50; # systematic offset!
+              xoff = - 50;
           endswitch
       endswitch
-
-    case {"2d-r10"}
-##      switch (id_M)
-##        case {32}
-##          switch (id_X)
-##            case {-8}
-##              xoff = - 35;
-##          endswitch
-##      endswitch
 
   endswitch
 

@@ -16,14 +16,14 @@ if 1
 
   ## ap parameters defining the analysis
   ap = [];
-  ap.a_type = "a_2DR10_dyn_cn_cp"; # identifier of this analysis
+  ap.a_type = "a_flat_dyn_cn_cp"; # identifier of this analysis
   ap.p_type = "2d_dyn_Ic"; # for the analysis use the output of processing procedure "p_type"
   ap.c_method = "linear"; # method to transform fluorescence intensity to concentration ("linear" / "nonlinear" .. no impact on delta_c)
   ap.c_if_method = "calib"; # method to deal with fluorescence intensity decay at the interface ("calib" / "calib-if" .. high impact on delta_c)
 
   ## selection of experiments to be analyzed
   ap.ids_A = [60]; # [°] inlination IDs
-  ap.ids_C = {"2d-r10"}; # cell IDs
+  ap.ids_C = {"flat"}; # cell IDs
   ap.ids_G = [2]; # [Nl/min] gas flow IDs
   ap.ids_L = {"WG141"}; # liquid IDs
   ap.ids_M = [8 16 32 64]; # [kg/h] mass flow IDs
@@ -46,13 +46,12 @@ if 1
   i_T = 1; ap.i_T = i_T;
   i_Z = 1; ap.i_Z = i_Z;
   ## overrides
-##  it_M = 1
-##  i_X = it_X = 1
+  it_M = 4
 
-  ap.dyn_cn_if_scmad_dev_max = 0.25; # used for threshold estimation for valid median interface deviation
+  ap.dyn_cn_if_scmad_dev_max = 0.5; # used for threshold estimation for valid median interface deviation
   ap.dyn_cn_nt_max = 20; # limit number of valid single frame used for the analysis (valid: small deviation to median interface)
   ap.c_calib_sig_X = 0; # c calibration reference smoothing factor per ids_X (default)
-  ap.c_isec_off_shift_lim = [0.25 0.1]; # [mm] intra section phi offset limits (default)
+  ap.c_isec_off_shift_lim = [0.01 0.1]; # [mm] intra section phi offset limits (default)
   ap.c_isec_rcurv_lim = 200; # [mm] threshold for "flat" interface curvature radius
 
   ## parameters for interface normal concentration profile estimation
@@ -69,7 +68,7 @@ if 1
 endif
 
 ## [10] normalized concentration field per x-section
-if 0
+if 1
 
   ## analysis identifier
   ap.sec_a_id = ["cn-" ap.c_method "_" ap.c_if_method]
@@ -92,19 +91,13 @@ if 0
       c_calib_sig_X = [];
       switch (i_M)
         case 1
-          c_calib_sig_X = [2 0 0 3] # for i_M=1&i_X=1 saturation recorded film was slightly thinner and thus of lower fluorescence
+          c_calib_sig_X = [2 0 0 0] # first check for intra section offset
         case 2
-          c_calib_sig_X = [0 0 0 0] # TODO: first check for intra section offset
+          c_calib_sig_X = [0 0 0 2] #
         case 3
-          if (i_X==2)
-            ap.cp_if_sfit_sps = 18;
-          endif
-          c_calib_sig_X = [0 0 0 0] # TODO: first check for intra section offset
+          c_calib_sig_X = [0 0 0 0] #
         case 4
-          if (i_X==2)
-            ap.cp_if_sfit_sps = 18;
-          endif
-          c_calib_sig_X = [0 0 0 0] # TODO: first check for intra section offset
+          c_calib_sig_X = [0 0 0 0] #
       endswitch
       if (! isempty (c_calib_sig_X))
         ap.c_calib_sig_X = c_calib_sig_X(i_X);

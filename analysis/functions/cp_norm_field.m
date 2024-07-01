@@ -23,16 +23,20 @@ function [cp_n, cp_b, cp_s] = cp_norm_field (snp, cp)
 
   ## bulk concentration estimate
   cp_b = cp_b_r = cp_b_r_mm = cell (1, n_t);
-  ## use one third of concentration profile for bulk estimate
+  ## use one third of concentration profile
   n_idx_third = round (numel (snp) / 3);
   for i_t = 1:n_t
+##    for i_p = 1:n_p
+##      cp_b{i_t}(i_p) = median (cp{i_t}(end-n_idx_third:end,i_p));
+##    endfor
+    cp_mm = imsmooth (cp{i_t}, 9);
     for i_p = 1:n_p
-      cp_b{i_t}(i_p) = median (cp{i_t}(end-n_idx_third:end,i_p));
+      cp_b{i_t}(i_p) = min (cp_mm(:,i_p));
     endfor
     cp_b{i_t}(isnan(cp_b{i_t})) = 0.0;
     ## attempt to reduce noise
     cp_b_r{i_t} = outlier_rm (cp_b{i_t}, movmedian (cp_b{i_t}, 81));
-    cp_b_r_mm{i_t} = movmedian (cp_b_r{i_t}, 21);
+    cp_b_r_mm{i_t} = vec (movmedian (cp_b_r{i_t}, 21));
   endfor
 
   ## surface concentration estimate
@@ -44,7 +48,7 @@ function [cp_n, cp_b, cp_s] = cp_norm_field (snp, cp)
     endfor
     ## attempt to reduce noise
     cp_s_r{i_t} = outlier_rm (cp_s{i_t}, movmedian (cp_s{i_t}, 81));
-    cp_s_r_mm{i_t} = movmean (cp_s_r{i_t}, 21);
+    cp_s_r_mm{i_t} = vec (movmean (cp_s_r{i_t}, 21));
   endfor
 
 
@@ -66,7 +70,7 @@ function [cp_n, cp_b, cp_s] = cp_norm_field (snp, cp)
       cp_n{i_t}(:,i_p) = norm_conc (cp{i_t}(:,i_p), cp_s{i_t}(i_p), cp_b{i_t}(i_p));
     endfor
     cp_n{i_t}(cp_n{i_t}>1) = 1.0;
-##    cp_n{i_t}(cp_n{i_t}<0) = 0.0;
+    cp_n{i_t}(cp_n{i_t}<0) = 0.0;
   endfor
 
 endfunction

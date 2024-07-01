@@ -25,7 +25,7 @@ function pdat = corr_y_offsets (pdat, it_A, it_C, it_M, it_X)
 
           x = pdat.c_msh{i_A,i_C,i_M,i_X}{1}(1,:);
           y = pdat.c_msh{i_A,i_C,i_M,i_X}{2}(:,1);
-          h_wall = pdat.c_h{i_A,i_C,i_M,i_X}.wall(xc)
+          h_wall = pdat.c_h{i_A,i_C,i_M,i_X}.wall
 
           [phi_des_shifted, phi_sat_shifted] = corr_y_offsets_phi (phi, phi_des, phi_sat, x, y, h_wall, 0.0);
 

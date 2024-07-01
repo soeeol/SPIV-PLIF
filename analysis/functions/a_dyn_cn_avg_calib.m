@@ -74,9 +74,6 @@ function [c_msh, cn_dyn, cn_dyn_avg, x, delta_u, delta_u_fit, delta_u_fit_avg, i
   ## intra section offset correction
   ##
 
-  ## correct for systematic offset
-  phi_sat = corr_intra_section_phi_sys_offset (phi_sat, ap.ids_C{ap.i_C}, ap.ids_M(ap.i_M), ap.ids_X(ap.i_X));
-
 ##      ## correct slight offset based phi dev min
 ##      ## if interface is detectable in both phi_abs and phi_sat, corr_xy_offset_min_ddeltau is preferred
 ##      phi_sat = corr_xy_offset_min_dphi (phi_avg, phi_sat, y, delta_u_phi_avg_valid, ap.a_type);
@@ -95,7 +92,7 @@ function [c_msh, cn_dyn, cn_dyn_avg, x, delta_u, delta_u_fit, delta_u_fit_avg, i
   printf (["median radius of abs curvature: " num2str(r_curvature_abs) " mm \n"])
   if (r_curvature_abs > ap.c_isec_rcurv_lim) # flat film, so only use y offset correction
     printf (["basically flat interface, might do x offset correction manually\n"]);
-    ap.c_isec_off_shift_lim = [0.01 0.1] # mm
+    ap.c_isec_off_shift_lim(1) = 0.01 # mm
   endif
   phi_sat = corr_xy_offset_min_ddeltau (c_msh, phi_avg, phi_sat, delta_u_phi_avg_valid, ap.c_isec_off_shift_lim, true);
 
