@@ -18,8 +18,6 @@ if 1
   ap = [];
   ap.a_type = "a_flat_dyn_cn_cp"; # identifier of this analysis
   ap.p_type = "2d_dyn_Ic"; # for the analysis use the output of processing procedure "p_type"
-  ap.c_method = "linear"; # method to transform fluorescence intensity to concentration ("linear" / "nonlinear" .. no impact on delta_c)
-  ap.c_if_method = "calib"; # method to deal with fluorescence intensity decay at the interface ("calib" / "calib-if" .. high impact on delta_c)
 
   ## selection of experiments to be analyzed
   ap.ids_A = [60]; # [°] inlination IDs
@@ -46,13 +44,20 @@ if 1
   i_T = 1; ap.i_T = i_T;
   i_Z = 1; ap.i_Z = i_Z;
   ## overrides
-  it_M = 4
+  #it_M = 4
+  #it_X = 2
 
+  ## parameters for interface based filtering and intra section offset correction
   ap.dyn_cn_if_scmad_dev_max = 0.5; # used for threshold estimation for valid median interface deviation
   ap.dyn_cn_nt_max = 20; # limit number of valid single frame used for the analysis (valid: small deviation to median interface)
-  ap.c_calib_sig_X = 0; # c calibration reference smoothing factor per ids_X (default)
   ap.c_isec_off_shift_lim = [0.01 0.1]; # [mm] intra section phi offset limits (default)
   ap.c_isec_rcurv_lim = 200; # [mm] threshold for "flat" interface curvature radius
+
+  ## parameters for concentration transformation
+  ap.c_method = "linear"; # method to transform fluorescence intensity to concentration ("linear" / "nonlinear" .. no impact on delta_c)
+  ap.c_if_method = "calib"; # method to deal with fluorescence intensity decay at the interface ("calib" / "calib-if" .. high impact on delta_c)
+  ap.c_calib_sig_X = 0; # c calibration reference smoothing factor per ids_X (default)
+  ap.c_rm_bl = true; # remove cameras black level
 
   ## parameters for interface normal concentration profile estimation
   ap.cp_pd_M = [0.35 0.45 0.5 0.5]; # interface normal profile depth for each ids_M [mm]
@@ -68,7 +73,7 @@ if 1
 endif
 
 ## [10] normalized concentration field per x-section
-if 1
+if 0
 
   ## analysis identifier
   ap.sec_a_id = ["cn-" ap.c_method "_" ap.c_if_method]

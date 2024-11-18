@@ -17,6 +17,6 @@
 
 function u = model_filmflow_laminar_u_profile (y, u_s, delta_u)
 
-  u = u_s .* ((2 .* y ./ delta_u) - (y ./ delta_u) .^ 2); # \label{eq:filmflow_u_profile}
+  u = u_s .* ((2 .* y ./ delta_u) - (y ./ delta_u) .^ 2); # \label{eq:filmflow_velocity_profile}
 
 endfunction

@@ -5,9 +5,9 @@
 ## Author: Sören J. Gerke
 ##
 
-function [cn] = norm_conc (c, conc_sat, conc_bulk)
+function [cn] = norm_conc (c, conc_surf, conc_bulk)
 
-  cn = (c - conc_bulk) ./ (conc_sat - conc_bulk);
+  cn = (c - conc_bulk) ./ (conc_surf - conc_bulk); # \label{eq:normalized.concentration}
 
   cn(isnan(cn)) = 0.0;
 

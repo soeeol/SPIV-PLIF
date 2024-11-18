@@ -7,14 +7,13 @@
 ## Author: Sören J. Gerke
 ##
 
-function [cn ext] = calc_cn (phi_dat, cref, method, sig, testplots)
+function [cn ext] = calc_cn (phi_dat, cref, method, sig, rm_bl, pdir, testplots)
 
   ext = [];
   conc = cn = [];
   c_sat_ref = cref(2);
   c_des_ref = cref(1);
   cscale = c_sat_ref - c_des_ref;
-
 
   ## quenching measurement Ic: desorbed liquid in contact with air
   phi = (phi_dat{1}); #
@@ -35,6 +34,13 @@ function [cn ext] = calc_cn (phi_dat, cref, method, sig, testplots)
     ## smoothing of calibration reference points
     phi_des = imsmooth (phi_des, sig);
     phi_sat = imsmooth (phi_sat, sig);
+  endif
+
+  ## remove black level of PLIF sensor
+  if rm_bl
+    phi = rm_blkr (pdir, phi, "const");
+    phi_des = rm_blkr (pdir, phi_des, "const");
+    phi_sat = rm_blkr (pdir, phi_sat, "const");
   endif
 
   if (testplots)
@@ -67,7 +73,7 @@ function [cn ext] = calc_cn (phi_dat, cref, method, sig, testplots)
     case "SV1" ## weak excitation Stern-Volmer formulation
 
       KSV = 1 ./ cscale .* (phi_des ./ phi_sat - 1); ## pixel wise scale factor from ref data
-      conc = 1 ./ KSV .* (phi_des ./ phi - 1) + c_des_ref;
+      conc = 1 ./ KSV .* (phi_des ./ phi - 1) + c_des_ref; # \label{eq:stern.volmer}
 
       ext.KSV = KSV;
 
@@ -167,18 +173,19 @@ function [cn ext] = calc_cn (phi_dat, cref, method, sig, testplots)
         caxis ([0 0.3]);
         colorbar;
       endif
+
     otherwise
+
       error (["calc_cn: method unknown"])
 
   endswitch
 
   ##
   if (! isempty (conc))
-##    cn = (conc - cref(1)) ./ cscale;
     cn = norm_conc (conc, c_sat_ref, c_des_ref);
   endif
 
-  ## exclude unphysical
+  ## exclude unphysical and limit negative (allow noise around zero level)
   cn(cn < -0.025) = -0.025; # but allow bulk concentration to fluctuate around zero
   cn(cn > 1) = 1;
 

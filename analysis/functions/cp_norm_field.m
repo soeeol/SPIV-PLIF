@@ -69,8 +69,8 @@ function [cp_n, cp_b, cp_s] = cp_norm_field (snp, cp)
     for i_p = 1:n_p
       cp_n{i_t}(:,i_p) = norm_conc (cp{i_t}(:,i_p), cp_s{i_t}(i_p), cp_b{i_t}(i_p));
     endfor
-    cp_n{i_t}(cp_n{i_t}>1) = 1.0;
-    cp_n{i_t}(cp_n{i_t}<0) = 0.0;
+##    cp_n{i_t}(cp_n{i_t}>1) = 1.0;
+##    cp_n{i_t}(cp_n{i_t}<0) = 0.0;
   endfor
 
 endfunction

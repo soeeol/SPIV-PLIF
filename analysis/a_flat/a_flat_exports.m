@@ -103,14 +103,34 @@ if 1
     close (fh)
   endif
 
+  ## gas-liquid interface coordinates
+  if 1
 
+    exp_id = "y_i_M";
+
+    for i_M = it_M
+      y_i_o(:,i_M) = delta_u_fit{i_M}(x_idx);
+    endfor
+    write_series_csv ([ap.result_dir exp_id], [vec(x_o) y_i_o], {"x in mm", "y_i in mm", "y_i in mm", "y_i in mm", "y_i in mm"}, []);
+
+    fh = figure ();
+    hold on;
+    for i_M = it_M
+      plot (x_o, y_i_o(:,i_M), ["-;i_M = " num2str(i_M) ";"]);
+    endfor
+    xlabel ("x in mm");
+    ylabel ("y in mm");
+    print (fh, "-dpng", "-color", "-r500", [ap.result_dir exp_id]);
+    close (fh)
+
+  endif
 
   ## delta_u
   if 1
     exp_id = "delta_u_M";
 
     for i_M = it_M
-      delta_u_o(:,i_M) = delta_u_fit{i_M}(x_idx);
+      delta_u_o(:,i_M) = delta_u_fit{i_M}(x_idx)' - y_wall_o(:,i_M);
     endfor
     write_series_csv ([ap.result_dir exp_id], [vec(x_o) delta_u_o], {"x in mm", "delta_u in mm", "delta_u in mm", "delta_u in mm", "delta_u in mm"}, []);
 
@@ -124,8 +144,6 @@ if 1
     print (fh, "-dpng", "-color", "-r500", [ap.result_dir exp_id]);
     close (fh)
   endif
-
-
 
   ## delta_c
   if 1
@@ -192,8 +210,8 @@ if 1
     exp_id = "maps_xy_M";
 
     ##          ux        uy            uz            um        cn
-    clims{1} = {[0 0.09], [-0.02 0.02], [-0.02 0.02], [0 0.09], [0 0.55]};
-    clims{2} = {[0 0.17], [-0.02 0.02], [-0.02 0.02], [0 0.17], [0 0.45]};
+    clims{1} = {[0 0.09], [-0.02 0.02], [-0.02 0.02], [0 0.10], [0 0.55]};
+    clims{2} = {[0 0.17], [-0.02 0.02], [-0.02 0.02], [0 0.20], [0 0.45]};
     clims{3} = {[0 0.30], [-0.02 0.02], [-0.02 0.02], [0 0.30], [0 0.35]};
     clims{4} = {[0 0.50], [-0.02 0.02], [-0.02 0.02], [0 0.50], [0 0.30]};
     write_series_csv ([ap.result_dir exp_id "_clims"], cell2mat (reshape (cell2mat (clims), 5, 4)), [], []);

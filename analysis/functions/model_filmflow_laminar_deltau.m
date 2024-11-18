@@ -10,6 +10,6 @@ function delta_u = model_filmflow_laminar_deltau (nu, alpha, Re)
 
   g = 9.81; # m / s^2
 
-  delta_u = (3 * nu ^ 2 / (g * sin (alpha)) * Re) .^ (1 / 3); # \label{eq:filmflow_deltau}
+  delta_u = ((3 * nu ^ 2 * Re) / (g * sin (alpha))) .^ (1 / 3); # \label{eq:filmflow_film_thickness}
 
 endfunction

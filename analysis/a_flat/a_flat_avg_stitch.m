@@ -17,8 +17,6 @@ if 1
   ## ap parameters defining the analysis
   ap = [];
   ap.a_type = "a_flat_avg_stitch"; # identifier of this analysis
-  ap.c_method = "linear"; # method to transform fluorescence intensity to concentration ("linear" / "nonlinear" .. no impact on delta_c_avg)
-  ap.c_if_method = "calib"; # method to deal with fluorescence intensity decay at the interface ("calib" / "calib-if" .. high impact on delta_c_avg)
 
   ## selection of experiments to be analyzed
   ap.ids_A = [60]; # [°] inlination IDs
@@ -47,9 +45,11 @@ if 1
   ## overrides
 ##  it_M = 4
 
-  ## prepare directories
-  ap.date_str = datestr (now, "yyyymmdd");
-  ap.result_dir = [pdir.analyzed ap.a_type "/"];
+
+
+  ## parameters concentration transformation
+  ap.c_method = "linear"; # method to transform fluorescence intensity to concentration ("linear" / "nonlinear" .. no impact on delta_c_avg)
+  ap.c_if_method = "calib"; # method to deal with fluorescence intensity decay at the interface ("calib" / "calib-if" .. high impact on delta_c_avg)
 
   ## per data variable: method for time series averaging before stitching
   ## ("median" or "mean")
@@ -59,6 +59,10 @@ if 1
   ## spline interface fit for stable interface normals (defaults)
   ap.sd.if_sfit_order = 3; # spline order
   ap.sd.if_sfit_sps = 9; # splines devisions per section (.. generally: increase for curved interface, decrease for flat)
+
+  ## prepare directories
+  ap.date_str = datestr (now, "yyyymmdd");
+  ap.result_dir = [pdir.analyzed ap.a_type "/"];
 
   ##
   ## stitching descriptors
@@ -309,12 +313,15 @@ if 1
   yp_eq_nd = linspace (0, 1, 101);
   up_eq_nd = model_filmflow_laminar_u_profile (yp_eq_nd, 1, 1);
   for i_M = it_M
+
     fh = figure ();
     hold on;
     plot (up_eq_nd, yp_eq_nd, "-k;Nusselt normalized;", "linewidth", 2);
     ##
     yp = y_cn{i_M};
+
     for i_X = it_X
+
       ## select x section range for most flat film
       x_u_l = ap.ids_X(i_X) - 2;
       x_u_u = ap.ids_X(i_X) + 2;

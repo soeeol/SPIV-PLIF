@@ -10,6 +10,8 @@
 ##
 
 function n = ri_matching_ri (w, T, p)
+
   n = (p(1).*T + p(2)) .* (p(3).*w.^2 + p(4).*w + p(5));
+
 endfunction
 

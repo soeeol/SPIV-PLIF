@@ -17,8 +17,6 @@ if 1
   ## ap parameters defining the analysis
   ap = [];
   ap.a_type = "a_2DR10_avg_stitch"; # identifier of this analysis
-  ap.c_method = "linear"; # method to transform fluorescence intensity to concentration ("linear" / "nonlinear" .. no impact on delta_c_avg)
-  ap.c_if_method = "calib"; # method to deal with fluorescence intensity decay at the interface ("calib" / "calib-if" .. high impact on delta_c_avg)
 
   ## selection of experiments to be analyzed
   ap.ids_A = [60]; # [°] inlination IDs
@@ -48,9 +46,11 @@ if 1
 ##  it_M = 1
 ##  i_M = it_M = 1
 
-  ## prepare directories
-  ap.date_str = datestr (now, "yyyymmdd");
-  ap.result_dir = [pdir.analyzed ap.a_type "/"];
+
+
+  ## parameters concentration transformation
+  ap.c_method = "linear"; # method to transform fluorescence intensity to concentration ("linear" / "nonlinear" .. no impact on delta_c_avg)
+  ap.c_if_method = "calib"; # method to deal with fluorescence intensity decay at the interface ("calib" / "calib-if" .. high impact on delta_c_avg)
 
   ## per data variable: method for time series averaging before stitching
   ## ("median" or "mean")
@@ -60,6 +60,10 @@ if 1
   ## spline interface fit for stable interface normals (defaults)
   ap.sd.if_sfit_order = 3; # spline order
   ap.sd.if_sfit_sps = 15; # splines devisions per section (.. generally: increase for curved interface, decrease for flat)
+
+  ## prepare directories
+  ap.date_str = datestr (now, "yyyymmdd");
+  ap.result_dir = [pdir.analyzed ap.a_type "/"];
 
   ##
   ## stitching descriptors

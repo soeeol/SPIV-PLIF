@@ -13,6 +13,7 @@ if 1
   ap = []
   ## select analysis
   ap.p_type = "a_2DR10_avg_stitch";
+  ap.a_type = "a_2DR10_reference_flow_profile";
 
   ap.ids_A = [60]; # [°] inlination IDs
   ap.ids_C = {"2d-r10"}; # cell IDs
@@ -39,7 +40,6 @@ if 1
   i_Z = 1; ap.i_Z = i_Z;
 
   ##
-  ap.a_type = "a_2DR10_reference_flow_profile";
   ap.c_method = "linear";
   ap.c_if_method = "calib";
 
@@ -237,7 +237,6 @@ if 1
   mfr_meas ./ mfr_Nu
 
   mfr_ref = mfr_meas;
-##  mfr_ref = mfr_Nu;
   ##
   y_eq_meas = linspace (0, delta_u_ref*1e-3, 1001);
   u_eq_meas = model_filmflow_laminar_u_profile (y_eq_meas, vec (u_s_ref), vec (delta_u_ref*1e-3));

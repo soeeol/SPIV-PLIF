@@ -183,6 +183,7 @@ fit_n_PD.SER = SER_n_PD
 
 ## save fit parameters
 save -text "ri_matching_calibration.txt" fit_n_PDMS fit_n_PT fit_n_PD
+write_series_csv ([save_dir "ri_matching_coefficients"], [fit_n_PT.c fit_n_PD.c], {"p1..p5 for PT", "p1..p5 for PD"}, "%01.09f")
 
 ##
 ## refractive index matching: mass fraction of liquid mixtures
@@ -205,7 +206,7 @@ w_match_T_PD / w_match_T_PD(2) * 100 - 100 # +/- 0.1 %
 ##
 
 function dndw = ri_mm_dw (w, T, p)
-  dndw = (p(1) .*T + p(2)) .* (2 .* p(3) * w + p(4));
+  dndw = (p(1).*T + p(2)) .* (2 .* p(3) * w + p(4));
 endfunction
 
 function dndT = ri_mm_dT (w, p)
@@ -228,25 +229,29 @@ DwDT_PT = DwDT(T_fit==T(2),n_fit==n_PDMS_T_fit(2))
 DwDn_PD = DwDn(T_fit==T(2),n_fit==n_PDMS_T_fit(2))
 DwDT_PD = DwDT(T_fit==T(2),n_fit==n_PDMS_T_fit(2))
 
-## temperature deviation
+## temperature deviation for refractometer measurements
 Delta_T = 0.1; # K
 
 ## precision of refractometer given is +/- 2e-5
 Delta_n_meas = 1 * 2e-5;
 
-100 * Delta_n_meas * DwDn_PT # +/- 0.014 %
-100 * Delta_n_meas * DwDn_PD # +/- 0.023 %
+## direct impact of Delta_n_meas on mass fraction estimate
+100 * Delta_n_meas * DwDn_PT # +/- 0.014 %wt
+100 * Delta_n_meas * DwDn_PD # +/- 0.023 %wt
+
+## refractive index measurement error estimatemad ([residuals_n_PT residuals_n_PD n_PDMS_T_mad])
+Delta_n = mad ([residuals_n_PT residuals_n_PD n_PDMS_T_mad])
 
 ## error of mass fraction estimate from liquid mixtures refractive index measurements
 Delta_n_PT = mad (residuals_n_PT); #mean (mean (abs (meas_PT_RI(:,2:end) - ri_matching_ri (meas_PT_RI(:,1), T, c_n_PT))))
 Delta_n_PD = mad (residuals_n_PD); #mean (mean (abs (meas_PD_RI(:,2:end) - ri_matching_ri (meas_PD_RI(:,1), T, c_n_PD))))
-Delta_w_PT = 100 * DwDn_PT * Delta_n_PT + 100 * DwDT_PT * Delta_T # +/- 0.1 %
-Delta_w_PD = 100 * DwDn_PD * Delta_n_PD + 100 * DwDT_PD * Delta_T # +/- 0.18 %
+Delta_w_PT = 100 * DwDn_PT * Delta_n + 100 * DwDT_PT * Delta_T # +/- 0.1 %wt
+Delta_w_PD = 100 * DwDn_PD * Delta_n + 100 * DwDT_PD * Delta_T # +/- 0.18 %wt
 
 ## error of mass fraction estimate from PDMS refractive index measurement
 Delta_n_PDMS = mean (n_PDMS_T_mad)
-Delta_w_PT_PDMS = 100 * DwDn_PT * Delta_n_PDMS + 100 * DwDT_PT * Delta_T # +/- 0.09 %
-Delta_w_PD_PDMS = 100 * DwDn_PD * Delta_n_PDMS + 100 * DwDT_PD * Delta_T # +/- 0.16 %
+Delta_w_PT_PDMS = 100 * DwDn_PT * Delta_n_PDMS + 100 * DwDT_PT * Delta_T # +/- 0.09 %wt
+Delta_w_PD_PDMS = 100 * DwDn_PD * Delta_n_PDMS + 100 * DwDT_PD * Delta_T # +/- 0.16 %wt
 
 
 ## dyn. viscosity estimated from measurements

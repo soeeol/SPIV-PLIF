@@ -13,6 +13,7 @@ if 1
   ap = []
   ## select analysis
   ap.p_type = "a_flat_avg_stitch";
+  ap.a_type = "a_flat_reference_flow_profile";
 
   ap.ids_A = [60]; # [°] inlination IDs
   ap.ids_C = {"flat"}; # cell IDs
@@ -39,7 +40,6 @@ if 1
   i_Z = 1; ap.i_Z = i_Z;
 
   ##
-  ap.a_type = "a_flat_reference_flow_profile";
   ap.c_method = "linear";
   ap.c_if_method = "calib";
 

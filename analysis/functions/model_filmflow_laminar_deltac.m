@@ -18,8 +18,7 @@ function delta_c = model_filmflow_laminar_deltac (x, D, u_s)
 
   x = vec (x);
   u_s = (vec (u_s))';
-##  D = D(1);
 
-  delta_c = sqrt ( (pi * x * D) ./ u_s ); # \label{eq:filmflow_deltac}
+  delta_c = sqrt ( (pi * x * D) ./ u_s ); # \label{eq:filmflow.delta_c}
 
 endfunction

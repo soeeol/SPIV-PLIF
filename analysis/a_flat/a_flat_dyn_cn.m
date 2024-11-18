@@ -35,44 +35,6 @@ testplots = false
 xoff = 0; # px idx .. - is left
 yoff = 0; # px idx .. - is up
 switch (aid.ids_C{i_C})
-
-##  case {"2d-r10"}
-##    switch aid.ids_M(i_M)
-##      case {8}
-##        switch (aid.ids_X(i_X))
-##          case {-8}
-##            xoff = 10;
-##          case {0}
-##            yoff = -2;
-##        endswitch
-##      case {16}
-##        switch (aid.ids_X(i_X))
-##          case {-8}
-##            xoff = 10;
-##          case {0}
-##            yoff = 4;
-##        endswitch
-##      case {32}
-##        switch (aid.ids_X(i_X))
-##          case {-8}
-##            xoff = 20;
-##            yoff = -2;
-##          case {+8}
-##            yoff = -3;
-##          case {16}
-##            yoff = -1;
-##        endswitch
-##      case {64}
-##        switch (aid.ids_X(i_X))
-##          case {-8}
-##            xoff = 10;
-##          case {0}
-##            yoff = 2;
-##          case {8}
-##            yoff = -4;
-##        endswitch
-##    endswitch
-
   case {"flat"}
     switch (aid.ids_M(i_M))
       case {64, 32, 16, 8}
@@ -83,7 +45,6 @@ switch (aid.ids_C{i_C})
       otherwise
         error ("xoff tested?")
     endswitch
-
 endswitch
 mxyoff = [xoff yoff];
 phi_sat = corr_xy_offset_man (phi_sat, mxyoff);

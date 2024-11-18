@@ -1,6 +1,7 @@
 ##  SPDX-License-Identifier: BSD-3-Clause
 ##  Copyright (c) 2024, Sören Jakob Gerke
 
+## Exports of a_2DR10_avg_stitch type data.
 ##
 ## Author: Sören J. Gerke
 ##
@@ -50,11 +51,12 @@ ymax = +2.5; # mm
 lim_x = [xmin xmax]; # in mm
 lim_y = [ymin ymax]; # in mm
 
+## inflow section
+xmin_in = -12.0; # mm
+xmax_in = -11.0; # mm
 
 
-##
-## exports of a_2DR10_avg_stitch data
-##
+## versus x
 if 1
 
   exp_dir = "avg_stitch";
@@ -76,13 +78,22 @@ if 1
   x_idx = (x{1} > xmin) & (x{1} < xmax);
   x_o = vec (x{1}(x_idx));
 
+  x_idx_in = (x{1} >= xmin_in) & (x{1} <= xmax_in);
+  x_o_in = vec (x{1}(x_idx_in));
+
   sf = get_sf (msh{1});
 
   ap.result_dir = [pdir.analyzed ap.a_type "/" exp_dir "/"]
   mkdir (ap.result_dir)
 
-  ## y_wall
+  h = 1.0 # mm structure height
+  Re = [3.21234 7.76579 18.3945 38.4204] # TODO: load or calculate Re
+  HU_recirc = [0.544 0.385 0.681 0.998] # manual measurement
+
+
+  ## y_wall - wall contour
   if 1
+
     exp_id = "y_wall_M_C";
 
     y_wall_C = xy_wall_cell (ap.ids_C{i_C}, x_o); # ideal
@@ -101,16 +112,41 @@ if 1
     ylabel ("y in mm");
     print (fh, "-dpng", "-color", "-r500", [ap.result_dir exp_id]);
     close (fh)
+
   endif
 
 
 
-  ## delta_u
+  ## gas-liquid interface coordinates
   if 1
+
+    exp_id = "y_i_M";
+
+    for i_M = it_M
+      y_i_o(:,i_M) = delta_u_fit{i_M}(x_idx);
+    endfor
+    write_series_csv ([ap.result_dir exp_id], [vec(x_o) y_i_o], {"x in mm", "y_i in mm", "y_i in mm", "y_i in mm", "y_i in mm"}, []);
+
+    fh = figure ();
+    hold on;
+    for i_M = it_M
+      plot (x_o, y_i_o(:,i_M), ["-;i_M = " num2str(i_M) ";"]);
+    endfor
+    xlabel ("x in mm");
+    ylabel ("y in mm");
+    print (fh, "-dpng", "-color", "-r500", [ap.result_dir exp_id]);
+    close (fh)
+
+  endif
+
+
+  ## delta_u - film thickness
+  if 1
+
     exp_id = "delta_u_M";
 
     for i_M = it_M
-      delta_u_o(:,i_M) = delta_u_fit{i_M}(x_idx);
+      delta_u_o(:,i_M) = delta_u_fit{i_M}(x_idx)' - y_wall_o(:,i_M);
     endfor
     write_series_csv ([ap.result_dir exp_id], [vec(x_o) delta_u_o], {"x in mm", "delta_u in mm", "delta_u in mm", "delta_u in mm", "delta_u in mm"}, []);
 
@@ -120,9 +156,74 @@ if 1
       plot (x_o, delta_u_o(:,i_M), ["-;i_M = " num2str(i_M) ";"]);
     endfor
     xlabel ("x in mm");
-    ylabel ("y in mm");
+    ylabel ("delta_u in mm");
     print (fh, "-dpng", "-color", "-r500", [ap.result_dir exp_id]);
     close (fh)
+
+    ## relative to undisturbed inflow film thickness
+    exp_id = "delta_u_rel_M";
+
+    for i_M = it_M
+      delta_u_in(i_M) = median (delta_u_fit{i_M}(x_idx_in));
+      delta_u_rel_o(:,i_M) = delta_u_o(:,i_M) ./ delta_u_in(i_M);
+    endfor
+
+    fh = figure ();
+    hold on;
+    for i_M = it_M
+      plot (x_o, delta_u_rel_o(:,i_M), ["-;i_M = " num2str(i_M) ";"]);
+    endfor
+    xlabel ("x in mm");
+    ylabel ("delta_u / delta_u inflow in -");
+    print (fh, "-dpng", "-color", "-r500", [ap.result_dir exp_id]);
+    close (fh)
+
+    write_series_csv ([ap.result_dir exp_id], [vec(x_o) delta_u_rel_o], {"x in mm", "delta_u_rel", "delta_u_rel", "delta_u_rel", "delta_u_rel"}, []);
+
+  endif
+
+
+
+  ## u_s - surface velocity
+  if 1
+
+    exp_id = "u_s_M";
+
+    for i_M = it_M
+      u_s_o(:,i_M) = u_s{i_M}(x_idx);
+    endfor
+
+    fh = figure ();
+    hold on;
+    for i_M = it_M
+      plot (x_o, u_s_o(:,i_M), ["-;i_M = " num2str(i_M) ";"]);
+    endfor
+    xlabel ("x in mm");
+    ylabel ("u_s in m / s");
+    print (fh, "-dpng", "-color", "-r500", [ap.result_dir exp_id]);
+    close (fh)
+
+    write_series_csv ([ap.result_dir exp_id], [vec(x_o) u_s_o], {"x in mm", "u_s in m/s", "u_s in m/s", "u_s in m/s", "u_s in m/s"}, []);
+
+    ## relative to inflow
+    exp_id = "u_s_rel_M";
+
+    for i_M = it_M
+      u_s_in(i_M) = median (u_s{i_M}(x_idx_in));
+      u_s_rel_o(:,i_M) = u_s_o(:,i_M) ./ u_s_in(i_M);
+    endfor
+
+    fh = figure ();
+    hold on;
+    for i_M = it_M
+      plot (x_o, u_s_rel_o(:,i_M), ["-;i_M = " num2str(i_M) ";"]);
+    endfor
+    xlabel ("x in mm");
+    ylabel ("u_s / u_s inflow in -");
+    print (fh, "-dpng", "-color", "-r500", [ap.result_dir exp_id]);
+    close (fh)
+    write_series_csv ([ap.result_dir exp_id], [vec(x_o) u_s_rel_o], {"x in mm", "u_s_rel", "u_s_rel", "u_s_rel", "u_s_rel"}, []);
+
   endif
 
 
@@ -152,7 +253,98 @@ if 1
   endif
 
 
+  ## extra interface length
+  cell2mat (l_s) - 33 # mm
 
+  sum (s_t{1})
+
+  ## contact time
+  exp_id = "contact time";
+
+  ## fixed section for comparison of microstructure influence
+  xmin_comp = -10.0
+  xmax_comp = +10.0
+  idx_comp = (x{1} >= xmin_comp) & (x{1} <= xmax_comp);
+
+  for i_M = it_M
+##    u_test = movmean (abs (max(u_y{i_M})) ./ (u_s_in(i_M)), 41);
+##    idx_dist = u_test >= 0.015;
+##    idx_dist = max(u_y{i_M}) >= 0.0025;
+##    xmin_comp = min (x{1}(idx_dist));
+##    xmax_comp = max (x{1}(idx_dist));
+##    idx_comp = (x{1} >= xmin_comp) & (x{1} <= xmax_comp);
+##    (xmax_comp - xmin_comp)
+##    (s_t{i_M}(end) / 20 - 1 ) * 100
+##    (mean (u_s{i_M}) / u_s_in(i_M) - 1 ) * 100
+##    t_c(i_M) = 1e-3 * s_t{i_M}(end) ./ mean(u_s{i_M}); # in s; over the full length
+    u_c(i_M) = mean (u_s{i_M}(idx_comp));
+    l_c(i_M) = max (s_t{i_M}(idx_comp)) - min (s_t{i_M}(idx_comp)) # contact length
+    t_c(i_M) = 1e-3 * (l_c(i_M)) ./ u_c(i_M); # in s; over the comparison section
+    t_c_comp(i_M) = 1e-3 * (xmax_comp - xmin_comp) ./ u_s_in(i_M); # flat comparison section
+  endfor
+
+  fh = figure ()
+  hold on
+  plot (Re, t_c_comp, "-*;flat;")
+  plot (Re, t_c, "-*;2DR10;")
+  xlabel ("Re in -");
+  ylabel ("contact time in s");
+  print (fh, "-dpng", "-color", "-r500", [ap.result_dir exp_id]);
+
+
+  ## liquid hold up HU of section
+  exp_id = "HU_M";
+
+  HU_static = [1 1 1 1] * 0.5 * tan (deg2rad (ap.ids_A)) * h .^ 2
+  HU_flat = (xmax - xmin) * delta_u_in
+  HU = (x_o(2) - x_o(1)) * sum (y_i_o - y_wall_o)
+  HU_extra = HU - HU_flat - HU_static # fluid dynamic excess
+  write_series_csv ([ap.result_dir exp_id], [Re' HU' HU_flat' HU_static' HU_extra' HU_recirc'], {"Re", "HU 2DR10 in mm^2", "HU Flat in mm^2", "HU static in mm^2", "HU extra in mm^2", "HU recirc in mm^2"}, []);
+
+  fh = figure ()
+  hold on
+  plot (Re, HU_flat, "-*;flat;")
+  plot (Re, HU, "-*;2DR10;")
+  plot (Re, HU_static, ";static 60°;")
+  plot (Re, HU_recirc, "-*;recirc measured;")
+  plot (Re, HU - HU_flat - HU_static, "-*;excess = HU - flat - static;")
+  xlabel ("Re in -");
+  ylabel ("HU in mm^2");
+  print (fh, "-dpng", "-color", "-r500", [ap.result_dir exp_id]);
+  close (fh)
+
+  ## relative to corresponding flat film
+  exp_id = "t_c_and_HU_rel_M";
+
+  t_c_rel = 100 * (t_c ./ t_c_comp - 1); # % change
+  l_c_rel = 100 * ( l_c / (xmax_comp - xmin_comp) - 1) # % change
+  u_c_rel = - 100 * ( u_c ./ (u_s_in) - 1) # % change
+  HU_extra_rel = 100 * HU_extra ./ ((xmax_comp - xmin_comp) * delta_u_in)
+  HU_recirc_rel = 100 * HU_recirc ./ ((xmax_comp - xmin_comp) * delta_u_in) # %
+  HU_static_rel = 100 * HU_static ./ ((xmax_comp - xmin_comp) * delta_u_in) # %
+  write_series_csv ([ap.result_dir exp_id], [Re' t_c_rel' l_c_rel' u_c_rel' HU_extra_rel' HU_recirc_rel' HU_static_rel'], {"Re", "contact time increase in %", "contact length increase in %", "surface velocity decrease in %", "holdup increase in %", "holdup in recirculation in %", "holdup static in %"}, []);
+
+  fh = figure ()
+  hold on
+  [ax, ha1, ha2] = plotyy (Re, HU_extra_rel, Re, t_c_rel);
+  set (ha1, "color", "k", "marker", "*", "displayname", "HU increase");
+  set (ha2, "color", "b", "marker", "*",  "displayname", "t_c increase");
+##  plot (ax(1), Re, 100 * HU_extra ./ ((xmax_comp - xmin_comp) * delta_u_in), "k-*;HU increase;")
+  plot (ax(1), Re, HU_recirc_rel, "k-d;HU recirc;")
+  plot (ax(1), Re, HU_static_rel, "k-^;HU static;")
+##  plot (ax(2), Re, t_c_rel, "b-*;t_c increase in %;")
+  plot (ax(2), Re, l_c_rel, "b-o;l_s increase;")
+  plot (ax(2), Re, u_c_rel, "b-s;u_s decrease in %;")
+  xlabel ("Re in -");
+  ylabel (ax(1), "HU in %")
+  ylabel (ax(2), "%")
+  print (fh, "-dpng", "-color", "-r500", [ap.result_dir exp_id]);
+  close (fh)
+
+endif
+
+## maps
+if 0
   ## flow profile vector plot output
   if 1
     exp_id = "flow_profiles_vec_M";
@@ -192,7 +384,7 @@ if 1
     exp_id = "maps_xy_M";
 
     ##          ux            uy            uz            um        cn
-    clims{1} = {[+0.00 0.13], [-0.12 0.12], [-0.05 0.05], [0 0.16], [0 0.60]};
+    clims{1} = {[+0.00 0.13], [-0.12 0.12], [-0.05 0.05], [0 0.20], [0 0.60]};
     clims{2} = {[+0.00 0.25], [-0.16 0.16], [-0.05 0.05], [0 0.30], [0 0.45]};
     clims{3} = {[-0.01 0.35], [-0.26 0.26], [-0.05 0.05], [0 0.40], [0 0.40]};
     clims{4} = {[-0.01 0.5],  [-0.24 0.24], [-0.05 0.05], [0 0.50], [0 0.30]};
@@ -293,6 +485,44 @@ if 1
         print_contour (fn_cprint, msh_p{i_M}{1}, msh_p{i_M}{2}, cprint, lim_x, lim_st, sf, lim_c, whitenan, true);
       endfor
     endfor
+  endif
+
+
+
+  ## normalize 2d vectors, make recirculation visible
+  if 1
+
+    exp_id = "vec_norm_2d";
+
+    ## for whole vector field display
+    x_res = 0.16; # mm
+    y_res = 0.16; # mm
+    [XX_xy_vec, YY_xy_vec] = meshgrid ([-12:x_res:20], [0:y_res:4]);
+    for i_M = it_M
+      [ux_xy uy_xy] = vec_uni_len (u_x{i_M}, u_y{i_M});
+      ux_xy_vec = interp2 (msh{i_M}{1}, msh{i_M}{2}, ux_xy .* mask_w{i_M} .* mask_g{i_M}, XX_xy_vec, YY_xy_vec);
+      uy_xy_vec = interp2 (msh{i_M}{1}, msh{i_M}{2}, uy_xy .* mask_w{i_M} .* mask_g{i_M}, XX_xy_vec, YY_xy_vec);
+      fh = figure (); hold on;
+      quiver (XX_xy_vec, YY_xy_vec, ux_xy_vec, uy_xy_vec, 1, "k")
+##      axis image
+      draw_cell (ap.ids_C{i_C}, [], 1)
+      plot (x_o, y_i_o(:,i_M), "r-")
+      plot (x_o, y_wall_o(:,i_M), "r-")
+      xlabel ("x in mm")
+      ylabel ("y in mm")
+      xlim ([-12 20])
+      axis image
+      print (fh, "-dpng", "-color", "-r500", [ap.result_dir exp_id "_M" num2str(i_M)]);
+      close (fh)
+
+      ## vector field to tikz
+      ux_xy_vec(isnan(ux_xy_vec)) = 0;
+      uy_xy_vec(isnan(uy_xy_vec)) = 0;
+      um_xy = vec_mag (ux_xy_vec, uy_xy_vec);
+      idx = (um_xy>=0.9) & (um_xy<=1.1); # minimal amount of vectors to be handled by tikz
+      write_series_csv ([ap.result_dir exp_id "_M" num2str(i_M)], [XX_xy_vec(idx(:)) YY_xy_vec(idx(:)) ux_xy_vec(idx(:)) uy_xy_vec(idx(:))], {"x in mm", "y in mm", "ux/um", "uy/um", "%01.04f"}, "%01.04f");
+    endfor
+
   endif
 
 endif

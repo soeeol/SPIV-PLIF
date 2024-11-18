@@ -5,9 +5,10 @@
 
 
 ## [01] tabulate analytic solution for characetristic delta_u, u_s and delta_c versus inlet Reynolds number
+ap.ids_A = [60]; # [°] inlination IDs
 ap.a_type = "a_analytical_solutions";
 ap.result_dir = [pdir.analyzed ap.a_type "/"];
-ap.pos_ref_profile = "full";
+ap.pos_ref_profile = "upstream";
 ap.save_dir = [ap.result_dir "reference_flow_profile/" ap.pos_ref_profile "/"];
 mkdir (ap.save_dir);
 
@@ -39,7 +40,26 @@ if 1
   delta_c = model_filmflow_laminar_deltac (x_delta_c_tab, D_AB.PLIF2, u_s); # m
   mfr = re * cell_width*1e-3 * fp.nu * fp.rho; # kg / s
 
-  write_series_csv ([ap.save_dir "tab_eq_Re_deltau_us_deltac_mfr"], [re' 1e3*delta_u' u_s' 1e6*delta_c 3600*mfr'], {"Re in -", "delta_u_ref in mm", "u_s in m/s", "delta_c in µm", "mfr in kg / h"}, []);
+  write_series_csv ([ap.save_dir "tab_eq_Re_deltau_us_deltac_mfr"], [re' 1e3*delta_u' u_s' 1e6*delta_c' 3600*mfr'], {"Re in -", "delta_u_ref in mm", "u_s in m/s", "delta_c in µm", "mfr in kg / h"}, []);
+
+endif
+
+
+
+if 1
+
+  ## at the same Re number, influence of viscosity estimation
+  visc_factor = 1.1
+
+  u_s_2 = model_filmflow_laminar_us (fp.nu*visc_factor, deg2rad (ap.ids_A), re); # m / s
+  delta_u_2 = model_filmflow_laminar_deltau (fp.nu*visc_factor, deg2rad (ap.ids_A), re); # m
+  delta_c_2 = model_filmflow_laminar_deltac (x_delta_c_tab, D_AB.PLIF2, u_s_2); # m
+
+  figure ()
+  plot (re, 100 * (u_s_2-u_s) ./ u_s, "k")
+  hold on
+  plot (re, 100 * (delta_u_2-delta_u) ./ delta_u, "b")
+  plot (re, 100 * (delta_c_2-delta_c) ./ delta_c, "r")
 
 endif
 

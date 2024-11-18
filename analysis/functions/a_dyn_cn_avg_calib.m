@@ -123,7 +123,7 @@ function [c_msh, cn_dyn, cn_dyn_avg, x, delta_u, delta_u_fit, delta_u_fit_avg, i
 
   cn_dyn = cell (1, n_t);
   for i_t = 1 : n_t
-    cn_dyn{i_t} = calc_cn ({phi{1,i_t} phi_des phi_sat}, [0 1], ap.c_method, ap.c_calib_sig_X, false);
+    cn_dyn{i_t} = calc_cn ({phi{1,i_t} phi_des phi_sat}, [0 1], ap.c_method, ap.c_calib_sig_X, ap.c_rm_bl, pdir, false);
   endfor
 
   ## temporal average

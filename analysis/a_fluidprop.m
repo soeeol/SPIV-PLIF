@@ -345,13 +345,62 @@ write_series_csv ([save_dir pname{1} "_" fname{1} "_" ds_eta_PD(id_E1_PD).source
 ## table comparing fluid properties for 20 25 and 30 °C for both refractive index matching liquid mixtures
 T = 273.15 + [20 25 30]'
 [w_L1_T, n_L1_T, rho_L1_T, eta_L1_T, c_sat_L1_T, D_AB_L1_T] = get_fp_lm (pdir, "WG141", T)
+c_sat_L1_T = [c_sat_L1_T c_sat_L1_T c_sat_L1_T]'
+D_AB_L1_T = 1e9 * D_AB_L1_T.PLIF2
+eta_L1_T = 1e3 * eta_L1_T
 [w_L2_T, n_L2_T, rho_L2_T, eta_L2_T, c_sat_L2_T, D_AB_L2_T] = get_fp_lm (pdir, "WP141", T)
-write_series_csv ([save_dir "WG141_fluidprop"], [T n_L1_T w_L1_T rho_L1_T eta_L1_T], {"T in K", "n in -", "w in g/g", "rho in kg/m^3", "eta in Pa s"}, [])
-write_series_csv ([save_dir "WP141_fluidprop"], [T n_L2_T w_L2_T rho_L2_T eta_L2_T], {"T in K", "n in -", "w in g/g", "rho in kg/m^3", "eta in Pa s"}, [])
-write_series_csv ([save_dir "WG141_WP141_fluidprop"], [[T n_L1_T w_L1_T rho_L1_T eta_L1_T];[T n_L2_T w_L2_T rho_L2_T eta_L2_T]], {"T in K", "n in -", "w in g/g", "rho in kg/m^3", "eta in Pa s"}, [])
+D_AB_L2_T = 1e9 * D_AB_L2_T.PLIF2
+c_sat_L2_T = [c_sat_L2_T c_sat_L2_T c_sat_L2_T]'
+eta_L2_T = 1e3 * eta_L2_T
+write_series_csv ([save_dir "WG141_fluidprop"], [T n_L1_T w_L1_T rho_L1_T eta_L1_T c_sat_L1_T D_AB_L1_T], {"T in K", "n in -", "w in g/g", "rho in kg/m^3", "eta in mPa s", "c_s in mg/l", "D in 1e-9*m^2/s"}, [])
+write_series_csv ([save_dir "WP141_fluidprop"], [T n_L2_T w_L2_T rho_L2_T eta_L2_T c_sat_L2_T D_AB_L2_T], {"T in K", "n in -", "w in g/g", "rho in kg/m^3", "eta in mPa s", "c_s in mg/l", "D in 1e-9*m^2/s"}, [])
+write_series_csv ([save_dir "WG141_WP141_fluidprop"], [[T n_L1_T w_L1_T rho_L1_T eta_L1_T c_sat_L1_T D_AB_L1_T];[T n_L2_T w_L2_T rho_L2_T eta_L2_T c_sat_L2_T D_AB_L2_T]], {"T in K", "n in -", "w in g/g", "rho in kg/m^3", "eta in mPa s", "c_s in mg/l", "D in 1e-9*m^2/s"}, [])
 
 
 ## TODO: sensitivity of fluid properties to mass fraction estimation by refractive index measurement
 
+T_ref = 298.15
+T_err = 0.2
+T = T_ref + [-T_err 0 T_err]
 
+fname = "glycerol-water"; ext = [];
+w_err = 0.1e-2
+w_ref = 0.5833
+w = w_ref + [-w_err 0 w_err]
+
+rho = get_fp_tab (pdir, fname, pname="rho", T_ref, w, ext)
+drho_w = mad (rho)
+rho = get_fp_tab (pdir, fname, pname="rho", T, w_ref, ext)
+drho_T = mad (rho)
+eta = get_fp_tab (pdir, fname, pname="eta", T_ref, w, ext)
+deta_w = 1e3 * mad (eta)
+eta = get_fp_tab (pdir, fname, pname="eta", T, w_ref, ext)
+deta_T = 1e3 * mad (eta)
+
+drho_L1 = drho_w + drho_T # kg/m^3
+deta_L1 = deta_w + deta_T # mPas
+
+100 * drho_L2 / mean (rho) # rel. error in %
+100 * deta_L2/1e3 / mean (eta) # rel. error in %
+
+
+fname = "propylene glycol-water"; ext = [];
+w_err = 0.18e-2
+w_ref = 0.7241
+w = w_ref + [-w_err 0 w_err]
+
+rho = get_fp_tab (pdir, fname, pname="rho", T_ref, w, ext)
+drho_w = mad (rho)
+rho = get_fp_tab (pdir, fname, pname="rho", T, w_ref, ext)
+drho_T = mad (rho)
+eta = get_fp_tab (pdir, fname, pname="eta", T_ref, w, ext)
+deta_w = 1e3 * mad (eta)
+eta = get_fp_tab (pdir, fname, pname="eta", T, w_ref, ext)
+deta_T = 1e3 * mad (eta)
+
+drho_L2 = drho_w + drho_T # kg/m^3
+deta_L2 = deta_w + deta_T # mPas
+
+100 * drho_L2 / mean (rho) # rel. error in %
+100 * deta_L2/1e3 / mean (eta) # rel. error in %
 
