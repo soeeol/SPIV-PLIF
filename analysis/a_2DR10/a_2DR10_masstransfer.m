@@ -48,6 +48,7 @@ if 1
 endif
 
 
+
 ## [01] load processing results
 if 1
 
@@ -68,6 +69,8 @@ if 1
 
   x_idx = (x{1} >= xmin) & (x{1} <= xmax);
   x_o = vec (x{1});
+
+  x_c = ((x_o + x_abs_meas)*1e-3 + x_off_inlet); # in m; longer contact than x_abs_meas with gas in inflow section
 
   n_x = numel (x{1})
 
@@ -106,6 +109,7 @@ if 1
 endif
 
 
+
 ## [02] concentration boundary layer thickness
 if 1
 
@@ -118,7 +122,6 @@ if 1
   endfor
 
   delta_c_o_mm = movmedian (delta_c_o, 41, 1);
-
 
   fh = figure ();
   hold on;
@@ -149,6 +152,7 @@ if 1
 endif
 
 
+
 ## [03] local mass transfer coefficient
 if 1
 
@@ -166,6 +170,8 @@ if 1
   plot (-1*[1 1], [min(min(beta_x_o_mm)) max(max(beta_x_o_mm))], "k--")
   plot (+1*[1 1], [min(min(beta_x_o_mm)) max(max(beta_x_o_mm))], "k--")
   print (fh, "-djpeg", "-color", "-r500", [ap.result_dir "beta_x_measured.jpg"]);
+
+  beta_x_eq = model_filmflow_laminar_beta_x (x_c', D_AB(2), ref_prof.u_s_ref)';
 
   ##
   ## structre effect has to be evaluated in context of local film thickness, local surface velocity, local inclination
@@ -187,11 +193,127 @@ endif
 
 
 
+## [04] integral mass transfer coefficient estimate, concentration profile based
+if 1
+
+  beta_unit = []
+
+  c_eq = 1
+  c_in = 0
+
+  slot_width = 0.2
+  dx_mean = slot_width / 2 # mm
+  profile_depth = 0.25 # mm
+
+  x_idx = (x{1} >= xmin - 0.5 + dx_mean) & (x{1} <= xmax + 0.5 - dx_mean);
+  x_beta = x{1}(x_idx);
+
+  dy = y{1}(2) - y{1}(1)
+  n_slots = (xmax - xmin) / slot_width
+
+  for i_M = it_M
+    L_unit = []
+    for ix = 1:n_slots
+
+      x_slot = (ix - 1) * slot_width + xmin; # mm
+
+      idx_x = (x_beta >= x_slot - dx_mean) & (x_beta <= x_slot + dx_mean);
+      idx_mean = (msh{i_M}{1} >= x_slot - dx_mean) & (msh{i_M}{1} <= x_slot + dx_mean);
+
+      delta_u_x = mean (delta_u{i_M}(idx_x));
+      y_wall_x = mean (y_wall{i_M}(idx_x));
+
+      cn_mean = cn{i_M};
+      cn_mean(idx_mean==0) = nan;
+
+      un_mean = u_x{i_M};
+      un_mean(idx_mean==0) = nan;
+
+      cn_mean_p = median (cn_mean, 2, "omitnan");
+      un_mean_p = median (un_mean, 2, "omitnan");
+
+  ##    idx_p = ( y{i_M} >= y_wall_x) & (y{i_M} <= delta_u_x + 5*dy); # limit profile to sublayer
+      idx_p = ( y{i_M} >= delta_u_x - profile_depth) & (y{i_M} <= delta_u_x + 4*dy); # limit profile to sublayer
+      idx_p_un = ( y{i_M} >= y_wall_x) & (y{i_M} <= delta_u_x + 4*dy); # limit profile to sublayer
+
+      ## valid profile only to peak cn
+      [~, idx_max] = max (cn_mean_p .* idx_p);
+      idx_p(idx_max+1:end) = 0;
+      idx_p_un(idx_max+1:end) = 0;
+      y_p = y{i_M}(idx_p_un);
+      y_p_un = y{i_M}(idx_p_un);
+
+      cn_p_x = cn_mean_p; # mean cn profile at position x
+      cn_p_x(!idx_p) = 0; # mean cn profile at position x
+      cn_p_x = cn_p_x(idx_p_un); # mean cn profile at position x
+      un_p_x = un_mean_p(idx_p_un);
+
+      ## integral virtual outlet concentration assuming Nusselt film flow and very thin concentration boundary layer
+      ##c_out = 3 / (2 * (delta_u_x - y_wall_x)) * dy * (sum (cn_p_x));
+      c_out = boundary_wm_vol_flow (y_p_un, un_p_x, y_p, cn_p_x, delta_u_x - y_wall_x, mean(un_p_x), false);
+
+      L_unit(ix) = x_off_inlet + x_abs_meas*1e-3 + x_slot*1e-3;
+
+      A_unit = cell_width*1e-3 * L_unit(ix);
+
+      vfr = ref_prof.mfr_ref(i_M) / fp.rho;
+
+      beta_unit(ix, i_M) = def_beta_unit (vfr, A_unit, c_eq, c_in, c_out);
+
+    endfor
+
+  endfor
+
+  fh = figure ();
+  hold on;
+  for i_M = it_M
+    plot (L_unit, beta_unit(:, i_M), ["-*;" num2str(i_M) ";"])
+  endfor
+
+
+  ## comparing measured to theoretical for flat film inlet and outlet section
+  ## unit length comparison
+  x_comp = [-10 18]
+  L_eq = x_off_inlet + x_abs_meas*1e-3 + x_comp*1e-3
+  comp_width = 2e-3
+  idx_comp = idx_comp_x = []
+  for iL = 1:length(L_eq)
+    idx_comp(iL, :) = (L_unit >= L_eq(iL) - comp_width) & (L_unit <= L_eq(iL) + comp_width);
+    idx_comp_x(iL, :) = (x_c >= L_eq(iL) - comp_width) & (x_c <= L_eq(iL) + comp_width);
+  endfor
+
+  beta_unit_M = beta_x_M = beta_x_eq_M = []
+  for i_M = it_M
+    beta_unit_M (1,i_M) = median (beta_unit(idx_comp(1,:)==1, i_M));
+    beta_unit_M (2,i_M) = median (beta_unit(idx_comp(2,:)==1, i_M));
+    beta_x_M (1,i_M) = median (beta_x_o_mm(idx_comp_x(1,:)==1, i_M));
+    beta_x_M (2,i_M) = median (beta_x_o_mm(idx_comp_x(2,:)==1, i_M));
+    beta_x_eq_M (1,i_M) = median (beta_x_eq(idx_comp_x(1,:)==1, i_M));
+    beta_x_eq_M (2,i_M) = median (beta_x_eq(idx_comp_x(2,:)==1, i_M));
+  endfor
+
+  beta_eq = model_filmflow_laminar_beta (ref_prof.u_s_ref, D_AB(2), L_eq')
+  (beta_eq ./ beta_unit_M)
+  correction = (mean (mean (beta_unit_M ./ beta_eq))) ^ 2
+##  beta_eq = model_filmflow_laminar_beta (ref_prof.u_s_ref, correction*D_AB(2), L_eq')
+
+  header = {"x* in mm", "x in m", "Run M#", "beta avg meas in m/s", "beta avg eq. in m/s", "beta avg meas / beta avg eq. in -", "beta local meas in m/s", "beta local eq. in m/s", "beta local meas / eq. in -"}
+  data_xs = vec (repmat (x_comp, 4, 1))
+  data_xc = vec (repmat (L_eq, 4, 1))
+  data_run = [it_M'; it_M']
+  data_beta_eq = [beta_eq(1,:)'; beta_eq(2,:)']
+  data_beta_unit = [beta_unit_M(1,:)'; beta_unit_M(2,:)']
+  data_beta_x = [beta_x_M(1,:)'; beta_x_M(2,:)']
+  data_beta_x_eq = [beta_x_eq_M(1,:)'; beta_x_eq_M(2,:)']
+  data = [data_xs data_xc data_run data_beta_unit data_beta_eq data_beta_unit./data_beta_eq data_beta_x data_beta_x_eq data_beta_x_eq./data_beta_x]
+
+  write_series_csv ([ap.result_dir "beta_avg"], data, header, []);
+
+endif
 
 
 
-
-## [03] diffusion front, exp. vs. analytical
+## [05] diffusion front, exp. vs. analytical
 if 1
 
   ## measured surface velocities from reference profile

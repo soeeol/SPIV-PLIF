@@ -17,5 +17,7 @@
 ##
 
 function beta_c = def_beta_unit (vfr, A, c_eq, c_in, c_out)
+
   beta_c = vfr ./ A .* log ( (c_eq - c_in) ./ (c_eq - c_out) ); # natural logarithm
+
 endfunction

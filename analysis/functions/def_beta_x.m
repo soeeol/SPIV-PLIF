@@ -11,5 +11,7 @@
 ##
 
 function beta_x = def_beta_x (delta_c, D)
+
   beta_x = D ./ delta_c;
+
 endfunction

@@ -14,10 +14,12 @@
 ## Author: Sören J. Gerke
 ##
 
-function  wm = boundary_wm_vol_flow (y_du, un, y_dphi, phi, lbd, uavg, testplots)
+function wm = boundary_wm_vol_flow (y_du, un, y_dphi, phi, lbd, uavg, testplots)
+
   if isempty (uavg)
     uavg = mean (un);
   endif
+
   if ( abs(y_du(2)-y_du(1)) >= abs(y_dphi(2)-y_dphi(1)) )
     y_ip = y_dphi;
     pro_ip = phi;
@@ -29,18 +31,23 @@ function  wm = boundary_wm_vol_flow (y_du, un, y_dphi, phi, lbd, uavg, testplots
     obs_in = phi;
     y_in = y_dphi;
   endif
+
   obs_ip = interp1 (y_in, obs_in, y_ip, "extrap");
   prod = vec(obs_ip) .* vec(pro_ip);
   dy = abs (y_ip(2) - y_ip(1));
+
   if testplots
     fh = figure (); hold on;
-    plot (y_dphi/lbd, phi)
-    plot (y_du/lbd, un)
-    plot (y_ip/lbd, prod)
+    plot (y_dphi/lbd, phi, ";scalar;")
+    plot (y_du/lbd, un, ";normal velocity;")
+    plot (y_ip/lbd, prod, ";product;")
   endif
+
   wm = 1 / (uavg * lbd) * sum (prod) * dy;
-  if testplots
-    pause (1)
-    close (fh)
-  endif
+
+##  if testplots
+##    pause (1)
+##    close (fh)
+##  endif
+
 endfunction

@@ -12,5 +12,7 @@
 ##
 
 function Sh = nd_sh (beta, L, D)
+
   Sh = beta .* L ./ D;
+
 endfunction

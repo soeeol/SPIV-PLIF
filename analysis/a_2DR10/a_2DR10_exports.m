@@ -6,55 +6,57 @@
 ## Author: Sören J. Gerke
 ##
 
-ap = []
+## init
+if 1
+  ap = []
 
-ap.a_type = "a_2DR10_export";
+  ap.a_type = "a_2DR10_export";
 
-## select analysis
-ap.ids_A = [60]; # [°] inlination IDs
-ap.ids_C = {"2d-r10"}; # cell IDs
-ap.ids_G = [2]; # [Nl/min] gas flow IDs
-ap.ids_L = {"WG141"}; # liquid IDs
-ap.ids_M = [8 16 32 64]; # [kg/h] mass flow IDs
-ap.ids_O = {"M13"}; # optical setup IDs
-ap.ids_T = [25]; # [°C] temperature IDs
-ap.ids_X = [-8 0 8 16]; # [mm] x section IDs
-ap.ids_Z = [0]; # [mm] z position of light sheet relative to center of cell
+  ## select analysis
+  ap.ids_A = [60]; # [°] inlination IDs
+  ap.ids_C = {"2d-r10"}; # cell IDs
+  ap.ids_G = [2]; # [Nl/min] gas flow IDs
+  ap.ids_L = {"WG141"}; # liquid IDs
+  ap.ids_M = [8 16 32 64]; # [kg/h] mass flow IDs
+  ap.ids_O = {"M13"}; # optical setup IDs
+  ap.ids_T = [25]; # [°C] temperature IDs
+  ap.ids_X = [-8 0 8 16]; # [mm] x section IDs
+  ap.ids_Z = [0]; # [mm] z position of light sheet relative to center of cell
 
-## iterators
-it_A = 1 : numel (ap.ids_A); # angles
-it_C = 1 : numel (ap.ids_C); # cells
-it_M = 1 : numel (ap.ids_M); # mass flow rates
-it_X = 1 : numel (ap.ids_X); # scanned x sections
-## fixed
-i_A = 1; ap.i_A = i_A;
-i_C = 1; ap.i_C = i_C;
-i_G = 1; ap.i_G = i_G;
-i_L = 1; ap.i_L = i_L;
-i_O = 1; ap.i_O = i_O;
-i_T = 1; ap.i_T = i_T;
-i_Z = 1; ap.i_Z = i_Z;
+  ## iterators
+  it_A = 1 : numel (ap.ids_A); # angles
+  it_C = 1 : numel (ap.ids_C); # cells
+  it_M = 1 : numel (ap.ids_M); # mass flow rates
+  it_X = 1 : numel (ap.ids_X); # scanned x sections
+  ## fixed
+  i_A = 1; ap.i_A = i_A;
+  i_C = 1; ap.i_C = i_C;
+  i_G = 1; ap.i_G = i_G;
+  i_L = 1; ap.i_L = i_L;
+  i_O = 1; ap.i_O = i_O;
+  i_T = 1; ap.i_T = i_T;
+  i_Z = 1; ap.i_Z = i_Z;
 
-##
-ap.c_method = "linear";
-ap.c_if_method = "calib";
+  ##
+  ap.c_method = "linear";
+  ap.c_if_method = "calib";
 
-##
-ap.result_dir = [pdir.analyzed ap.a_type "/"]
-mkdir (ap.result_dir)
+  ##
+  ap.result_dir = [pdir.analyzed ap.a_type "/"]
+  mkdir (ap.result_dir)
 
-## displayed section
-xmin = -12.0; # mm
-xmax = +20.0; # mm
-ymin = +0.0; # mm
-ymax = +2.5; # mm
-lim_x = [xmin xmax]; # in mm
-lim_y = [ymin ymax]; # in mm
+  ## displayed section
+  xmin = -12.0; # mm
+  xmax = +20.0; # mm
+  ymin = +0.0; # mm
+  ymax = +2.5; # mm
+  lim_x = [xmin xmax]; # in mm
+  lim_y = [ymin ymax]; # in mm
 
-## inflow section
-xmin_in = -12.0; # mm
-xmax_in = -11.0; # mm
-
+  ## inflow section
+  xmin_in = -12.0; # mm
+  xmax_in = -11.0; # mm
+endif
 
 ## versus x
 if 1
@@ -251,6 +253,29 @@ if 1
     print (fh, "-dpng", "-color", "-r500", [ap.result_dir exp_id]);
     close (fh)
   endif
+
+  ## correlation * vs 1/delta_c per i_M
+  Rxy = []
+  for i_M = it_M
+    [Rxy, ~] = corrcoef (u_s_o(:, i_M).^2, 1 ./ delta_c_o(:, i_M)) # some, mean RSQ=0.4
+##    [Rxy, ~] = corrcoef (delta_u_o(:, i_M), 1 ./ delta_c_o(:, i_M)) # lower
+##    [Rxy, ~] = corrcoef (incl_s{i_M}(x_idx),  1 ./ delta_c_o(:, i_M)) # lowest
+    RSQ(i_M) = Rxy(1,2) * Rxy(1,2)
+  endfor
+
+  ## correlation * vs 1/delta_c per x
+  RSQ_x = []
+  for i_x = 1:length(u_s_o(:, i_M))
+    [Rxy, ~] = corrcoef (u_s_o(i_x, 1:4).^2, 1 ./ delta_c_o(i_x, 1:4)); #
+##    [Rxy, ~] = corrcoef (delta_u_o(i_x, :), 1 ./ delta_c_o(i_x, :)); #
+    RSQ_x(i_x) = Rxy(1,2) * Rxy(1,2);
+  endfor
+  figure ()
+  plot (x_o, movmedian (RSQ_x, 41))
+  hold on;
+  i_M = 3
+  plot (x_o, delta_c_o(:,i_M) ./ max (delta_c_o(:,i_M)))
+  plot (x_o, u_s_o(:,i_M) ./ max (u_s_o(:,i_M)))
 
 
   ## extra interface length

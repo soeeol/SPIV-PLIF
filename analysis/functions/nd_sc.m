@@ -12,5 +12,7 @@
 ##
 
 function Sc = nd_sc (nu, D)
+
   Sc = nu ./ D;
+
 endfunction
