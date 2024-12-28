@@ -1,4 +1,4 @@
-%% Flat Analysis
+%% Flat Analysis overview
 %
 % Author: Sören J. Gerke
 
@@ -20,6 +20,7 @@
 edit "p_2d_avg_uIc1.m"
 
 
+
 %% p_2d_dyn_Ic.m
 %
 % processing script per section provides wall aligned:
@@ -27,6 +28,7 @@ edit "p_2d_avg_uIc1.m"
 % * fluorescence recordings Ic as time series (temporal avg per exposure)
 % * fluorescence recordings Ic0 and Ic1 as temporal average of several exposures
 edit "p_2d_dyn_Ic.m"
+
 
 
 %% a_flat_dyn_cn_cp.m
@@ -52,6 +54,7 @@ edit "p_2d_dyn_Ic.m"
 edit "a_flat_dyn_cn_cp.m"
 
 
+
 %% a_flat_avg_stitch.m
 %
 % Assembly of per section temporal average analysis results
@@ -61,6 +64,7 @@ edit "a_flat_dyn_cn_cp.m"
 % * results of *a_flat_dyn_cn_cp.m*
 % * results of *p_2d_avg_uIc1.m*
 edit "a_flat_avg_stitch.m"
+
 
 
 %% a_flat_reference_flow_profile.m
@@ -75,6 +79,7 @@ edit "a_flat_avg_stitch.m"
 edit "a_flat_reference_flow_profile.m"
 
 
+
 %% a_flat_exports.m
 %
 % export some graphics and data series for creation of figures
@@ -85,15 +90,19 @@ edit "a_flat_reference_flow_profile.m"
 edit "a_flat_exports.m"
 
 
+
 %% a_flat_masstransfer.m
 %
 % * diffusion front: measured vs. theory
+% * concentration boundary layer thickness
+% * cmass transfer coefficients
 %
 % Needs:
 %%
 % * results of *a_flat_avg_stitch.m*
 % * results of *a_flat_reference_flow_profile.m*
 edit "a_flat_masstransfer.m"
+
 
 
 %% a_analytical_solutions.m

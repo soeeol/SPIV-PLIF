@@ -56,10 +56,8 @@ if 1
   ## inflow section
   xmin_in = -12.0; # mm
   xmax_in = -11.0; # mm
-endif
 
-## versus x
-if 1
+
 
   exp_dir = "avg_stitch";
 
@@ -92,6 +90,10 @@ if 1
   Re = [3.21234 7.76579 18.3945 38.4204] # TODO: load or calculate Re
   HU_recirc = [0.544 0.385 0.681 0.998] # manual measurement
 
+endif
+
+## versus x
+if 1
 
   ## y_wall - wall contour
   if 1
@@ -117,8 +119,6 @@ if 1
 
   endif
 
-
-
   ## gas-liquid interface coordinates
   if 1
 
@@ -140,7 +140,6 @@ if 1
     close (fh)
 
   endif
-
 
   ## delta_u - film thickness
   if 1
@@ -341,12 +340,14 @@ if 1
   ## relative to corresponding flat film
   exp_id = "t_c_and_HU_rel_M";
 
-  t_c_rel = 100 * (t_c ./ t_c_comp - 1); # % change
-  l_c_rel = 100 * ( l_c / (xmax_comp - xmin_comp) - 1) # % change
+  t_c_rel = 100 * (t_c ./ t_c_comp - 1); # excess in %
+  l_c_rel = 100 * ( l_c / (xmax_comp - xmin_comp) - 1) # excess in %
   u_c_rel = - 100 * ( u_c ./ (u_s_in) - 1) # % change
-  HU_extra_rel = 100 * HU_extra ./ ((xmax_comp - xmin_comp) * delta_u_in)
-  HU_recirc_rel = 100 * HU_recirc ./ ((xmax_comp - xmin_comp) * delta_u_in) # %
-  HU_static_rel = 100 * HU_static ./ ((xmax_comp - xmin_comp) * delta_u_in) # %
+
+  HU_comp = ((xmax_comp - xmin_comp) * delta_u_in);
+  HU_extra_rel = 100 * HU_extra ./ HU_comp
+  HU_recirc_rel = 100 * HU_recirc ./ HU_comp # %
+  HU_static_rel = 100 * HU_static ./ HU_comp # %
   write_series_csv ([ap.result_dir exp_id], [Re' t_c_rel' l_c_rel' u_c_rel' HU_extra_rel' HU_recirc_rel' HU_static_rel'], {"Re", "contact time increase in %", "contact length increase in %", "surface velocity decrease in %", "holdup increase in %", "holdup in recirculation in %", "holdup static in %"}, []);
 
   fh = figure ()
@@ -402,7 +403,60 @@ if 0
     close (fh);
   endif
 
+  ## streamlines
+  ## .. just around the microstructure
+  if 0
+    exp_id = "streamlines_M";
 
+    for i_M = it_M
+
+      mask_g{i_M} = masking ("gas", size (msh{i_M}{1}), min (y{i_M}), delta_u_fit{i_M}, sf, 2, nan);
+      mask_w{i_M} = masking ("wall", size (msh{i_M}{1}), min (y{i_M}), y_wall{i_M}, sf, 2, nan);
+      mask = mask_w{i_M} .* mask_g{i_M};
+
+      ld_x = 12; # domain length, mm
+      ld_y = ld_x; # trick for even_stream_data() to work well is a square velocity grid
+      res = 0.02 # velocity field scaling, mm
+      stream_minDensity = 8 # min. required streamline density
+      stream_maxDensity = 64 # max. allowed streamline density
+      ## filter streamlines
+      stream_skip = 2
+      stream_minLength = 4
+
+      fh = figure ();
+      hold on
+      for ix = 1#
+
+        k = ix - 1
+        xs = linspace (-4*0 - ld_x/2 + ld_x*k - res/2, -4*0 + ld_x/2 + ld_x*k , ld_x / res + 1);
+        ys = linspace (0, ld_y, ld_y / res + 1);
+        [XS, YS] = meshgrid (xs, ys);
+
+        US = interp2 (msh{i_M}{1}, msh{i_M}{2}, u_x{i_M} .* mask, XS, YS, "cubic");
+        VS = interp2 (msh{i_M}{1}, msh{i_M}{2}, u_y{i_M} .* mask, XS, YS, "cubic");
+
+        ## obtained
+        [xy, ~] = even_stream_data_mod (XS, YS, US, VS, stream_minDensity, stream_maxDensity);
+
+        xy_filtered = streamlines_filter (xy, skip=stream_skip, minLength=stream_minLength);
+
+        plot (xy_filtered(:,1), xy_filtered(:,2), "k")
+
+      endfor
+      axis equal
+      plot (x{i_M}, delta_u{i_M}, "r", "linewidth", 2)
+      plot (x{i_M}, y_wall{i_M}, "r", "linewidth", 2)
+      xlim ([-6 6])
+      axis off
+
+      export_name = [ap.result_dir exp_id num2str(i_M) "_stream_density_" num2str(stream_minDensity) "_" num2str(stream_maxDensity)]
+      print (fh, "-dpng", "-color", "-r500", export_name);
+
+      write_series_csv (export_name, xy_filtered, {"x in mm", "y in mm"}, []);
+
+    endfor
+
+  endif
 
   ## xy maps
   if 1
@@ -509,6 +563,53 @@ if 0
         fn_cprint = [ap.result_dir exp_id "_" id_c "_M" num2str(i_M)]
         print_contour (fn_cprint, msh_p{i_M}{1}, msh_p{i_M}{2}, cprint, lim_x, lim_st, sf, lim_c, whitenan, true);
       endfor
+    endfor
+  endif
+
+
+
+  ## measured concentration, extrapolated with fit function to film surface
+  if 1
+    exp_id = "maps_nt_M";
+
+    cp_s_ext = cp_nn_meas_ext = {}
+    cp_s_ext_o = []
+
+    ## extrapolated surface concentration
+    figure(); hold on;
+    for i_M = it_M
+      cp_s_ext{i_M} = a_fit_cp_scale{i_M} .* cp_s{i_M};
+      cp_s_ext_o(:,i_M) = outlier_rm (cp_s_ext{i_M}, movmedian (cp_s_ext{i_M}, 41));
+      cp_s_ext_o(:,i_M) = movmedian (cp_s_ext_o(:,i_M), 41);
+      plot (x{i_M}, cp_s_ext_o(:,i_M), [";i_M = " num2str(i_M) ";"]);
+    endfor
+    ylim ([0 1])
+
+    ## cn measured, replaced film surface sublayer by extrapolated
+    for i_M = it_M
+      cp_nn_meas_ext{i_M} = cp_nn{i_M} .* cp_s_ext{i_M};
+    endfor
+
+    ## check
+##    i_p = 1000
+##    figure (); hold on;
+##    plot (cp_n{i_M}(:,i_p).*cp_s{i_M}(i_p), ";meas;")
+##    plot (cp_nn{i_M}(:,i_p), ";cp_nn;") # surface normalized
+##    plot (cp_nn{i_M}(:,i_p).*a_fit_cp_scale{i_M}(i_p).*cp_s{i_M}(i_p), "r*;meas, extrapol;")
+##    plot (cp_nn_meas_ext{i_M}(:,i_p), ";cp nn meas ext;") # surface normalized
+##    xlim ([1 51])
+##    ylim ([-0.1 1])
+
+    lim_st = [0 0.1]; # mm
+    clims = {[0 0.65], [0 0.55], [0 0.45], [0 0.35]};
+    write_series_csv ([ap.result_dir exp_id "_clims"], reshape (cell2mat (clims), 1, 8), [], []);
+    whitenan = false;
+    for i_M = it_M
+      lim_c = clims{i_M};
+      id_c = ["c-" ap.c_method "_" ap.c_if_method "_" "cp_nn_meas_ext"];
+      cprint = cp_nn_meas_ext{i_M};
+      fn_cprint = [ap.result_dir exp_id "_" id_c "_M" num2str(i_M)]
+      print_contour (fn_cprint, msh_p{i_M}{1}, msh_p{i_M}{2}, cprint, lim_x, lim_st, sf, lim_c, whitenan, true);
     endfor
   endif
 

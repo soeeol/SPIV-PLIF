@@ -38,12 +38,14 @@ function wm = boundary_wm_vol_flow (y_du, un, y_dphi, phi, lbd, uavg, testplots)
 
   if testplots
     fh = figure (); hold on;
-    plot (y_dphi/lbd, phi, ";scalar;")
-    plot (y_du/lbd, un, ";normal velocity;")
-    plot (y_ip/lbd, prod, ";product;")
+    plot (y_dphi, phi / max (phi), ";scalar;")
+    plot (y_du, un / max(un), ";boundary normal outward velocity;")
+    plot (y_ip, prod / max(prod), ";product;")
+    plot ([y_ip(1) y_ip(end)/lbd(end)], [1 1] * uavg / max(un), ";un mean;")
+
   endif
 
-  wm = 1 / (uavg * lbd) * sum (prod) * dy;
+  wm = 1 / (uavg * (lbd+dy)) * sum (prod) * dy;
 
 ##  if testplots
 ##    pause (1)

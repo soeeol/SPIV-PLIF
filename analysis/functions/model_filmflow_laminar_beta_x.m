@@ -12,5 +12,7 @@
 ##
 
 function beta = model_filmflow_laminar_beta_x (x, D, u_s)
+
   beta = sqrt ( (u_s' * D) ./ (pi * x) );
+
 endfunction

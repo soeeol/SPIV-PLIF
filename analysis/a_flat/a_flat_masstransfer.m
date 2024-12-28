@@ -115,6 +115,8 @@ if 1
   endfor
   xlabel ("c in mm");
   ylabel ("delta_c in mm");
+  plot (-1*[1 1], [min(min(delta_c_o)) max(max(delta_c_o))], "k--");
+  plot (+1*[1 1], [min(min(delta_c_o)) max(max(delta_c_o))], "k--");
   print (fh, "-djpeg", "-color", "-r500", [ap.result_dir "delta_c_measured.jpg"]);
 
   write_series_csv ([ap.result_dir "delta_c_meas"], [x_o*1e-3 x_c delta_c_o*1e-3 delta_c_o_mm*1e-3], {"x in m", "x_c in m", "delta_c in m M1", "delta_c in m  M2", "delta_c in m  M3", "delta_c in m  M4"}, []);
@@ -141,6 +143,8 @@ if 1
   endfor
   xlabel ("x* in mm");
   ylabel ("beta_x in mm");
+  plot (-1*[1 1], [min(min(beta_x_o_mm)) max(max(beta_x_o_mm))], "k--")
+  plot (+1*[1 1], [min(min(beta_x_o_mm)) max(max(beta_x_o_mm))], "k--")
   print (fh, "-djpeg", "-color", "-r500", [ap.result_dir "beta_x_measured.jpg"]);
 
   beta_x_eq = model_filmflow_laminar_beta_x (x_c', D_AB(2), ref_prof.u_s_ref)';
@@ -159,7 +163,7 @@ if 1
 
   slot_width = 0.2
   dx_mean = slot_width / 2 # mm
-  profile_depth = 0.25 # mm
+  profile_depth = 0.25 # mm 0.25
 
   x_idx = (x{1} >= xmin - 0.5 + dx_mean) & (x{1} <= xmax + 0.5 - dx_mean);
   x_beta = x{1}(x_idx);
@@ -167,20 +171,27 @@ if 1
   dy = y{1}(2) - y{1}(1)
   n_slots = (xmax - xmin) / slot_width
 
+  ## using interface normal concentration profiles with extrapolated sublayer concentration
   for i_M = it_M
+
     L_unit = []
+
     for ix = 1:n_slots
 
       x_slot = (ix - 1) * slot_width + xmin; # mm
 
       idx_x = (x_beta >= x_slot - dx_mean) & (x_beta <= x_slot + dx_mean);
       idx_mean = (msh{i_M}{1} >= x_slot - dx_mean) & (msh{i_M}{1} <= x_slot + dx_mean);
+      idx_s = (msh_p{i_M}{1} >= x_slot - dx_mean) & (msh_p{i_M}{1} <= x_slot + dx_mean);
 
       delta_u_x = mean (delta_u{i_M}(idx_x));
+      delta_c_x = mean (delta_c{i_M}(idx_x));
       y_wall_x = mean (y_wall{i_M}(idx_x));
 
-      cn_mean = cn{i_M};
-      cn_mean(idx_mean==0) = nan;
+      cp_s_ext{i_M} = a_fit_cp_scale{i_M} .* cp_s{i_M};
+      cp_nn_meas_ext{i_M} = cp_nn{i_M} .* cp_s_ext{i_M};
+      cn_mean = cp_nn_meas_ext{i_M};
+      cn_mean(idx_s==0) = nan;
 
       un_mean = u_x{i_M};
       un_mean(idx_mean==0) = nan;
@@ -188,26 +199,20 @@ if 1
       cn_mean_p = median (cn_mean, 2, "omitnan");
       un_mean_p = median (un_mean, 2, "omitnan");
 
-  ##    idx_p = ( y{i_M} >= y_wall_x) & (y{i_M} <= delta_u_x + 5*dy); # limit profile to sublayer
-      idx_p = ( y{i_M} >= delta_u_x - profile_depth) & (y{i_M} <= delta_u_x + 4*dy); # limit profile to sublayer
+      idx_p = ( s_n{i_M} >= 0) & (s_n{i_M} <= profile_depth);
+
       idx_p_un = ( y{i_M} >= y_wall_x) & (y{i_M} <= delta_u_x + 4*dy); # limit profile to sublayer
 
-      ## valid profile only to peak cn
-      [~, idx_max] = max (cn_mean_p .* idx_p);
-      idx_p(idx_max+1:end) = 0;
-      idx_p_un(idx_max+1:end) = 0;
-      y_p = y{i_M}(idx_p_un);
+      y_p = delta_u_x - s_n{i_M}(idx_p);
       y_p_un = y{i_M}(idx_p_un);
 
       cn_p_x = cn_mean_p; # mean cn profile at position x
-      cn_p_x(!idx_p) = 0; # mean cn profile at position x
-      cn_p_x = cn_p_x(idx_p_un); # mean cn profile at position x
+      cn_p_x(!idx_p) = 0; #
+      cn_p_x = cn_p_x(idx_p); # mean cn profile at position x
       un_p_x = un_mean_p(idx_p_un);
 
       ## integral virtual outlet concentration assuming Nusselt film flow and very thin concentration boundary layer
-      ##c_out = 3 / (2 * (delta_u_x - y_wall_x)) * dy * (sum (cn_p_x));
       c_out = boundary_wm_vol_flow (y_p_un, un_p_x, y_p, cn_p_x, delta_u_x - y_wall_x, mean(un_p_x), false);
-##      c_out = 1.4 * c_out;
 
       L_unit(ix) = x_off_inlet + x_abs_meas*1e-3 + x_slot*1e-3;
 
@@ -254,15 +259,15 @@ if 1
   correction = (mean (mean (beta_unit_M ./ beta_eq))) ^ 2
 ##  beta_eq = model_filmflow_laminar_beta (ref_prof.u_s_ref, correction*D_AB(2), L_eq')
 
-  header = {"x* in mm", "x in m", "Run M#", "beta avg meas in m/s", "beta avg eq. in m/s", "beta avg meas / beta avg eq. in -", "beta local meas in m/s", "beta local eq. in m/s", "beta local meas / eq. in -"}
-  data_xs = vec(repmat(x_comp, 4, 1))
-  data_xc = vec(repmat(L_eq, 4, 1))
+  header = {"x* in mm", "x in m", "Run M#", "beta avg meas * 1e5 in m/s", "beta avg eq. * 1e5 in m/s", "beta avg meas / beta avg eq. in -", "beta local meas * 1e5 in m/s", "beta local eq. * 1e5 in m/s", "beta local meas / eq. in -"}
+  data_xs = vec (repmat (x_comp, 4, 1))
+  data_xc = vec (repmat (L_eq, 4, 1))
   data_run = [it_M'; it_M']
-  data_beta_eq = [beta_eq(1,:)'; beta_eq(2,:)']
-  data_beta_unit = [beta_unit_M(1,:)'; beta_unit_M(2,:)']
-  data_beta_x = [beta_x_M(1,:)'; beta_x_M(2,:)']
-  data_beta_x_eq = [beta_x_eq_M(1,:)'; beta_x_eq_M(2,:)']
-  data = [data_xs data_xc data_run data_beta_unit data_beta_eq data_beta_unit./data_beta_eq data_beta_x data_beta_x_eq data_beta_x_eq./data_beta_x]
+  data_beta_eq = 1e5 * [beta_eq(1,:)'; beta_eq(2,:)']
+  data_beta_unit = 1e5 * [beta_unit_M(1,:)'; beta_unit_M(2,:)']
+  data_beta_x = 1e5 * [beta_x_M(1,:)'; beta_x_M(2,:)']
+  data_beta_x_eq = 1e5 * [beta_x_eq_M(1,:)'; beta_x_eq_M(2,:)']
+  data = [data_xs data_xc data_run data_beta_unit data_beta_eq data_beta_unit./data_beta_eq data_beta_x data_beta_x_eq data_beta_x./data_beta_x_eq]
 
   write_series_csv ([ap.result_dir "beta_avg"], data, header, []);
 

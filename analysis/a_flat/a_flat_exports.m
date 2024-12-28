@@ -1,61 +1,59 @@
 ##  SPDX-License-Identifier: BSD-3-Clause
 ##  Copyright (c) 2024, Sören Jakob Gerke
 
+## Exports of a_flat_avg_stitch type data.
 ##
 ## Author: Sören J. Gerke
 ##
 
-ap = []
-
-ap.a_type = "a_flat_export";
-
-## select analysis
-ap.ids_A = [60]; # [°] inlination IDs
-ap.ids_C = {"flat"}; # cell IDs
-ap.ids_G = [2]; # [Nl/min] gas flow IDs
-ap.ids_L = {"WG141"}; # liquid IDs
-ap.ids_M = [8 16 32 64]; # [kg/h] mass flow IDs
-ap.ids_O = {"M13"}; # optical setup IDs
-ap.ids_T = [25]; # [°C] temperature IDs
-ap.ids_X = [-8 0 8 16]; # [mm] x section IDs
-ap.ids_Z = [0]; # [mm] z position of light sheet relative to center of cell
-
-## iterators
-it_A = 1 : numel (ap.ids_A); # angles
-it_C = 1 : numel (ap.ids_C); # cells
-it_M = 1 : numel (ap.ids_M); # mass flow rates
-it_X = 1 : numel (ap.ids_X); # scanned x sections
-## fixed
-i_A = 1; ap.i_A = i_A;
-i_C = 1; ap.i_C = i_C;
-i_G = 1; ap.i_G = i_G;
-i_L = 1; ap.i_L = i_L;
-i_O = 1; ap.i_O = i_O;
-i_T = 1; ap.i_T = i_T;
-i_Z = 1; ap.i_Z = i_Z;
-
-##
-ap.c_method = "linear";
-ap.c_if_method = "calib";
-
-##
-ap.result_dir = [pdir.analyzed ap.a_type "/"]
-mkdir (ap.result_dir)
-
-## displayed section
-xmin = -12.0; # mm
-xmax = +20.0; # mm
-ymin = +0.0; # mm
-ymax = +2.5; # mm
-lim_x = [xmin xmax]; # in mm
-lim_y = [ymin ymax]; # in mm
-
-
-
-##
-## exports of a_2DR10_avg_stitch data
-##
+## init
 if 1
+  ap = []
+
+  ap.a_type = "a_flat_export";
+
+  ## select analysis
+  ap.ids_A = [60]; # [°] inlination IDs
+  ap.ids_C = {"flat"}; # cell IDs
+  ap.ids_G = [2]; # [Nl/min] gas flow IDs
+  ap.ids_L = {"WG141"}; # liquid IDs
+  ap.ids_M = [8 16 32 64]; # [kg/h] mass flow IDs
+  ap.ids_O = {"M13"}; # optical setup IDs
+  ap.ids_T = [25]; # [°C] temperature IDs
+  ap.ids_X = [-8 0 8 16]; # [mm] x section IDs
+  ap.ids_Z = [0]; # [mm] z position of light sheet relative to center of cell
+
+  ## iterators
+  it_A = 1 : numel (ap.ids_A); # angles
+  it_C = 1 : numel (ap.ids_C); # cells
+  it_M = 1 : numel (ap.ids_M); # mass flow rates
+  it_X = 1 : numel (ap.ids_X); # scanned x sections
+  ## fixed
+  i_A = 1; ap.i_A = i_A;
+  i_C = 1; ap.i_C = i_C;
+  i_G = 1; ap.i_G = i_G;
+  i_L = 1; ap.i_L = i_L;
+  i_O = 1; ap.i_O = i_O;
+  i_T = 1; ap.i_T = i_T;
+  i_Z = 1; ap.i_Z = i_Z;
+
+  ##
+  ap.c_method = "linear";
+  ap.c_if_method = "calib";
+
+  ##
+  ap.result_dir = [pdir.analyzed ap.a_type "/"]
+  mkdir (ap.result_dir)
+
+  ## displayed section
+  xmin = -12.0; # mm
+  xmax = +20.0; # mm
+  ymin = +0.0; # mm
+  ymax = +2.5; # mm
+  lim_x = [xmin xmax]; # in mm
+  lim_y = [ymin ymax]; # in mm
+
+
 
   exp_dir = "avg_stitch";
 
@@ -81,8 +79,14 @@ if 1
   ap.result_dir = [pdir.analyzed ap.a_type "/" exp_dir "/"]
   mkdir (ap.result_dir)
 
-  ## y_wall
+endif
+
+## versus x
+if 1
+
+  ## y_wall - wall contour
   if 1
+
     exp_id = "y_wall_M_C";
 
     y_wall_C = zeros (size (x_o)); # ideal
@@ -101,6 +105,7 @@ if 1
     ylabel ("y in mm");
     print (fh, "-dpng", "-color", "-r500", [ap.result_dir exp_id]);
     close (fh)
+
   endif
 
   ## gas-liquid interface coordinates
@@ -125,8 +130,9 @@ if 1
 
   endif
 
-  ## delta_u
+  ## delta_u - film thickness
   if 1
+
     exp_id = "delta_u_M";
 
     for i_M = it_M
@@ -140,7 +146,7 @@ if 1
       plot (x_o, delta_u_o(:,i_M), ["-;i_M = " num2str(i_M) ";"]);
     endfor
     xlabel ("x in mm");
-    ylabel ("y in mm");
+    ylabel ("delta_u in mm");
     print (fh, "-dpng", "-color", "-r500", [ap.result_dir exp_id]);
     close (fh)
   endif
@@ -169,7 +175,12 @@ if 1
     close (fh)
   endif
 
+endif
 
+
+
+## maps
+if 0
 
   ## flow profile vector plot output
   if 1
@@ -202,8 +213,6 @@ if 1
     endfor
     close (fh);
   endif
-
-
 
   ## xy maps
   if 1
@@ -310,6 +319,53 @@ if 1
         fn_cprint = [ap.result_dir exp_id "_" id_c "_M" num2str(i_M)]
         print_contour (fn_cprint, msh_p{i_M}{1}, msh_p{i_M}{2}, cprint, lim_x, lim_st, sf, lim_c, whitenan, true);
       endfor
+    endfor
+  endif
+
+
+
+  ## measured concentration, extrapolated with fit function to film surface
+  if 1
+    exp_id = "maps_nt_M";
+
+    cp_s_ext = cp_nn_meas_ext = {}
+    cp_s_ext_o = []
+
+    ## extrapolated surface concentration
+    figure(); hold on;
+    for i_M = it_M
+      cp_s_ext{i_M} = a_fit_cp_scale{i_M} .* cp_s{i_M};
+      cp_s_ext_o(:,i_M) = outlier_rm (cp_s_ext{i_M}, movmedian (cp_s_ext{i_M}, 41));
+      cp_s_ext_o(:,i_M) = movmedian (cp_s_ext_o(:,i_M), 41);
+      plot (x{i_M}, cp_s_ext_o(:,i_M), [";i_M = " num2str(i_M) ";"]);
+    endfor
+    ylim ([0 1])
+
+    ## cn measured, replaced film durface sublayer by extrapolated
+    for i_M = it_M
+      cp_nn_meas_ext{i_M} = cp_nn{i_M} .* cp_s_ext{i_M};
+    endfor
+
+    ## check
+##    i_p = 1000
+##    figure (); hold on;
+##    plot (cp_n{i_M}(:,i_p).*cp_s{i_M}(i_p), ";meas;")
+##    plot (cp_nn{i_M}(:,i_p), ";cp_nn;") # surface normalized
+##    plot (cp_nn{i_M}(:,i_p).*a_fit_cp_scale{i_M}(i_p).*cp_s{i_M}(i_p), "r*;meas, extrapol;")
+##    plot (cp_nn_meas_ext{i_M}(:,i_p), ";cp nn meas ext;") # surface normalized
+##    xlim ([1 51])
+##    ylim ([-0.1 1])
+
+    lim_st = [0 0.1]; # mm
+    clims = {[0 0.55], [0 0.5], [0 0.40], [0 0.35]};
+    write_series_csv ([ap.result_dir exp_id "_clims"], reshape (cell2mat (clims), 1, 8), [], []);
+    whitenan = false;
+    for i_M = it_M
+      lim_c = clims{i_M};
+      id_c = ["c-" ap.c_method "_" ap.c_if_method "_" "cp_nn_meas_ext"];
+      cprint = cp_nn_meas_ext{i_M};
+      fn_cprint = [ap.result_dir exp_id "_" id_c "_M" num2str(i_M)]
+      print_contour (fn_cprint, msh_p{i_M}{1}, msh_p{i_M}{2}, cprint, lim_x, lim_st, sf, lim_c, whitenan, true);
     endfor
   endif
 
