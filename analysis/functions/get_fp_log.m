@@ -39,6 +39,12 @@ function fp = get_fp_log (pdir, id_exp)
 ##      fp.eta = eta_test;
       fp.eta = eta_tab;
       fp.nu = fp.eta / fp.rho;
+
+      ## diffusivity
+      [~, ~, ~, eta_D_AB, ~, D_AB_T] = get_fp_lm (pdir, "WG141", T_test);
+      fp.D_AB_1 = corr_D_T_eta (eta_D_AB, T_test, D_AB_T.PLIF1, fp.eta, T_test);
+      fp.D_AB_2 = corr_D_T_eta (eta_D_AB, T_test, D_AB_T.PLIF2, fp.eta, T_test);
+
     otherwise
       error ("get_fp_exp: no data for id_exp");
   endswitch

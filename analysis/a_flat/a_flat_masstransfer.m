@@ -75,21 +75,35 @@ if 1
 
   ## reference profile
   ref_prof = load ([pdir.analyzed "a_flat_reference_flow_profile/downstream/" "tab_meas_Re_deltau_us_deltac_mfr.txt"])
+  u_s = ref_prof.u_s_ref
 
-  ## theoretical liquid mixture properties
-  [~, ~, ~, ~, ~, D_AB_lm] = get_fp_lm (pdir, ap.ids_L{1}, ap.ids_T + 273.15);
-  D_AB = [D_AB_lm.PLIF1 D_AB_lm.PLIF2]
+  ## contact time: flat film - derive from ref profile surface velocity
+  x_c = ((x_o + x_abs_meas)*1e-3 + x_off_inlet); # in m; longer contact than x_abs_meas with gas in inflow section
+  t_c = x_c ./ u_s;
+
+  ## resulting contact time section ranges
+  x_sec(1,:)' ./ u_s
 
   ## fluid properties experiment
   fp = get_fp_log (pdir, "flat_WG141");
+  D_AB = [fp.D_AB_1 fp.D_AB_2]
 
   [~, ~, u_avg] = model_filmflow_laminar_u_profile_p (fp.nu, deg2rad (ap.ids_A), ref_prof.re_fp);
 
-  u_s = ref_prof.u_s_ref
-
-  i_eq = 101;
+  ## flat film theoretical solution
+  i_eq = 1001;
   x_c_eq = vec (linspace (0, 0.11, i_eq));
   t_c_eq = vec (linspace (0, 1.10, i_eq));
+
+  delta_c_eq_1 = model_filmflow_laminar_deltac (x_c_eq', D_AB(1), u_s');
+  delta_c_eq_2 = model_filmflow_laminar_deltac (x_c_eq', D_AB(2), u_s');
+
+  write_series_csv ([ap.result_dir "delta_c_x_eq_1"], [x_c_eq delta_c_eq_1], {"x in m", "delta_c in m M1", "delta_c in m  M2", "delta_c in m  M3", "delta_c in m  M4"}, []);
+  write_series_csv ([ap.result_dir "delta_c_x_eq_2"], [x_c_eq delta_c_eq_2], {"x in m", "delta_c in m M1", "delta_c in m  M2", "delta_c in m  M3", "delta_c in m  M4"}, []);
+  write_series_csv ([ap.result_dir "delta_c_x_eq"  ], [x_c_eq delta_c_eq_2], {"x in m", "delta_c in m M1", "delta_c in m  M2", "delta_c in m  M3", "delta_c in m  M4"}, []);
+
+  beta_x_eq_1 = model_filmflow_laminar_beta_x (x_c_eq', D_AB(1), u_s)';
+  beta_x_eq_2 = model_filmflow_laminar_beta_x (x_c_eq', D_AB(2), u_s)';
 
 endif
 
@@ -113,7 +127,7 @@ if 1
   for i_M = it_M
       plot (x_o, delta_c_o(:,i_M));
   endfor
-  xlabel ("c in mm");
+  xlabel ("x* in mm");
   ylabel ("delta_c in mm");
   plot (-1*[1 1], [min(min(delta_c_o)) max(max(delta_c_o))], "k--");
   plot (+1*[1 1], [min(min(delta_c_o)) max(max(delta_c_o))], "k--");
@@ -121,9 +135,10 @@ if 1
 
   write_series_csv ([ap.result_dir "delta_c_meas"], [x_o*1e-3 x_c delta_c_o*1e-3 delta_c_o_mm*1e-3], {"x in m", "x_c in m", "delta_c in m M1", "delta_c in m  M2", "delta_c in m  M3", "delta_c in m  M4"}, []);
 
-
-  delta_c_eq = model_filmflow_laminar_deltac (x_c_eq', D_AB_lm.PLIF2, u_s');
-  write_series_csv ([ap.result_dir "delta_c_x_eq"], [x_c_eq delta_c_eq], {"x in m", "delta_c in m M1", "delta_c in m  M2", "delta_c in m  M3", "delta_c in m  M4"}, []);
+  for i_M = it_M
+    plot (1e3*x_c_eq-60, 1e3*delta_c_eq_1(:,i_M), "k");
+    plot (1e3*x_c_eq-60, 1e3*delta_c_eq_2(:,i_M), "b");
+  endfor
 
 endif
 
@@ -132,14 +147,19 @@ endif
 ## [03] local mass transfer coefficient
 if 1
 
-  beta_x = D_AB(2) ./ (delta_c_o * 1e-3);
-  beta_x_o_mm = movmedian (beta_x, 41, 1);
+  beta_x_1 = D_AB(1) ./ (delta_c_o * 1e-3);
+  beta_x_2 = D_AB(2) ./ (delta_c_o * 1e-3);
+  beta_x_o_mm_1 = movmedian (beta_x_1, 41, 1);
+  beta_x_o_mm_2 = movmedian (beta_x_2, 41, 1);
+
+  beta_x = beta_x_2;
+  beta_x_o_mm = beta_x_o_mm_2;
 
   fh = figure ();
   hold on;
   for i_M = fliplr (it_M)
-##      plot (x_o, beta_x(:,i_M), [";" num2str(i_M) ";"]);
-      plot (x_o, beta_x_o_mm(:,i_M), [";" num2str(i_M) ";"]);
+    plot (x_o, beta_x(:,i_M), [";" "M" num2str(i_M) ";"]);
+    plot (x_o, beta_x_o_mm(:,i_M), ["k;" num2str(i_M) ";"]);
   endfor
   xlabel ("x* in mm");
   ylabel ("beta_x in mm");
@@ -147,7 +167,10 @@ if 1
   plot (+1*[1 1], [min(min(beta_x_o_mm)) max(max(beta_x_o_mm))], "k--")
   print (fh, "-djpeg", "-color", "-r500", [ap.result_dir "beta_x_measured.jpg"]);
 
-  beta_x_eq = model_filmflow_laminar_beta_x (x_c', D_AB(2), ref_prof.u_s_ref)';
+  for i_M = it_M
+    plot (1e3*x_c_eq - 60, beta_x_eq_1(:,i_M), "k");
+    plot (1e3*x_c_eq - 60, beta_x_eq_2(:,i_M), "b");
+  endfor
 
 endif
 
@@ -244,32 +267,50 @@ if 1
     idx_comp_x(iL, :) = (x_c >= L_eq(iL) - comp_width) & (x_c <= L_eq(iL) + comp_width);
   endfor
 
-  beta_unit_M = beta_x_M = beta_x_eq_M = []
+  beta_eq_1 = model_filmflow_laminar_beta (u_s, D_AB(1), L_eq')
+  beta_eq_2 = model_filmflow_laminar_beta (u_s, D_AB(2), L_eq')
+  beta_eq = beta_eq_2;
+
+  beta_x_c_eq_1 = model_filmflow_laminar_beta_x (x_c', D_AB(1), u_s)';
+  beta_x_c_eq_2 = model_filmflow_laminar_beta_x (x_c', D_AB(2), u_s)';
+  beta_x_eq = beta_x_c_eq_2;
+
+  beta_unit_M = beta_x_M = beta_x_eq_1_M = beta_x_eq_2_M = []
   for i_M = it_M
-    beta_unit_M (1,i_M) = median (beta_unit(idx_comp(1,:)==1, i_M));
-    beta_unit_M (2,i_M) = median (beta_unit(idx_comp(2,:)==1, i_M));
-    beta_x_M (1,i_M) = median (beta_x_o_mm(idx_comp_x(1,:)==1, i_M));
-    beta_x_M (2,i_M) = median (beta_x_o_mm(idx_comp_x(2,:)==1, i_M));
-    beta_x_eq_M (1,i_M) = median (beta_x_eq(idx_comp_x(1,:)==1, i_M));
-    beta_x_eq_M (2,i_M) = median (beta_x_eq(idx_comp_x(2,:)==1, i_M));
+    for i_L = 1:2
+      beta_unit_M(i_L,i_M) = median (beta_unit(idx_comp(i_L,:)==1, i_M));
+      beta_x_1_M(i_L,i_M) = median (beta_x_o_mm_1(idx_comp_x(i_L,:)==1, i_M));
+      beta_x_2_M(i_L,i_M) = median (beta_x_o_mm_2(idx_comp_x(i_L,:)==1, i_M));
+      beta_x_eq_1_M(i_L,i_M) = median (beta_x_c_eq_1(idx_comp_x(i_L,:)==1, i_M));
+      beta_x_eq_2_M(i_L,i_M) = median (beta_x_c_eq_2(idx_comp_x(i_L,:)==1, i_M));
+    endfor
   endfor
 
-  beta_eq = model_filmflow_laminar_beta (ref_prof.u_s_ref, D_AB(2), L_eq')
-  (beta_eq ./ beta_unit_M)
-  correction = (mean (mean (beta_unit_M ./ beta_eq))) ^ 2
-##  beta_eq = model_filmflow_laminar_beta (ref_prof.u_s_ref, correction*D_AB(2), L_eq')
-
-  header = {"x* in mm", "x in m", "Run M#", "beta avg meas * 1e5 in m/s", "beta avg eq. * 1e5 in m/s", "beta avg meas / beta avg eq. in -", "beta local meas * 1e5 in m/s", "beta local eq. * 1e5 in m/s", "beta local meas / eq. in -"}
+  header = {"x* in mm", "x in m", "Run M#", ...
+            "beta avg meas * 1e5 in m/s", "beta avg meas / beta avg eq. in -", "beta avg meas / beta avg eq. in -", ...
+            "beta local meas * 1e5 in m/s", "beta local meas / eq. in -", "beta local meas * 1e5 in m/s", "beta local meas / eq. in -"}
   data_xs = vec (repmat (x_comp, 4, 1))
   data_xc = vec (repmat (L_eq, 4, 1))
   data_run = [it_M'; it_M']
-  data_beta_eq = 1e5 * [beta_eq(1,:)'; beta_eq(2,:)']
+  data_beta_eq_1 = 1e5 * [beta_eq_1(1,:)'; beta_eq_1(2,:)']
+  data_beta_eq_2 = 1e5 * [beta_eq_2(1,:)'; beta_eq_2(2,:)']
   data_beta_unit = 1e5 * [beta_unit_M(1,:)'; beta_unit_M(2,:)']
-  data_beta_x = 1e5 * [beta_x_M(1,:)'; beta_x_M(2,:)']
-  data_beta_x_eq = 1e5 * [beta_x_eq_M(1,:)'; beta_x_eq_M(2,:)']
-  data = [data_xs data_xc data_run data_beta_unit data_beta_eq data_beta_unit./data_beta_eq data_beta_x data_beta_x_eq data_beta_x./data_beta_x_eq]
+  data_beta_x_1 = 1e5 * [beta_x_1_M(1,:)'; beta_x_1_M(2,:)']
+  data_beta_x_2 = 1e5 * [beta_x_2_M(1,:)'; beta_x_2_M(2,:)']
+  data_beta_x_eq_1 = 1e5 * [beta_x_eq_1_M(1,:)'; beta_x_eq_1_M(2,:)']
+  data_beta_x_eq_2 = 1e5 * [beta_x_eq_2_M(1,:)'; beta_x_eq_2_M(2,:)']
+  data = [data_xs data_xc data_run ...
+          data_beta_unit data_beta_unit./data_beta_eq_1 data_beta_unit./data_beta_eq_2 ...
+          data_beta_x_1 data_beta_x_1./data_beta_x_eq_1 ...
+          data_beta_x_2 data_beta_x_2./data_beta_x_eq_2]
 
-  write_series_csv ([ap.result_dir "beta_avg"], data, header, []);
+  data_tab = [];
+  for k = 1:4
+    i_row = (k-1)*2 + 1
+    data_tab(i_row,:) = data(k,:)
+    data_tab(i_row+1,:) = data(k+4,:)
+  endfor
+  write_series_csv ([ap.result_dir "beta_avg"], data_tab, header, []);
 
 endif
 
@@ -277,26 +318,6 @@ endif
 
 ## [05] diffusion front, exp. vs. analytical
 if 1
-
-  ## measured surface velocities from reference profile
-  ref_prof = load ([pdir.analyzed "a_flat_reference_flow_profile/downstream/" "tab_meas_Re_deltau_us_deltac_mfr.txt"])
-
-  ## theoretical liquid mixture properties
-  [~, ~, ~, ~, ~, D_AB_lm] = get_fp_lm (pdir, ap.ids_L{1}, ap.ids_T + 273.15);
-
-  ## fluid properties experiment
-  fp = get_fp_log (pdir, "flat_WG141");
-
-  [~, ~, u_avg] = model_filmflow_laminar_u_profile_p (fp.nu, deg2rad (ap.ids_A), ref_prof.re_fp);
-
-  u_s = ref_prof.u_s_ref
-
-  ## contact time: flat film - derive from ref profile surface velocity
-  x_c = ((x_o + x_abs_meas)*1e-3 + x_off_inlet); # in m; longer contact than x_abs_meas with gas in inflow section
-  t_c = x_c ./ u_s;
-
-  ## resulting contact time section ranges
-  x_sec(1,:)' ./ u_s
 
   ## measured diffusion front
   snD = convert_deltac_snd (1e-3 * delta_c_o); # m
@@ -313,8 +334,6 @@ if 1
   i_eq = 101;
   x_c_eq = vec (linspace (0, 0.11, i_eq));
   t_c_eq = vec (linspace (0, 1.1, i_eq));
-
-  D_AB = [D_AB_lm.PLIF1 D_AB_lm.PLIF2]
 
   delta_c_eq = model_filmflow_laminar_deltac (t_c_eq*u_s(1), D_AB, u_s(1));
   snD_eq = convert_deltac_snd (delta_c_eq); # m
@@ -354,10 +373,10 @@ if 1
     snd_sq_mm = movmedian (snd_sq, 201);
     snd_sq_filter = outlier_rm (snd_sq, snd_sq_mm);
 
-    pfit{i_M} = polyfit (t_c(:,i_M), snd_sq_filter - D_AB_lm.PLIF2 * t_c(:,i_M), 0);
+    pfit{i_M} = polyfit (t_c(:,i_M), snd_sq_filter - D_AB(2) * t_c(:,i_M), 0);
 
     plot (t_c(:,i_M), snd_sq, ["b; delta_c meas i_M = " num2str(i_M) ";"]);
-    plot (t_c(:,i_M), polyval([D_AB_lm.PLIF2 pfit{i_M}], t_c(:,i_M)), ["-r; delta_c meas i_M = " num2str(i_M) ";"], "linewidth", 2);
+    plot (t_c(:,i_M), polyval([D_AB(2) pfit{i_M}], t_c(:,i_M)), ["-r; delta_c meas i_M = " num2str(i_M) ";"], "linewidth", 2);
   endfor
   for i_D = 1:2
     plot (t_c_eq, Ddtc_eq_l(:,i_D), ["--;eq. w. 0.75 * D_" num2str(i_D) ";"]);
