@@ -41,6 +41,8 @@ if 1
   ap.c_method = "linear";
   ap.c_if_method = "calib";
 
+  ap.pos_ref_profile = "downstream"; # microstructure, full, upstream, downstream
+
   ##
   ap.result_dir = [pdir.analyzed ap.a_type "/"]
   mkdir (ap.result_dir)
@@ -53,13 +55,10 @@ if 1
   lim_x = [xmin xmax]; # in mm
   lim_y = [ymin ymax]; # in mm
 
-  ## inflow section
-  xmin_in = -12.0; # mm
-  xmax_in = -11.0; # mm
-
-
-
-  exp_dir = "avg_stitch";
+  ## export to result_dir
+  export_dir = ["avg_stitch" "_" ap.ids_C{1}];
+  ap.result_dir = [pdir.analyzed ap.a_type "/" export_dir "/"]
+  mkdir (ap.result_dir)
 
   ## load data
   ap.i_M = it_M;
@@ -75,19 +74,17 @@ if 1
   load ([data_dir "sd_x_vec.v7"]);
 
   # x is same for all i_M
-  x_idx = (x{1} > xmin) & (x{1} < xmax);
-  x_o = vec (x{1}(x_idx));
+  x_idx = (x{end} >= xmin) & (x{end} <= xmax);
+  x_o = vec (x{end}(x_idx));
 
-  x_idx_in = (x{1} >= xmin_in) & (x{1} <= xmax_in);
-  x_o_in = vec (x{1}(x_idx_in));
 
   sf = get_sf (msh{1});
 
-  ap.result_dir = [pdir.analyzed ap.a_type "/" exp_dir "/"]
-  mkdir (ap.result_dir)
-
   h = 1.0 # mm structure height
-  Re = [3.21234 7.76579 18.3945 38.4204] # TODO: load or calculate Re
+
+  ref_prof = load ([pdir.analyzed "a_2DR10_reference_flow_profile" "/" ap.pos_ref_profile "/" "tab_meas_Re_deltau_us_deltac_mfr.txt"])
+  Re = ref_prof.re_fp
+
   HU_recirc = [0.544 0.385 0.681 0.998] # manual measurement
 
 endif
@@ -100,11 +97,12 @@ if 1
 
     exp_id = "y_wall_M_C";
 
+    y_wall_o = []
     y_wall_C = xy_wall_cell (ap.ids_C{i_C}, x_o); # ideal
     for i_M = it_M
       y_wall_o(:,i_M) = y_wall{i_M}(x_idx);
     endfor
-    write_series_csv ([ap.result_dir exp_id], [vec(x_o) y_wall_o y_wall_C], {"x in mm", "y_wall in mm", "y_wall in mm", "y_wall in mm", "y_wall in mm", "y_wall ideal in mm"}, []);
+    write_series_csv ([ap.result_dir exp_id], [vec(x_o) y_wall_o y_wall_C], {"x in mm", "y_wall in mm (M1)", "y_wall in mm (M2)", "y_wall in mm (M3)", "y_wall in mm (M4)", "y_wall ideal in mm"}, []);
 
     fh = figure ();
     hold on;
@@ -123,11 +121,11 @@ if 1
   if 1
 
     exp_id = "y_i_M";
-
+    y_i_o = []
     for i_M = it_M
       y_i_o(:,i_M) = delta_u_fit{i_M}(x_idx);
     endfor
-    write_series_csv ([ap.result_dir exp_id], [vec(x_o) y_i_o], {"x in mm", "y_i in mm", "y_i in mm", "y_i in mm", "y_i in mm"}, []);
+    write_series_csv ([ap.result_dir exp_id], [vec(x_o) y_i_o], {"x in mm", "y_i in mm (M2)", "y_i in mm (M2)", "y_i in mm (M3)", "y_i in mm (M4)"}, []);
 
     fh = figure ();
     hold on;
@@ -165,7 +163,7 @@ if 1
     exp_id = "delta_u_rel_M";
 
     for i_M = it_M
-      delta_u_in(i_M) = median (delta_u_fit{i_M}(x_idx_in));
+      delta_u_in(i_M) = ref_prof.delta_u_ref(i_M);
       delta_u_rel_o(:,i_M) = delta_u_o(:,i_M) ./ delta_u_in(i_M);
     endfor
 
@@ -210,7 +208,7 @@ if 1
     exp_id = "u_s_rel_M";
 
     for i_M = it_M
-      u_s_in(i_M) = median (u_s{i_M}(x_idx_in));
+      u_s_in(i_M) = ref_prof.u_s_ref(i_M);
       u_s_rel_o(:,i_M) = u_s_o(:,i_M) ./ u_s_in(i_M);
     endfor
 
@@ -248,7 +246,7 @@ if 1
       plot (x_o, delta_c_o(:,i_M), ["-;i_M = " num2str(i_M) ";"]);
     endfor
     xlabel ("x in mm");
-    ylabel ("s_t in mm");
+    ylabel ("delta_c in mm");
     print (fh, "-dpng", "-color", "-r500", [ap.result_dir exp_id]);
     close (fh)
   endif
@@ -338,7 +336,7 @@ if 1
   close (fh)
 
   ## relative to corresponding flat film
-  exp_id = "t_c_and_HU_rel_M";
+  exp_id = "M_tc_Lc_HU";
 
   t_c_rel = 100 * (t_c ./ t_c_comp - 1); # excess in %
   l_c_rel = 100 * ( l_c / (xmax_comp - xmin_comp) - 1) # excess in %
@@ -348,7 +346,7 @@ if 1
   HU_extra_rel = 100 * HU_extra ./ HU_comp
   HU_recirc_rel = 100 * HU_recirc ./ HU_comp # %
   HU_static_rel = 100 * HU_static ./ HU_comp # %
-  write_series_csv ([ap.result_dir exp_id], [Re' t_c_rel' l_c_rel' u_c_rel' HU_extra_rel' HU_recirc_rel' HU_static_rel'], {"Re", "contact time increase in %", "contact length increase in %", "surface velocity decrease in %", "holdup increase in %", "holdup in recirculation in %", "holdup static in %"}, []);
+  write_series_csv ([ap.result_dir "tab_" exp_id], [Re' t_c_rel' l_c_rel' u_c_rel' HU_extra_rel' HU_recirc_rel' HU_static_rel'], {"Re", "contact time increase in %", "contact length increase in %", "surface velocity decrease in %", "holdup increase in %", "holdup in recirculation in %", "holdup static in %"}, []);
 
   fh = figure ()
   hold on
@@ -370,7 +368,7 @@ if 1
 endif
 
 ## maps
-if 0
+if 1
   ## flow profile vector plot output
   if 1
     exp_id = "flow_profiles_vec_M";
@@ -405,7 +403,7 @@ if 0
 
   ## streamlines
   ## .. just around the microstructure
-  if 0
+  if 1
     exp_id = "streamlines_M";
 
     for i_M = it_M

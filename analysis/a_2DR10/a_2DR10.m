@@ -80,6 +80,7 @@ edit "a_2DR10_reference_flow_profile.m"
 % Needs:
 %%
 % * results of *a_2DR10_avg_stitch.m*
+% * results of *a_2DR10_reference_flow_profile.m*
 edit "a_2DR10_exports.m"
 
 

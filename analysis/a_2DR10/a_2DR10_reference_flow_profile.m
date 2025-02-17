@@ -104,7 +104,7 @@ if 1
       x_u =  20;
     case {"upstream"} # upstream profile
       x_l = -12;
-      x_u = -8;
+      x_u = -10;
     case {"downstream"} # downstream profile
       x_l = 8;
       x_u = 12;
@@ -182,7 +182,7 @@ if 1
     u_s_ref(i_M) = u_s_mean(i_M);
   endfor
 
-  ## corrections for consistent predicted profile
+  ## corrections for consistent predicted profile / wall offset
   switch (ap.pos_ref_profile)
     case {"downstream"}
       delta_u_ref(2) = delta_u_ref(2) - 0.005;
@@ -219,24 +219,14 @@ if 1
   sf = get_sf (msh{i_M})
   mfr_meas = []
   for i_M = it_M
-    mfr_meas(i_M) = sum (ux_mean{i_M}((y{i_M} >= 0) & (y{i_M} <= delta_u_mean(i_M)))) * sf(2)/1e3 * cell_width/1e3 * fp.rho; # kg / s
+##    mfr_meas(i_M) = sum (ux_mean{i_M}((y{i_M} >= 0) & (y{i_M} <= delta_u_mean(i_M)))) * sf(2)/1e3 * cell_width/1e3 * fp.rho; # kg / s
+    mfr_meas(i_M) = sum (ux_mean{i_M}((y{i_M} >= 0) & (y{i_M} <= delta_u_ref(i_M)))) * sf(2)/1e3 * cell_width/1e3 * fp.rho; # kg / s
   endfor
   mfr_meas * 3600
 
-  switch (ap.pos_ref_profile)
-    case {"downstream"}
-      mfr_meas(1) = mfr_meas(1) * 0.98; # integral overpredicts mfr_meas close to wall
-      mfr_meas(2) = mfr_meas(2) * 0.95;
-      mfr_meas(3) = mfr_meas(3) * 0.95;
-      mfr_meas(4) = mfr_meas(4) * 0.95;
-    case {"full"}
-##      mfr_meas(1) = mfr_meas(1) * 0.97;
-##      mfr_meas(2) = mfr_meas(2) * 0.98;
-  endswitch
-
   mfr_meas ./ mfr_Nu
 
-  mfr_ref = mfr_meas;
+  mfr_ref = mfr_Nu; # integral overpredicts mfr_meas close to wall
   ##
   y_eq_meas = linspace (0, delta_u_ref*1e-3, 1001);
   u_eq_meas = model_filmflow_laminar_u_profile (y_eq_meas, vec (u_s_ref), vec (delta_u_ref*1e-3));
@@ -263,6 +253,7 @@ if 1
   endfor
   legend ("autoupdate", "off");
   for i_M = it_M
+    plot ([0 1] * 1.0 * u_s_Nu(i_M), delta_u_mean(i_M)*[1 1], "--k");
     plot ([0 1] * 1.0 * u_s_ref(i_M), delta_u_ref(i_M)*[1 1], "--r");
     plot ([0 1] * 1.0 * u_s_ref(i_M), 0 * [1 1], "--k");
   endfor
@@ -373,7 +364,7 @@ if 1
   ## inlet Re number matching the measured profile, but not matching measured viscosity and/or inclination of plate
   ## inlet Re number matching the mass flow rate and measured viscosity and/or inclination of plate
 
-  write_series_csv ([ap.save_dir "tab_meas_Re_deltau_us_deltac_mfr"], [re_fp' delta_u_ref' u_s_ref' 1e3*delta_c_ref' 3600*mfr_meas'], {"Re in -" "delta_u_ref in mm", "u_s in m/s", "delta_c in µm", "mfr_ref in kg/h"}, []);
+  write_series_csv ([ap.save_dir "tab_meas_Re_deltau_us_deltac_mfr"], [re_fp' delta_u_ref' u_s_ref' 1e3*delta_c_ref' 3600*mfr_ref'], {"Re in -" "delta_u_ref in mm", "u_s_ref in m/s", "delta_c_ref in µm", "mfr_ref in kg/h"}, []);
 
   ## store for futher analysis use, ref values for analytical solution
   cd (ap.save_dir)

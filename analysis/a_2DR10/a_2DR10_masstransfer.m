@@ -83,8 +83,8 @@ if 1
 
   ## reference profile
   ref_prof = load ([pdir.analyzed "a_2DR10_reference_flow_profile/downstream/" "tab_meas_Re_deltau_us_deltac_mfr.txt"])
+
   ## measured surface velocities from reference profile
-  ref_prof = load ([pdir.analyzed "a_2DR10_reference_flow_profile/downstream/" "tab_meas_Re_deltau_us_deltac_mfr.txt"])
   u_s_ref = ref_prof.u_s_ref
 
   ## fluid properties experiment

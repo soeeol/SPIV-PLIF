@@ -43,10 +43,7 @@ if 1
   i_T = 1; ap.i_T = i_T;
   i_Z = 1; ap.i_Z = i_Z;
   ## overrides
-##  it_M = 1
-##  i_M = it_M = 1
-
-
+##  i_M = it_M = 4
 
   ## parameters concentration transformation
   ap.c_method = "linear"; # method to transform fluorescence intensity to concentration ("linear" / "nonlinear" .. no impact on delta_c_avg)
@@ -64,6 +61,13 @@ if 1
   ## prepare directories
   ap.date_str = datestr (now, "yyyymmdd");
   ap.result_dir = [pdir.analyzed ap.a_type "/"];
+
+  ## prepare result storage path
+  ap.i_M = it_M;
+  ap.i_X = it_X;
+  ap.id_meas = get_measid_ap (ap);
+  ap.save_dir_id = [ap.result_dir ap.id_meas "/"];
+  mkdir (ap.save_dir_id);
 
   ##
   ## stitching descriptors
@@ -108,13 +112,6 @@ if 1
   sd{4}.dat_fn{1} = "u.v7"; ##  "u.v7" u_msh u_dat u_masks u_h
   sd{4}.dat_var{1} = {"u_dat"};
   ##  "y_if.v7" y_if_wall y_if_gas
-
-  ## prepare result storage path
-  ap.i_M = it_M;
-  ap.i_X = it_X;
-  ap.id_meas = get_measid_ap (ap);
-  ap.save_dir_id = [ap.result_dir ap.id_meas "/"];
-  mkdir (ap.save_dir_id);
 
 endif
 
@@ -181,16 +178,15 @@ if 1
   xoff = zeros (numel(ap.ids_M), numel(ap.ids_X));
   xoff([1 2 4],1) = +0.05;
   xoff(1,3:4) = +0.1; # recorded on another day
-##  xoff(3,1) = +0.0;
 ##  xoff(2,1) = +0.025;
+##  xoff(3,1) = +0.0;
   xoff(4,3:4) = +0.5; # recorded on another day
 
   yoff = zeros (numel(ap.ids_M), numel(ap.ids_X));
   yoff(1,3) = +0.005;
 ##  yoff(2,1) = -0.005;
 ##  yoff(3,3) = +0.005;
-  yoff(4,1) = -0.01;
-  yoff(4,3:4) = +0.005;
+  yoff(4,1) = -0.01; yoff(4,3:4) = +0.005;
 
   if 0
     ## test plot offset correction
@@ -211,12 +207,17 @@ if 1
     ylim ([0 max(delta_u_dyn_avg_MX{it_M(end),2})]);
   endif
 
-  ## intra section u vs c offset - fine tuning ## TODO fix big offset in processing
+  ## intra section u vs c offset - fine tuning
   x_u_off = zeros (numel(ap.ids_M), numel(ap.ids_X)); # + shifts u vs c in +x
-  x_u_off(1,2) = + 0.04;
-  x_u_off(2,2) = + 0.04;
+  x_u_off(1,2) = + 0.02;
+  x_u_off(2,2) = + 0.02;
+  x_u_off(3,2) = + 0.02;
+  x_u_off(4,2) = + 0.02;
 
-  y_u_off = zeros (numel(ap.ids_M), numel(ap.ids_X));# + shifts u vs c in +y
+  y_u_off = zeros (numel(ap.ids_M), numel(ap.ids_X)); # + shifts u vs c in +y
+  y_u_off(1,1) = - 0.005;
+  y_u_off(2,1) = - 0.01;
+  y_u_off(3,1) = + 0.01;
 
 endif
 
@@ -370,7 +371,7 @@ if 1
     xlabel ("u / u_s");
     ylabel ("y / delta_u");
     legend ("location", "northwest");
-    print (fh, "-djpeg", "-r1000", [ap.save_dir_id "test_y_u_off___i_M=" num2str(i_M) ".jpg"]);
+    print (fh, "-djpeg", "-r500", [ap.save_dir_id "test_y_u_off___i_M=" num2str(i_M) ".jpg"]);
     close (fh);
 
   endfor
@@ -395,6 +396,7 @@ if 1
     fh = figure ();
     plot_map_msh (msh_u{i_M}, dat_u_avg{i_M}{4}, fh)
     caxis ([ 0 median(max(dat_u_avg{i_M}{4}, [], 2), "omitnan") ]);
+    caxis ([ 0 1.5*median(max(dat_u_avg{i_M}{4}, [], 2), "omitnan") ]);
     hold on;
     quiver (x_v, y_v, ux_v, uy_v, 1, "k");
     axis image;
@@ -445,7 +447,7 @@ if 1
   u_dat = u_x = u_y = u_z = u_m = {};
   u_s = incl_s = curve_s = l_s = y_h = vfr = {};
 
-  ##
+  ## stitched data
   for i_M = it_M
 
     x{i_M} = msh{i_M}{1}(1,:);
@@ -543,7 +545,7 @@ if 1
       plot ((x_sec-0.06)*1e3, [0 0 0 0 0; 1.0 * [1 1 1 1 1]], "--k");
       xlabel ("x* in mm");
       ylabel ("cn in -");
-      print (fh, "-djpeg", "-r1000", [ap.save_dir_id "vec_cn_b___cn_s___i_M=" num2str(i_M) ".jpg"]);
+      print (fh, "-djpeg", "-r500", [ap.save_dir_id "vec_cn_b___cn_s___i_M=" num2str(i_M) ".jpg"]);
       close (fh);
 
       fh = figure ();
@@ -556,7 +558,7 @@ if 1
       plot ((x_sec-0.06)*1e3, [0 0 0 0 0; 2.0 * [1 1 1 1 1]], "--k");
       xlabel ("x* in mm");
       ylabel ("y in mm");
-      print (fh, "-djpeg", "-r1000", [ap.save_dir_id "vec_delta_u___y_h___i_M=" num2str(i_M) ".jpg"]);
+      print (fh, "-djpeg", "-r500", [ap.save_dir_id "vec_delta_u___y_h___i_M=" num2str(i_M) ".jpg"]);
       close (fh);
 
       fh = figure ();
@@ -568,7 +570,7 @@ if 1
       legend ("autoupdate", "off");
       plot ((x_sec-0.06)*1e3, [0 0 0 0 0; 2.0 * [1 1 1 1 1]], "--k");
       xlabel ("x* in mm");
-      print (fh, "-djpeg", "-r1000", [ap.save_dir_id "vec_incl_s___curv_s___i_M=" num2str(i_M) ".jpg"]);
+      print (fh, "-djpeg", "-r500", [ap.save_dir_id "vec_incl_s___curv_s___i_M=" num2str(i_M) ".jpg"]);
       close (fh);
 
       fh = figure ();
@@ -579,7 +581,7 @@ if 1
       legend ("autoupdate", "off");
       plot ((x_sec-0.06)*1e3, [0 0 0 0 0; 2.0 * [1 1 1 1 1]], "--k");
       xlabel ("x* in mm");
-      print (fh, "-djpeg", "-r1000", [ap.save_dir_id "vec_u_s_norm___i_M=" num2str(i_M) ".jpg"]);
+      print (fh, "-djpeg", "-r500", [ap.save_dir_id "vec_u_s_norm___i_M=" num2str(i_M) ".jpg"]);
       close (fh);
 
       fh = figure ();
@@ -590,7 +592,7 @@ if 1
       plot ((x_sec-0.06)*1e3, [0 0 0 0 0; max(vfr{i_M}) * [1 1 1 1 1]], "--k");
       xlabel ("x* in mm");
       ylabel ("VFR in m^3 / s");
-      print (fh, "-djpeg", "-r1000", [ap.save_dir_id "vec_vfr___i_M=" num2str(i_M) ".jpg"]);
+      print (fh, "-djpeg", "-r500", [ap.save_dir_id "vec_vfr___i_M=" num2str(i_M) ".jpg"]);
       close (fh);
 
       fh = figure ();
@@ -599,7 +601,7 @@ if 1
       legend ("autoupdate", "off");
       plot ((x_sec-0.06)*1e3, [min(s_t{i_M} ./ (x{i_M}-min(x{i_M}))) * [1 1 1 1 1] ; max(s_t{i_M} ./ (x{i_M}-min(x{i_M}))) * [1 1 1 1 1]], "--k");
       xlabel ("x* in mm");
-      print (fh, "-djpeg", "-r1000", [ap.save_dir_id "vec_s_t_by_x___i_M=" num2str(i_M) ".jpg"]);
+      print (fh, "-djpeg", "-r500", [ap.save_dir_id "vec_s_t_by_x___i_M=" num2str(i_M) ".jpg"]);
       close (fh);
 
       fh = figure ();
@@ -610,7 +612,7 @@ if 1
       xlabel ("x* in mm");
       ylabel ("delta_c in mm");
       ylim ([0 0.1]);
-      print (fh, "-djpeg", "-r1000", [ap.save_dir_id "vec_delta_c___i_M=" num2str(i_M) ".jpg"]);
+      print (fh, "-djpeg", "-r500", [ap.save_dir_id "vec_delta_c___i_M=" num2str(i_M) ".jpg"]);
       close (fh);
 
       fh = figure ();
@@ -620,11 +622,12 @@ if 1
       plot ((x_sec-0.06)*1e3, [0 0 0 0 0; 2 * [1 1 1 1 1]], "--k");
       xlabel ("x* in mm");
       ylabel ("a_fit_cp_scale");
-      print (fh, "-djpeg", "-r1000", [ap.save_dir_id "vec_a_fit_cp_scale___i_M=" num2str(i_M) ".jpg"]);
+      print (fh, "-djpeg", "-r500", [ap.save_dir_id "vec_a_fit_cp_scale___i_M=" num2str(i_M) ".jpg"]);
       close (fh);
 
       ## maps
       if 1
+
         fh = plot_map_msh (msh{i_M}, phi{i_M}, []);
         hold on;
         plot ((x_sec-0.06)*1e3, [0 0 0 0 0; max(y{i_M}) * [1 1 1 1 1]], "--k");
@@ -736,7 +739,4 @@ if 1
   endif
 
 endif
-
-##
-##
 
